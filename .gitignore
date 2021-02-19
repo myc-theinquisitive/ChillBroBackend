@@ -1,0 +1,11 @@
+# Ignoring virtual environment
+.venv/
+activate
+
+# Ignoring extra files create by pycharm
+.idea/
+__pycache__/
+*.pyc
+
+# Ignore database sqlite
+db.sqlite3
