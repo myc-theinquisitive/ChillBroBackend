@@ -39,10 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
-    'authemail',
     'UserApp',
     'Coupons',
     'Entity',
+    'authentication'
 ]
 
 MIDDLEWARE = [
@@ -141,12 +141,16 @@ DSC_COUPON_CODE_LENGTH = 10
 DATE_FORMAT = "%d/%m/%Y, %H:%M:%S"
 
 
-EMAIL_FROM = os.environ.get('AUTHEMAIL_DEFAULT_EMAIL_FROM') or '<YOUR DEFAULT_EMAIL_FROM HERE>'
-EMAIL_BCC = os.environ.get('AUTHEMAIL_DEFAULT_EMAIL_BCC') or '<YOUR DEFAULT_EMAIL_BCC HERE>'
+EMAIL_FROM = 'sriharshanagulakonda@gmail.com'
+EMAIL_BCC = '17341a05c0@gmrit.edu.in'
 
-EMAIL_HOST = os.environ.get('AUTHEMAIL_EMAIL_HOST') or 'smtp.gmail.com'
-EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587
-EMAIL_HOST_USER = os.environ.get('AUTHEMAIL_EMAIL_HOST_USER') or '<YOUR EMAIL_HOST_USER HERE>'
-EMAIL_HOST_PASSWORD = os.environ.get('AUTHEMAIL_EMAIL_HOST_PASSWORD') or '<YOUR EMAIL_HOST_PASSWORD HERE>'
+# EMAIL_HOST = os.environ.get('AUTHEMAIL_EMAIL_HOST') or 'smtp.gmail.com'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'sriharshanagulakonda@gmail.com'
+EMAIL_HOST_PASSWORD = 'SagaRekha'
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
