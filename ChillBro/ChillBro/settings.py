@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'UserApp',
     'Coupons',
     'Entity',
+    'Address',
 ]
 
 MIDDLEWARE = [

@@ -1,5 +1,6 @@
 # Ignoring virtual environment
 .venv/
+venv/
 activate
 
 # Ignoring extra files create by pycharm
