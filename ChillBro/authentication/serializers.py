@@ -1,5 +1,8 @@
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
+from .models import OTPCode
 
 
 class SignupSerializer(serializers.Serializer):
@@ -47,3 +50,16 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('email', 'first_name', 'last_name')
 
 
+class OTPCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=OTPCode
+        fields='__all__'
+
+class OTPValidateSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=10)
+    otp=serializers.CharField(max_length=6)
+
+class OTPResendSerializer(serializers.Serializer):
+    phone=serializers.CharField(max_length=10)
+    otp=serializers.CharField(max_length=6)
+    time=serializers.DateTimeField(default=timezone.now())

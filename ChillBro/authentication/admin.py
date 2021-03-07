@@ -5,7 +5,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import ugettext_lazy as _
 
 from .forms import EmailUserCreationForm, EmailUserChangeForm
-from .models import SignupCode, PasswordResetCode, EmailChangeCode
+from .models import SignupCode, PasswordResetCode, EmailChangeCode, OTPCode
 
 
 class SignupCodeAdmin(admin.ModelAdmin):
@@ -101,4 +101,4 @@ admin.site.register(get_user_model(), EmailUserAdmin)
 admin.site.register(SignupCode, SignupCodeAdmin)
 admin.site.register(PasswordResetCode, PasswordResetCodeAdmin)
 admin.site.register(EmailChangeCode, EmailChangeCodeAdmin)
-
+admin.site.register(OTPCode)

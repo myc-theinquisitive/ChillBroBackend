@@ -1,5 +1,7 @@
 import binascii
 import os
+import random
+
 from django.conf import settings
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
@@ -211,4 +213,22 @@ class EmailChangeCode(AbstractBaseCode):
         }
 
         send_multi_format_email(prefix, ctxt, target_email=self.email)
+
+def random_string():
+    return str(random.randint(100000, 999999))
+
+
+class AutoDateTimeField(models.DateTimeField):
+    def pre_save(self, model_instance, add):
+        return timezone.now()
+
+
+class OTPCode(models.Model):
+    phone=models.TextField(max_length=10,unique=True)
+    otp=models.TextField(max_length=6,default=random_string)
+    time=models.DateTimeField(default=timezone.now())
+
+
+    def __str__(self):
+        return self.phone
 

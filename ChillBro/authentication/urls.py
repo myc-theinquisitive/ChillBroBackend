@@ -28,6 +28,9 @@ urlpatterns = [
          name='authemail-password-change'),
 
     path('users/me/', UserMe.as_view(), name='authemail-me'),
+    path('otplogin/',OTPLogin.as_view(),name='otplogin'),
+    path('otpvalidate/',OTPValidate.as_view(),name='otpvalidate'),
+    path('otpresend/',OTPResend.as_view(),name='otpresend')
 ]
 
 
