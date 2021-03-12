@@ -1,6 +1,6 @@
-#API's
+# API's
 
-###Get Discount
+### Get Discount
 url : http://127.0.0.1:8000/coupons/discount/
 method: POST
 
@@ -18,7 +18,7 @@ output data:
 }
 
 
-###Use Coupon
+### Use Coupon
 url: http://127.0.0.1:8000/coupons/use_coupon/
 method: POST
 
@@ -37,7 +37,7 @@ output data:
 }
 
 
-###Get All Coupons
+### Get All Coupons
 url: http://127.0.0.1:8000/coupons/
 method: GET
 
@@ -94,7 +94,7 @@ output data:
 ]
 
 
-###Get Single Coupon
+### Get Single Coupon
 url: http://127.0.0.1:8000/coupons/1/
 method: POST
 
@@ -103,7 +103,7 @@ input data: None
 output data: Single coupon details
 
 
-###Create coupon
+### Create coupon
 url: http://127.0.0.1:8000/coupons/
 method: POST
 
@@ -151,7 +151,7 @@ input data:
 output data: coupon details
 
 
-###Update Coupon
+### Update Coupon
 url: http://127.0.0.1:8000/coupons/1/
 method: PUT
 
@@ -160,7 +160,7 @@ input data: Same as create
 output data: coupon details
 
 
-###Get Coupon History
+### Get Coupon History
 url: http://127.0.0.1:8000/coupons/history/
 method: GET
 
@@ -221,7 +221,7 @@ output data:
 ]
 
 
-###Get Available coupons
+### Get Available coupons
 url: http://127.0.0.1:8000/coupons/available/
 method: POST
 
