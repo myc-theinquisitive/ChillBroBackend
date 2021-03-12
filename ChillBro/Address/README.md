@@ -1,6 +1,6 @@
-#API's
+# API's
 
-###Get All Addresses
+### Get All Addresses
 url: http://127.0.0.1:8000/address/
 method: GET
 
@@ -25,7 +25,7 @@ output data:
 ]
 
 
-###Get Address by id
+### Get Address by id
 url: http://127.0.0.1:8000/address/1/
 method: GET
 
@@ -48,7 +48,7 @@ output data:
 }
 
 
-###Create Address
+### Create Address
 url: http://127.0.0.1:8000/address/
 method: POST
 
@@ -70,7 +70,7 @@ input data:
 output data: object instance
 
 
-###Update Address
+### Update Address
 url: http://127.0.0.1:8000/address/1/
 method: PUT
 
@@ -79,7 +79,7 @@ input data: same as create
 output data: object instance
 
 
-###Get Address By Ids
+### Get Address By Ids
 url: http://127.0.0.1:8000/address/get_by_ids/
 method: GET
 
