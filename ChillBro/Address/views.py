@@ -17,6 +17,7 @@ class AddressList(generics.ListCreateAPIView):
 class AddressDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Address.objects.all()
+
     serializer_class = AddressSerializer
 
 
