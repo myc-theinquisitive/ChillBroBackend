@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import (Coupon, Discount, Ruleset, CouponUser, AllowedEntitiesRule,
-                     AllowedUsersRule, MaxUsesRule, ValidityRule, CouponUserUsages)
+from .models import (Coupon, Discount, Ruleset, CouponUser, AllowedEntitiesRule, AllowedProductsRule,
+                     AllowedUsersRule, MaxUsesRule, ValidityRule, CouponUserUsages, CouponHistory)
 
 from .actions import (reset_coupon_usage, delete_expired_coupons)
 
@@ -12,6 +12,11 @@ from .actions import (reset_coupon_usage, delete_expired_coupons)
 class CouponAdmin(admin.ModelAdmin):
     list_display = ('code', 'discount', 'ruleset', 'times_used', 'created', )
     actions = [delete_expired_coupons]
+
+
+@admin.register(CouponHistory)
+class CouponHistoryAdmin(admin.ModelAdmin):
+    pass
 
 
 @admin.register(Discount)
@@ -43,6 +48,12 @@ class AllowedUsersRuleAdmin(admin.ModelAdmin):
 
 @admin.register(AllowedEntitiesRule)
 class AllowedEntitiesRuleAdmin(admin.ModelAdmin):
+    def get_model_perms(self, request):
+        return {}
+
+
+@admin.register(AllowedProductsRule)
+class AllowedProductsRuleAdmin(admin.ModelAdmin):
     def get_model_perms(self, request):
         return {}
 
