@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'Coupons',
     'Entity',
     'Address',
+    'RentalCalendar',
 ]
 
 MIDDLEWARE = [
@@ -112,13 +113,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -138,8 +139,8 @@ AUTH_USER_MODEL = 'UserApp.MyUser'
 
 # Constants
 
-DSC_COUPON_CODE_LENGTH = 10
-DATE_FORMAT = "%d/%m/%Y, %H:%M:%S"
+DSC_COUPON_CODE_LENGTH = 15
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
 EMAIL_FROM = os.environ.get('AUTHEMAIL_DEFAULT_EMAIL_FROM') or '<YOUR DEFAULT_EMAIL_FROM HERE>'
