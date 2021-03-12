@@ -1,6 +1,6 @@
-#API's
+# API's
 
-###Create Rent Booking
+### Create Rent Booking
 url: http://127.0.0.1:8000/rental_calendar/
 method: POST
 
@@ -20,7 +20,7 @@ output data:
 }
 
 
-###Update Rent Booking
+### Update Rent Booking
 url: http://127.0.0.1:8000/rental_calendar/
 method: PUT
 
@@ -40,7 +40,7 @@ output data:
 }
 
 
-###Get All Booking
+### Get All Booking
 url: http://127.0.0.1:8000/rental_calendar/get_all/
 method: GET
 
@@ -58,7 +58,7 @@ output data:
 ]
 
 
-###Cancel Booking
+### Cancel Booking
 url: http://127.0.0.1:8000/rental_calendar/cancel_booking/
 method: POST
 
@@ -74,7 +74,7 @@ output data:
 }
 
 
-###Product Availability
+### Product Availability
 url: http://127.0.0.1:8000/rental_calendar/product_availability/
 method: POST
 
@@ -118,7 +118,7 @@ output data:
 }
 
 
-###Product Booking
+### Product Booking
 url: http://127.0.0.1:8000/rental_calendar/product/bookings/
 method: POST
 
@@ -141,7 +141,7 @@ output data:
 ]
 
 
-###Cancelled Product Bookings
+### Cancelled Product Bookings
 url: http://127.0.0.1:8000/rental_calendar/product/cancelled_bookings/
 method: POST
 
