@@ -1,14 +1,16 @@
 from django.db import models
 from django.utils import timezone
+from datetime import datetime
 
-from .helpers import (get_random_code, get_coupon_code_length, get_user_model, get_date_format)
-from .wrapper import get_entity_model
+from .helpers import (get_random_code, get_coupon_code_length, get_user_model)
 
 
 class Ruleset(models.Model):
     allowed_users = models.ForeignKey('AllowedUsersRule', on_delete=models.CASCADE, verbose_name="Allowed users rule")
     allowed_entities = models.ForeignKey('AllowedEntitiesRule', on_delete=models.CASCADE,
                                          verbose_name="Allowed entities rule")
+    allowed_products = models.ForeignKey('AllowedProductsRule', on_delete=models.CASCADE,
+                                         verbose_name="Allowed products rule")
     max_uses = models.ForeignKey('MaxUsesRule', on_delete=models.CASCADE, verbose_name="Max uses rule")
     validity = models.ForeignKey('ValidityRule', on_delete=models.CASCADE, verbose_name="Validity rule")
 
@@ -21,10 +23,8 @@ class Ruleset(models.Model):
 
 
 class AllowedEntitiesRule(models.Model):
-    entity_model = get_entity_model()
-
-    entities = models.ManyToManyField(entity_model, verbose_name="Entities", blank=True)
-    all_entities = models.BooleanField(default=False, verbose_name="All entities?")
+    entities = models.TextField(verbose_name="Entities", blank=True, null=True)
+    all_entities = models.BooleanField(default=True, verbose_name="All entities?")
 
     def __str__(self):
         if self.all_entities:
@@ -37,10 +37,8 @@ class AllowedEntitiesRule(models.Model):
 
 
 class AllowedUsersRule(models.Model):
-    user_model = get_user_model()
-
-    users = models.ManyToManyField(user_model, verbose_name="Users", blank=True)
-    all_users = models.BooleanField(default=False, verbose_name="All users?")
+    users = models.TextField(verbose_name="Users", blank=True, null=True)
+    all_users = models.BooleanField(default=True, verbose_name="All users?")
 
     def __str__(self):
         if self.all_users:
@@ -50,6 +48,20 @@ class AllowedUsersRule(models.Model):
     class Meta:
         verbose_name = "Allowed User Rule"
         verbose_name_plural = "Allowed User Rules"
+
+
+class AllowedProductsRule(models.Model):
+    products = models.TextField(verbose_name="Products", blank=True, null=True)
+    all_products = models.BooleanField(default=True, verbose_name="All Products?")
+
+    def __str__(self):
+        if self.all_products:
+            return "AllowedProductsRule Nº{0} - ALL allowed".format(self.id)
+        return "AllowedProductsRule Nº{0} - Specific allowed".format(self.id)
+
+    class Meta:
+        verbose_name = "Allowed Product Rule"
+        verbose_name_plural = "Allowed Product Rules"
 
 
 class MaxUsesRule(models.Model):
@@ -66,13 +78,13 @@ class MaxUsesRule(models.Model):
 
 
 class ValidityRule(models.Model):
-    expiration_date = models.DateTimeField(verbose_name="Expiration date")
+    start_date = models.DateTimeField(verbose_name="Start date", null=True)
+    end_date = models.DateTimeField(verbose_name="End date", null=True)
     is_active = models.BooleanField(default=False, verbose_name="Is active?")
     minimum_order_value = models.IntegerField(default=0, verbose_name="Minimum Order value to avail the coupon")
 
     def __str__(self):
-        return "IsActive-{0}, MinimumValue-{1}, Expiry-{2}".format(self.is_active, self.minimum_order_value,
-                                                                   self.expiration_date.strftime(get_date_format()))
+        return "IsActive-{0}, MinimumValue-{1}".format(self.is_active, self.minimum_order_value)
 
     class Meta:
         verbose_name = "Validity Rule"
@@ -131,12 +143,15 @@ class Discount(models.Model):
 
 
 class Coupon(models.Model):
-    code_length = get_coupon_code_length()
 
-    code = models.CharField(max_length=code_length, default=get_random_code, verbose_name="Coupon Code", unique=True)
+    code = models.CharField(max_length=get_coupon_code_length(), default=get_random_code,
+                            verbose_name="Coupon Code", unique=True)
+    title = models.CharField(max_length=100, null=True)
+    description = models.TextField(null=True)
+    terms_and_conditions = models.TextField(null=True)
     discount = models.ForeignKey('Discount', on_delete=models.CASCADE)
     times_used = models.IntegerField(default=0, editable=False, verbose_name="Times used")
-    created = models.DateTimeField(editable=False, verbose_name="Created")
+    created = models.DateTimeField(default=datetime.now, editable=False, verbose_name="Created")
 
     ruleset = models.ForeignKey('Ruleset', on_delete=models.CASCADE, verbose_name="Ruleset")
 
@@ -147,3 +162,23 @@ class Coupon(models.Model):
         if not self.id:
             self.created = timezone.now()
         return super(Coupon, self).save(*args, **kwargs)
+
+
+class CouponHistory(models.Model):
+    user_model = get_user_model()
+
+    code = models.CharField(max_length=get_coupon_code_length(), default=get_random_code,
+                            verbose_name="Coupon Code")
+    title = models.CharField(max_length=100, null=True)
+    description = models.TextField(null=True)
+    terms_and_conditions = models.TextField(null=True)
+    discount = models.ForeignKey('Discount', on_delete=models.CASCADE)
+    times_used = models.IntegerField(default=0, editable=False, verbose_name="Times used")
+    created = models.DateTimeField(default=datetime.now, editable=False, verbose_name="Created")
+
+    ruleset = models.ForeignKey('Ruleset', on_delete=models.CASCADE, verbose_name="Ruleset")
+    changed_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="Changed By")
+
+    def __str__(self):
+        return "Code-{0}, ChangedBy-{1}".format(self.code, self.changed_by)
+

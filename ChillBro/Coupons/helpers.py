@@ -4,7 +4,7 @@ import random
 from django.conf import settings
 
 
-def get_coupon_code_length(length=12):
+def get_coupon_code_length(length=15):
     return settings.DSC_COUPON_CODE_LENGTH if hasattr(settings, 'DSC_COUPON_CODE_LENGTH') else length
 
 
@@ -18,4 +18,4 @@ def get_random_code(length=12):
 
 
 def get_date_format():
-    return settings.DATE_FORMAT if hasattr(settings, 'DATE_FORMAT') else "%d/%m/%Y, %H:%M:%S"
+    return settings.DATE_FORMAT if hasattr(settings, 'DATE_FORMAT') else "%Y-%m-%dT%H:%M:%S"

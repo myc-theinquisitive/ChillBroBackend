@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'UserApp',
     'Coupons',
     'Entity',
+    'Address',
+    'RentalCalendar',
 ]
 
 MIDDLEWARE = [
@@ -111,13 +113,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -137,8 +139,8 @@ AUTH_USER_MODEL = 'UserApp.MyUser'
 
 # Constants
 
-DSC_COUPON_CODE_LENGTH = 10
-DATE_FORMAT = "%d/%m/%Y, %H:%M:%S"
+DSC_COUPON_CODE_LENGTH = 15
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
 EMAIL_FROM = os.environ.get('AUTHEMAIL_DEFAULT_EMAIL_FROM') or '<YOUR DEFAULT_EMAIL_FROM HERE>'
@@ -150,3 +152,26 @@ EMAIL_HOST_USER = os.environ.get('AUTHEMAIL_EMAIL_HOST_USER') or '<YOUR EMAIL_HO
 EMAIL_HOST_PASSWORD = os.environ.get('AUTHEMAIL_EMAIL_HOST_PASSWORD') or '<YOUR EMAIL_HOST_PASSWORD HERE>'
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
+
+LOGGING = {
+    'version': 1,
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+        }
+    },
+    'loggers': {
+        'django.db.backends': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        }
+    }
+}
