@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'Entity',
     'Address',
     'RentalCalendar',
+    'Product',
 ]
 
 MIDDLEWARE = [
@@ -126,12 +127,15 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+MEDIA_URL = 'http://127.0.0.1:8000/'
 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
-    )
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 10
 }
 
 AUTH_USER_MODEL = 'UserApp.MyUser'
