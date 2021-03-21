@@ -26,6 +26,12 @@ class CategoryImageCreate(generics.CreateAPIView):
     serializer_class = CategoryImageSerializer
 
 
+class CategoryImageDelete(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = CategoryImage.objects.all()
+    serializer_class = CategoryImageSerializer
+
+
 def convert_category_to_dict(category):
     return {
         "id": category.id,

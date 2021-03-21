@@ -21,3 +21,10 @@ class BaseProductImageCreate(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
+
+
+class BaseProductImageDelete(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = ProductImage.objects.all()
+    serializer_class = ProductImageSerializer
+
