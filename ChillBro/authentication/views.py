@@ -43,7 +43,6 @@ class Signup(APIView):
                 if user.is_verified:
                     content = {'detail': _('Email address already taken.')}
                     return Response(content, status=status.HTTP_400_BAD_REQUEST)
-
                 try:
                     # Delete old signup codes
                     signup_code = SignupCode.objects.get(user=user)
@@ -96,67 +95,6 @@ class SignupVerify(APIView):
         else:
             content = {'detail': _('Unable to verify user.')}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
-
-def validate_phone(x):
-    if len(x)!=10:
-        return False
-    if len(filter(lambda  x: not x.isdigit(),x))>0:
-        return False
-    return True
-
-class OTPLogin(APIView):
-    serializer_class = OTPCreateSerializer
-    def post(self,request):
-        serializer=self.serializer_class(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'otp':serializer.data},status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-
-class OTPValidate(APIView):
-    serializer_class=OTPValidateSerializer
-    def post(self,request):
-        serializer=self.serializer_class(data=request.data)
-        x=OTPCode.objects.filter(phone=request.data['phone'])
-        if len(x)==0:
-            return Response({"error":"Phone no. not registered"},status=status.HTTP_404_NOT_FOUND)
-        if x[0].otp==request.data['otp']:
-            now=str(datetime.datetime.now())
-            time=str(x[0].time)
-            FMT = '%Y-%m-%d %H:%M:%S'
-            diff=str((datetime.datetime.strptime(now, FMT+".%f"))-(datetime.datetime.strptime(time[:19], FMT)))
-            diff=diff.split('.')[0]
-            diff_seconds=sum(x * int(t) for x, t in zip([3600, 60, 1], diff.split(":")))
-            if diff_seconds<=300:
-               return Response({"authenticate":True},status=status.HTTP_200_OK)
-            else:
-                return Response({"error":"OTP has been expired"})
-        else:
-            return Response({"authenticate":False},status=status.HTTP_401_UNAUTHORIZED)
-
-
-def random_string():
-    return str(random.randint(100000, 999999))
-
-
-class OTPResend(APIView):
-    serializer_class=OTPCreateSerializer
-
-    def put(self,request):
-        x=OTPCode.objects.filter(phone=request.data['phone'])
-        if len(x) == 0:
-            return Response({"error": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
-        x=x[0]
-        request.data['otp']=random_string()
-        request.data['time']=timezone.now()
-        serializer=self.serializer_class(x,data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-
 
 class Login(APIView):
     permission_classes = (AllowAny,)
@@ -408,3 +346,88 @@ class UserMe(APIView):
 
     def get(self, request, format=None):
         return Response(self.serializer_class(request.user).data)
+
+
+def validate_phone(x):
+    if len(x)!=10:
+        return False
+    if len(filter(lambda  x: not x.isdigit(),x))>0:
+        return False
+    return True
+
+def checkPhoneExists(phone):
+    user=get_user_model().objects.filter(phone_number=phone)
+    if len(user)>0:
+        return True
+    return False
+
+
+
+class OTPLogin(APIView):
+    serializer_class = OTPCreateSerializer
+    def post(self,request):
+        serializer=self.serializer_class(data=request.data)
+
+        if serializer.is_valid():
+            phone=request.data['phone']
+            if checkPhoneExists(phone):
+                serializer.save()
+                return Response({'otp':serializer.data},status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
+class OTPValidate(APIView):
+    serializer_class=OTPValidateSerializer
+    def post(self,request):
+        serializer=self.serializer_class(data=request.data)
+        phone=request.data['phone']
+        x=OTPCode.objects.filter(phone=phone)
+        if len(x)==0:
+            return Response({"error":"Phone no. not registered"},status=status.HTTP_404_NOT_FOUND)
+        if x[0].otp==request.data['otp']:
+            now=str(datetime.datetime.now())
+            time=str(x[0].time)
+            FMT = '%Y-%m-%d %H:%M:%S'
+            diff=str((datetime.datetime.strptime(now, FMT+".%f"))-(datetime.datetime.strptime(time[:19], FMT)))
+            diff=diff.split('.')[0]
+            diff_seconds=sum(x * int(t) for x, t in zip([3600, 60, 1], diff.split(":")))
+            if diff_seconds<=300*60:
+                user = get_user_model().objects.filter(phone_number=phone)[0]
+                if user.is_active:
+                    token, created = Token.objects.get_or_create(user=user)
+                    return Response({'token': token.key},
+                                    status=status.HTTP_200_OK)
+                else:
+                    content = {'detail': _('User account not active.')}
+                    return Response(content,
+                                    status=status.HTTP_401_UNAUTHORIZED)
+                return Response({"authenticate":True},status=status.HTTP_200_OK)
+            else:
+                return Response({"error":"OTP has been expired"})
+        else:
+            return Response({"authenticate":False},status=status.HTTP_401_UNAUTHORIZED)
+
+
+def random_string():
+    return str(random.randint(100000, 999999))
+
+
+class OTPResend(APIView):
+    serializer_class=OTPCreateSerializer
+
+    def put(self,request):
+        phone=request.data['phone']
+        x=OTPCode.objects.filter(phone=request.data['phone'])
+        if len(x) == 0 or (not checkPhoneExists(phone)):
+            return Response({"error": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
+        x=x[0]
+        request.data['otp']=random_string()
+        request.data['time']=timezone.now()
+        serializer=self.serializer_class(x,data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
