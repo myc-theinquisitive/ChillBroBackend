@@ -138,19 +138,19 @@ AUTH_USER_MODEL = 'UserApp.MyUser'
 # Constants
 
 DSC_COUPON_CODE_LENGTH = 10
-DATE_FORMAT = "%d/%m/%Y, %H:%M:%S"
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
-EMAIL_FROM = 'sriharshanagulakonda@gmail.com'
-EMAIL_BCC = '17341a05c0@gmrit.edu.in'
+EMAIL_FROM = 'myc.theinquisitive@gmail.com'
+EMAIL_BCC = 'team.theinquisitive@gmail.com' # Any mail for BCC can be given
 
 # EMAIL_HOST = os.environ.get('AUTHEMAIL_EMAIL_HOST') or 'smtp.gmail.com'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 # EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'sriharshanagulakonda@gmail.com'
-EMAIL_HOST_PASSWORD = 'SagaRekha'
+EMAIL_HOST_USER = ' myc.theinquisitive@gmail.com'
+EMAIL_HOST_PASSWORD = 'MissionMyc'
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 

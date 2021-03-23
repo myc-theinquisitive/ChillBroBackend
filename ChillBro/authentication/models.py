@@ -9,6 +9,7 @@ from django.core.mail.message import EmailMultiAlternatives
 from django.db import models
 from django.template.loader import render_to_string
 from django.utils import timezone
+from datetime import timedelta
 from django.utils.translation import ugettext_lazy as _
 from django.core.mail import send_mail
 
@@ -226,7 +227,8 @@ class AutoDateTimeField(models.DateTimeField):
 class OTPCode(models.Model):
     phone=models.TextField(max_length=10,unique=True)
     otp=models.TextField(max_length=6,default=random_string)
-    time=models.DateTimeField(default=timezone.now())
+    time=models.DateTimeField(default=timezone.now)
+    # expiry_time=models.DateTimeField(default=timezone.now()+timedelta(minutes=5))
 
 
     def __str__(self):

@@ -60,7 +60,5 @@ class OTPValidateSerializer(serializers.Serializer):
     otp=serializers.CharField(max_length=6)
 
 
-class OTPResendSerializer(serializers.Serializer):
-    phone=serializers.CharField(max_length=10)
-    otp=serializers.CharField(max_length=6)
+class OTPResendSerializer(OTPValidateSerializer):
     time=serializers.DateTimeField(default=timezone.now())
