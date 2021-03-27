@@ -240,7 +240,9 @@ class HotelView(ProductInterface):
 
     @staticmethod
     def update_hotel_room_response(response: Dict) -> Dict:
-        response.pop("product", None)
+        # Other than product id make necessary modification
+        # Will remove product id in product view as it is required there
+        # response.pop("product", None)
         return response
 
     def get(self, product_id):

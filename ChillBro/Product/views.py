@@ -1,10 +1,13 @@
 from .Category.views import *
 from .BaseProduct.views import *
 from .Hotel.views import *
+from .Seller.views import *
 from .product_interface import ProductInterface
-from .serializers import ProductSerializer, IdsListSerializer
+from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer
 from .Hotel.views import HotelView
 from collections import defaultdict
+from .wrapper import key_value_content_type_model, key_value_tag_model
+from .models import SellerProduct
 
 
 class ProductView(ProductInterface):
@@ -19,6 +22,9 @@ class ProductView(ProductInterface):
         self.product_specific_data = None
 
         self.product_object = None
+
+        self.key_value_content_type_model = key_value_content_type_model()
+        self.key_value_tag_model = key_value_tag_model()
 
     @staticmethod
     def get_view_and_key_by_type(product_type):
@@ -95,6 +101,11 @@ class ProductView(ProductInterface):
             'discounted_price': decimal,
             'featured': boolean,
             'active': boolean,
+            'tags': ['hotel', 'stay'],
+            'features': {
+                'feature1': 'feature value',
+                'feature2': 'feature 2 value'
+            },
             'hotel_room': {
                 'amenities': [
                     {
@@ -160,6 +171,16 @@ class ProductView(ProductInterface):
             'discounted_price': decimal,
             'featured': boolean,
             'active': boolean,
+            'tags': ['hotel', 'stay', 'Single Room'],
+            'features': {
+                'add': {
+                    'feature1': 'feature value 1',
+                    'feature2': 'feature value 2',
+                },
+                'delete': {
+                    'feature3': 'feature value 3'
+                }
+            },
             'hotel_room': {
                 'hotel_room_id': string,
                 'amenities': {
@@ -220,6 +241,35 @@ class ProductView(ProductInterface):
             )
         return product_id_wise_images_dict
 
+    def get_product_id_wise_features(self, product_ids):
+        ctype = self.key_value_content_type_model.objects.get_for_model(Product)
+        product_features = self.key_value_tag_model.objects.filter(
+            content_type=ctype, object_id__in=product_ids).all()
+
+        product_id_wise_features_dict = defaultdict(list)
+        for product_feature in product_features:
+            product_id_wise_features_dict[product_feature.object_id].append(
+                {
+                    "feature": product_feature.key,
+                    "value": product_feature.value
+                }
+            )
+        return product_id_wise_features_dict
+
+    @staticmethod
+    def get_product_id_wise_sellers(product_ids):
+        product_sellers = SellerProduct.objects.filter(product_id__in=product_ids)
+
+        product_id_wise_sellers_dict = defaultdict(list)
+        for product_seller in product_sellers:
+            product_id_wise_sellers_dict[product_seller.product_id].append(
+                {
+                    "seller_id": product_seller.seller_id,
+                    "price": product_seller.selling_price
+                }
+            )
+        return product_id_wise_sellers_dict
+
     def get(self, product_slug):
 
         self.product_object = Product.objects.get(slug=product_slug)
@@ -228,10 +278,17 @@ class ProductView(ProductInterface):
         product_data = self.product_serializer.data
         product_data = self.update_product_response(product_data)
 
+        product_id_wise_features_dict = self.get_product_id_wise_features([self.product_object.id])
+        product_data["features"] = product_id_wise_features_dict[self.product_object.id]
+
         product_id_wise_images_dict = self.get_product_id_wise_images([self.product_object.id])
         product_data["images"] = product_id_wise_images_dict[self.product_object.id]
 
+        product_id_wise_sellers_dict = self.get_product_id_wise_sellers([self.product_object.id])
+        product_data["sellers"] = product_id_wise_sellers_dict[self.product_object.id]
+
         product_specific_data = self.product_specific_view.get(self.product_object.id)
+        product_specific_data.pop("product", None)
         product_data[self.product_specific_key] = product_specific_data
 
         return product_data
@@ -244,27 +301,30 @@ class ProductView(ProductInterface):
         products_data = products_serializer.data
 
         product_id_wise_images_dict = self.get_product_id_wise_images(product_ids)
+        product_id_wise_features_dict = self.get_product_id_wise_features(product_ids)
 
         group_products_by_type = defaultdict(list)
         for product_data in products_data:
             product_data = self.update_product_response(product_data)
+            product_data["features"] = product_id_wise_features_dict[product_data["id"]]
             product_data["images"] = product_id_wise_images_dict[product_data["id"]]
             group_products_by_type[product_data["type"]].append(product_data)
 
         response = []
         for type in group_products_by_type:
-            product_view, product_key = self.get_view_and_key_by_type(type)
+            product_specific_view, product_key = self.get_view_and_key_by_type(type)
 
             product_specific_ids = []
             for product_dict in group_products_by_type[type]:
                 product_specific_ids.append(product_dict["id"])
 
-            product_specific_data = product_view.get_by_ids(product_specific_ids)
+            product_specific_data = product_specific_view.get_by_ids(product_specific_ids)
 
             # combine product data with product specific data
-            product_id_product_specific_data_dict = {}
+            product_id_product_specific_data_dict = defaultdict(dict)
             for product_specific_dict in product_specific_data:
-                product_id_product_specific_data_dict[product_specific_dict["id"]] = product_specific_dict
+                product_id_product_specific_data_dict[product_specific_dict["product"]] = product_specific_dict
+                product_specific_dict.pop("product", None)
 
             for product_dict in group_products_by_type[type]:
                 product_dict[product_key] = product_id_product_specific_data_dict[product_dict["id"]]
@@ -338,4 +398,22 @@ class GetProductsByCategory(generics.ListAPIView):
 
         response_data["results"] = self.product_view.get_by_ids(product_ids)
 
+        return response
+
+
+class SearchProducts(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ProductSerializer
+    product_view = ProductView()
+
+    def get(self, request, *args, **kwargs):
+        self.queryset = Product.objects.search(kwargs["query"])
+        response = super().get(request, args, kwargs)
+        response_data = response.data
+
+        product_ids = []
+        for product in response_data["results"]:
+            product_ids.append(product["id"])
+
+        response_data["results"] = self.product_view.get_by_ids(product_ids)
         return response
