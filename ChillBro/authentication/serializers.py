@@ -16,6 +16,7 @@ class SignupSerializer(serializers.Serializer):
                                        required=False)
     last_name = serializers.CharField(max_length=30, default='',
                                       required=False)
+    phone_number=serializers.CharField(max_length=10)
 
 
 class LoginSerializer(serializers.Serializer):

@@ -12,6 +12,8 @@ from django.utils import timezone
 from datetime import timedelta
 from django.utils.translation import ugettext_lazy as _
 from django.core.mail import send_mail
+from django.core.validators import MinLengthValidator
+from .validations import validate_phone
 
 # Make part of the model eventually, so it can be edited
 EXPIRY_PERIOD = 3    # days
@@ -56,7 +58,7 @@ class EmailAbstractUser(AbstractBaseUser, PermissionsMixin):
     """
     first_name = models.CharField(_('first name'), max_length=30, blank=True)
     last_name = models.CharField(_('last name'), max_length=30, blank=True)
-    email = models.EmailField(_('email address'), max_length=255, unique=True)
+    email = models.EmailField(_('email address'), max_length=255, unique=True,null=True,blank=True)
     is_staff = models.BooleanField(
         _('staff status'), default=False,
         help_text=_('Designates whether the user can log into this '
@@ -224,12 +226,15 @@ class AutoDateTimeField(models.DateTimeField):
         return timezone.now()
 
 
+def getExpiryTime():
+    return timezone.now() + timedelta(minutes=5)
+
+
 class OTPCode(models.Model):
-    phone=models.TextField(max_length=10,unique=True)
+    phone=models.CharField('phone_number',max_length=10,unique=True,null=True,blank=True,validators=[MinLengthValidator(10),validate_phone])
     otp=models.TextField(max_length=6,default=random_string)
     time=models.DateTimeField(default=timezone.now)
-    # expiry_time=models.DateTimeField(default=timezone.now()+timedelta(minutes=5))
-
+    expiry_time=models.DateTimeField(default=getExpiryTime)
 
     def __str__(self):
         return self.phone

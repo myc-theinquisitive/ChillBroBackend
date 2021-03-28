@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'UserApp',
     'Coupons',
     'Entity',
-    'authentication'
+    'authentication',
+    'Issues'
 ]
 
 MIDDLEWARE = [

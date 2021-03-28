@@ -1,6 +1,6 @@
 from django.utils import timezone
 import datetime, random
-from datetime import date
+from datetime import date,timedelta
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
@@ -22,7 +22,6 @@ from .serializers import EmailChangeSerializer
 from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 
-
 class Signup(APIView):
     permission_classes = (AllowAny,)
     serializer_class = SignupSerializer
@@ -35,6 +34,11 @@ class Signup(APIView):
             password = serializer.data['password']
             first_name = serializer.data['first_name']
             last_name = serializer.data['last_name']
+            phone_number=serializer.data['phone_number']
+
+            if phone_number=="" and email=="":
+                content = {'detail': _("Email and phone number, both can't be null.")}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
             must_validate_email = getattr(settings, "AUTH_EMAIL_VERIFICATION", True)
 
@@ -347,16 +351,6 @@ class UserMe(APIView):
     def get(self, request, format=None):
         return Response(self.serializer_class(request.user).data)
 
-
-def validate_phone(phone):
-    if len(phone)!=10:
-        return False
-    if len(list(filter(lambda  x: not x.isdigit(),phone)))>0:
-        return False
-    if phone[0] not in ['6','7','8','9']:
-        return False
-    return True
-
 def checkPhoneExists(phone):
     try:
         user=get_user_model().objects.get(phone_number=phone)
@@ -367,8 +361,6 @@ def checkPhoneExists(phone):
 class OTPLogin(APIView):
     serializer_class = OTPCreateSerializer
     def post(self,request):
-        if not validate_phone(request.data['phone']):
-            return Response({'message':"Invalid Phone Number"},status=status.HTTP_400_BAD_REQUEST)
         serializer=self.serializer_class(data=request.data)
         if serializer.is_valid():
             phone=request.data['phone']
@@ -383,8 +375,6 @@ class OTPLogin(APIView):
 class OTPValidate(APIView):
     serializer_class=OTPValidateSerializer
     def post(self,request):
-        if not validate_phone(request.data['phone']):
-            return Response({"authenticate":False,'message':"Invalid Phone Number"},status=status.HTTP_400_BAD_REQUEST)
         serializer=self.serializer_class(data=request.data)
         phone=request.data['phone']
         try:
@@ -392,19 +382,16 @@ class OTPValidate(APIView):
         except:
             return Response({"message","Phone No. not found"},status=status.HTTP_400_BAD_REQUEST)
         if phone_user_object.otp==request.data['otp']:
-            now=str(datetime.datetime.now())
-            time=str(phone_user_object.time)
-            FMT = '%Y-%m-%d %H:%M:%S'
-            diff=str((datetime.datetime.strptime(now, FMT+".%f"))-(datetime.datetime.strptime(time[:19], FMT)))
-            diff=diff.split('.')[0]
-            diff_seconds=sum(phone_user_object * int(t) for phone_user_object, t in zip([3600, 60, 1], diff.split(":")))
-            if diff_seconds<=300*60:
+            now=datetime.datetime.now()
+
+            if now<phone_user_object.expiry_time:
                 try:
                     user = get_user_model().objects.get(phone_number=phone)
                 except:
                     return Response({"message":"Phone No. not registered"},status=status.HTTP_400_BAD_REQUEST)
                 if user.is_active:
                     token, created = Token.objects.get_or_create(user=user)
+                    user.is_active=True
                     return Response({"authenticate":True,"message":"Sucessfully OTP Validated",'token': token.key},
                                     status=status.HTTP_200_OK)
                 else:
@@ -426,8 +413,6 @@ class OTPResend(APIView):
 
     def put(self,request):
         phone=request.data['phone']
-        if not validate_phone(phone):
-            return Response({'message':"Invalid Phone Number"},status=status.HTTP_400_BAD_REQUEST)
         try:
             phone_user_object=OTPCode.objects.get(phone=request.data['phone'])
         except:
@@ -439,7 +424,8 @@ class OTPResend(APIView):
 
         request.data['otp']=random_string()
         request.data['time']=timezone.now()
-        serializer=self.serializer_class(x,data=request.data)
+        request.data['expiry_time']=timezone.now()+timedelta(minutes=5)
+        serializer=self.serializer_class(phone_user_object,data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data,status=status.HTTP_201_CREATED)
