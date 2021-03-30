@@ -21,6 +21,6 @@ urlpatterns = [
     path('api/accounts/', include('authemail.urls')),
     path('coupons/', include('Coupons.urls')),
     path('address/', include('Address.urls')),
-    path('rental_calendar/', include('RentalCalendar.urls')),
+    path('bookings/', include('Bookings.urls')),
     path('', include('Product.urls')),
 ]

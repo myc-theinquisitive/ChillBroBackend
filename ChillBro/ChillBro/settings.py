@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'Coupons',
     'Entity',
     'Address',
-    'RentalCalendar',
+    'Bookings',
     'Product',
 ]
 
