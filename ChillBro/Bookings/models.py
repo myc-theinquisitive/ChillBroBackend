@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from Coupons.helpers import (get_random_code, get_coupon_code_length, get_user_model)
 from .validators import get_user_id,check_coupon_id,check_product_id
+from .constants import Status, Pay_status, Type
 # Create your models here.
 def get_order_id():
     return str(uuid.uuid4())
@@ -14,27 +15,13 @@ class Orders(models.Model):
     booking_id = models.CharField(max_length=50, primary_key = True,default=get_order_id, verbose_name="Order Id")
     booking_date = models.DateTimeField()
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    type=(
-        (1,'Hotels'),
-        (2,'Transport'),
-        (3,'Rentals'),
-        (4,'Resorts'),
-        (5,'Events'),
-    )
-    entity_type=models.IntegerField(choices=type,default=1)
 
-    Status = (
-        (1, 'PENDING'),
-        (2, 'ONGOING'),
-        (3, 'CANCELLED'),
-        (4, 'DONE'),
-    )
-    order_status = models.IntegerField(choices=Status, default=1)
-    pay_status = (
-        (1, 'PENDING'),
-        (2, 'DONE'),
-    )
-    payment_status = models.IntegerField(choices=pay_status,default=1)
+    entity_type=models.CharField(max_length=30,choices=[(i.value ,i.value) for i in Type],default= Type.Hotels.value)
+
+
+    order_status = models.CharField(max_length=30,choices=[ (i.value, i.value) for i in Status], default=Status.PENDING.value)
+
+    payment_status = models.CharField(max_length=30,choices=[ (i.value, i.value) for i in Pay_status], default=Pay_status.PENDING.value)
 
 
     def __str__(self):
@@ -50,6 +37,8 @@ class OrderedProducts(models.Model):
     quantity = models.IntegerField()
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     is_cancelled = models.BooleanField(default=False)
+
+    product_status = models.CharField(max_length=30,choices=[(i.value, i.value) for i in Status], default=Status.PENDING.value)
 
 
     class Meta:

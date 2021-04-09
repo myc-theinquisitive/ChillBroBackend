@@ -5,6 +5,8 @@ def get_product_data(product_id_list):
     products['1'] = {'value': 100.0}
     products['2'] = {'value': 200.0}
     products['3'] = {'value': 300.0}
+    if len(products) == 0:
+        return None
     return products
 
 
@@ -18,6 +20,8 @@ def get_total_products_value(products_id_list):
 def get_individual_product_value(product_id):
     product = get_product_data([product_id])
     return product[product_id]['value']
-def get_coupons():
+def get_coupons(coupon_id):
     coupons = ['a', 'b', 'c']
-    return coupons
+    if coupon_id in coupons:
+        return coupon_id
+    return None
