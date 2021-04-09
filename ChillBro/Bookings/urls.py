@@ -1,4 +1,6 @@
 from django.urls import path
+
+from . import views
 from .views import *
 from .RentalCalendar.views import*
 
@@ -12,7 +14,7 @@ urlpatterns = [
     path('<int:pk>',OrderDeleteList.as_view()),
     path('userorders',UserOrdersList.as_view()),
     path('cancelorder',CancelOrderList.as_view()),
-    path('orderdetails',OrderDetailsList.as_view()),
+    path('orderdetails',OrderDetailsListFilter.as_view()),
 
 
     path('rental_calendar/', CreateUpdateRentalBooking.as_view()),
