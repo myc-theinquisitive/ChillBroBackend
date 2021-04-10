@@ -1,6 +1,6 @@
 from django.utils import timezone
 import datetime, random
-from datetime import date,timedelta
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
@@ -15,68 +15,113 @@ from rest_framework.views import APIView
 
 from .models import SignupCode, EmailChangeCode, PasswordResetCode, OTPCode
 from .models import send_multi_format_email
-from .serializers import SignupSerializer, LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, OTPResendSerializer
+from .serializers import SignupSerializer, LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, \
+    OTPResendSerializer, MailSignUpSerializer, PhoneSignUpSerializer
 from .serializers import PasswordResetSerializer
 from .serializers import PasswordResetVerifiedSerializer
 from .serializers import EmailChangeSerializer
 from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 
+
 class Signup(APIView):
     permission_classes = (AllowAny,)
-    serializer_class = SignupSerializer
+    mail_serializer_class = MailSignUpSerializer
+    phone_serializer_class = PhoneSignUpSerializer
 
-    def post(self, request, format=None):
-        serializer = self.serializer_class(data=request.data)
+    def mailSignUp(self, serializer, email, password, first_name, last_name):
+        must_validate_email = getattr(settings, "AUTH_EMAIL_VERIFICATION", True)
 
+        try:
+            user = get_user_model().objects.get(email=email)
+            if user.is_verified:
+                content = {'detail': _('Email address already taken.')}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                # Delete old signup codes
+                signup_code = SignupCode.objects.get(user=user)
+                signup_code.delete()
+            except SignupCode.DoesNotExist:
+                pass
+
+        except get_user_model().DoesNotExist:
+            user = get_user_model().objects.create_user(email=email)
+
+        # Set user fields provided
+        user.set_password(password)
+        user.first_name = first_name
+        user.last_name = last_name
+        if not must_validate_email:
+            user.is_verified = True
+            send_multi_format_email('welcome_email',
+                                    {'email': user.email, },
+                                    target_email=user.email)
+        user.save()
+
+        if must_validate_email:
+            # Create and associate signup code
+            ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
+            signup_code = SignupCode.objects.create_signup_code(user, ipaddr)
+            signup_code.send_signup_email()
+
+        content = {'email': email, 'first_name': first_name,
+                   'last_name': last_name}
+        return Response(content, status=status.HTTP_201_CREATED)
+
+    def phoneSignUp(self, serializer, phone_number, first_name, last_name):
+        must_validate_phone = getattr(settings, "AUTH_VERIFICATION", True)
+
+        try:
+            user = get_user_model().objects.get(phone_number=phone_number)
+            if user.is_verified:
+                content = {'detail': _('Phone number already registered.')}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                # Delete old signup codes
+                signup_code = SignupCode.objects.get(user=user)
+                signup_code.delete()
+            except SignupCode.DoesNotExist:
+                pass
+
+        except get_user_model().DoesNotExist:
+            user = get_user_model().objects.create_user_by_phone(phone_number=phone_number)
+
+        # Set user fields provided
+        user.first_name = first_name
+        user.last_name = last_name
+        if not must_validate_phone:
+            user.is_verified = True
+            # send_multi_format_email('welcome_email',{'email': user.email, },target_email=user.email)
+
+        user.save()
+
+        if must_validate_phone:
+            # Create and associate signup code
+            ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
+            signup_code = SignupCode.objects.create_signup_code(user, ipaddr)
+            # signup_code.send_signup_email()
+            # sendOTP()
+
+        content = {'phone_number': phone_number, 'first_name': first_name,
+                   'last_name': last_name}
+        return Response(content, status=status.HTTP_201_CREATED)
+
+    def post(self, request, mail, phone, format=None):
+        if mail:
+            serializer = self.mail_serializer_class(data=request.data)
+        else:
+            serializer = self.phone_serializer_class(data=request.data)
         if serializer.is_valid():
-            email = serializer.data['email']
-            password = serializer.data['password']
             first_name = serializer.data['first_name']
             last_name = serializer.data['last_name']
-            phone_number=serializer.data['phone_number']
 
-            if phone_number=="" and email=="":
-                content = {'detail': _("Email and phone number, both can't be null.")}
-                return Response(content, status=status.HTTP_400_BAD_REQUEST)
-
-            must_validate_email = getattr(settings, "AUTH_EMAIL_VERIFICATION", True)
-
-            try:
-                user = get_user_model().objects.get(email=email)
-                if user.is_verified:
-                    content = {'detail': _('Email address already taken.')}
-                    return Response(content, status=status.HTTP_400_BAD_REQUEST)
-                try:
-                    # Delete old signup codes
-                    signup_code = SignupCode.objects.get(user=user)
-                    signup_code.delete()
-                except SignupCode.DoesNotExist:
-                    pass
-
-            except get_user_model().DoesNotExist:
-                user = get_user_model().objects.create_user(email=email)
-
-            # Set user fields provided
-            user.set_password(password)
-            user.first_name = first_name
-            user.last_name = last_name
-            if not must_validate_email:
-                user.is_verified = True
-                send_multi_format_email('welcome_email',
-                                        {'email': user.email, },
-                                        target_email=user.email)
-            user.save()
-
-            if must_validate_email:
-                # Create and associate signup code
-                ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
-                signup_code = SignupCode.objects.create_signup_code(user, ipaddr)
-                signup_code.send_signup_email()
-
-            content = {'email': email, 'first_name': first_name,
-                       'last_name': last_name}
-            return Response(content, status=status.HTTP_201_CREATED)
+            if mail:
+                email = serializer.data['email']
+                password = serializer.data['password']
+                return self.mailSignUp(serializer, email, password, first_name, last_name)
+            elif phone:
+                phone_number = serializer.data['phone_number']
+                return self.phoneSignUp(serializer, phone_number, first_name, last_name)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -99,6 +144,7 @@ class SignupVerify(APIView):
         else:
             content = {'detail': _('Unable to verify user.')}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
 
 class Login(APIView):
     permission_classes = (AllowAny,)
@@ -124,11 +170,11 @@ class Login(APIView):
                                         status=status.HTTP_401_UNAUTHORIZED)
                 else:
                     content = {'detail':
-                               _('User account not verified.')}
+                                   _('User account not verified.')}
                     return Response(content, status=status.HTTP_401_UNAUTHORIZED)
             else:
                 content = {'detail':
-                           _('Unable to login with provided credentials.')}
+                               _('Unable to login with provided credentials.')}
                 return Response(content, status=status.HTTP_401_UNAUTHORIZED)
 
         else:
@@ -351,57 +397,63 @@ class UserMe(APIView):
     def get(self, request, format=None):
         return Response(self.serializer_class(request.user).data)
 
+
 def checkPhoneExists(phone):
     try:
-        user=get_user_model().objects.get(phone_number=phone)
+        user = get_user_model().objects.get(phone_number=phone)
         return True
     except:
         return False
 
+
 class OTPLogin(APIView):
     serializer_class = OTPCreateSerializer
-    def post(self,request):
-        serializer=self.serializer_class(data=request.data)
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            phone=request.data['phone']
+            phone = request.data['phone']
             if checkPhoneExists(phone):
                 serializer.save()
-                return Response({'otp':serializer.data['otp']},status=status.HTTP_200_OK)
+                return Response({'otp': serializer.data['otp']}, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
         else:
-            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class OTPValidate(APIView):
-    serializer_class=OTPValidateSerializer
-    def post(self,request):
-        serializer=self.serializer_class(data=request.data)
-        phone=request.data['phone']
-        try:
-            phone_user_object=OTPCode.objects.get(phone=request.data['phone'])
-        except:
-            return Response({"message","Phone No. not found"},status=status.HTTP_400_BAD_REQUEST)
-        if phone_user_object.otp==request.data['otp']:
-            now=datetime.datetime.now()
+    serializer_class = OTPValidateSerializer
 
-            if now<phone_user_object.expiry_time:
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        phone = request.data['phone']
+        try:
+            phone_user_object = OTPCode.objects.get(phone=request.data['phone'])
+        except:
+            return Response({"message", "Phone No. not found"}, status=status.HTTP_400_BAD_REQUEST)
+        if phone_user_object.otp == request.data['otp']:
+            now = datetime.datetime.now()
+
+            if now < phone_user_object.expiry_time:
                 try:
                     user = get_user_model().objects.get(phone_number=phone)
                 except:
-                    return Response({"message":"Phone No. not registered"},status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"message": "Phone No. not registered"}, status=status.HTTP_400_BAD_REQUEST)
                 if user.is_active:
                     token, created = Token.objects.get_or_create(user=user)
-                    user.is_active=True
-                    return Response({"authenticate":True,"message":"Sucessfully OTP Validated",'token': token.key},
+                    user.is_verified = True
+                    return Response({"authenticate": True, "message": "Sucessfully OTP Validated", 'token': token.key},
                                     status=status.HTTP_200_OK)
                 else:
-                    content = {'detail': _('User account not active.'),"authenticate":False,"message":"User not active"}
+                    content = {'detail': _('User account not active.'), "authenticate": False,
+                               "message": "User not active"}
                     return Response(content,
                                     status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({"authenticate":True,"message":"OTP has been expired"})
+                return Response({"authenticate": True, "message": "OTP has been expired"})
         else:
-            return Response({"authenticate":False,"message":"Incorrect OTP"},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"authenticate": False, "message": "Incorrect OTP"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def random_string():
@@ -409,25 +461,24 @@ def random_string():
 
 
 class OTPResend(APIView):
-    serializer_class=OTPCreateSerializer
+    serializer_class = OTPCreateSerializer
 
-    def put(self,request):
-        phone=request.data['phone']
+    def put(self, request):
+        phone = request.data['phone']
         try:
-            phone_user_object=OTPCode.objects.get(phone=request.data['phone'])
+            phone_user_object = OTPCode.objects.get(phone=request.data['phone'])
         except:
-            return Response({"message","Phone No. not found"},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message", "Phone No. not found"}, status=status.HTTP_400_BAD_REQUEST)
         if not phone_user_object:
             return Response({'message': 'Phone no. not registered'}, status=status.HTTP_400_BAD_REQUEST)
         if (not checkPhoneExists(phone)):
             return Response({"message": "Phone no. not registered"}, status=status.HTTP_400_BAD_REQUEST)
 
-        request.data['otp']=random_string()
-        request.data['time']=timezone.now()
-        request.data['expiry_time']=timezone.now()+timedelta(minutes=5)
-        serializer=self.serializer_class(phone_user_object,data=request.data)
+        request.data['otp'] = random_string()
+        request.data['time'] = timezone.now()
+        request.data['expiry_time'] = timezone.now() + timedelta(minutes=5)
+        serializer = self.serializer_class(phone_user_object, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

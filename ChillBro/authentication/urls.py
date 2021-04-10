@@ -5,7 +5,8 @@ from .views import *
 
 
 urlpatterns = [
-    path('signup/', Signup.as_view(), name='authemail-signup'),
+    path('mail-signup/', Signup.as_view(),{"mail":True,"phone":False}, name='authemail-signup'),
+    path('phone-signup/', Signup.as_view(),{"mail":False,"phone":True}, name='authemail-signup'),
     path('signup/verify/', SignupVerify.as_view(),
          name='authemail-signup-verify'),
 

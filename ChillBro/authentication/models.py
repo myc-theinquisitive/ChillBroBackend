@@ -19,7 +19,9 @@ from .validations import validate_phone
 EXPIRY_PERIOD = 3    # days
 
 
-def _generate_code():
+def _generate_code(length=None):
+    if length:
+        return binascii.hexlify(os.urandom(20)).decode('utf-8')[:length]
     return binascii.hexlify(os.urandom(20)).decode('utf-8')
 
 
@@ -43,6 +45,10 @@ class EmailUserManager(BaseUserManager):
 
     def create_user(self, email, password=None, **extra_fields):
         return self._create_user(email, password, False, False, False,
+                                 **extra_fields)
+
+    def create_user_by_phone(self, phone_number, password=None, **extra_fields):
+        return self._create_user(phone_number, password, False, False, False,
                                  **extra_fields)
 
     def create_superuser(self, email, password, **extra_fields):
@@ -105,7 +111,7 @@ class EmailAbstractUser(AbstractBaseUser, PermissionsMixin):
 
 class SignupCodeManager(models.Manager):
     def create_signup_code(self, user, ipaddr):
-        code = _generate_code()
+        code = _generate_code(length=6)
         signup_code = self.create(user=user, code=code, ipaddr=ipaddr)
 
         return signup_code
