@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'Address',
     'RentalCalendar',
     'Product',
+    'taggit',
+    'kvstore',
 ]
 
 MIDDLEWARE = [
@@ -134,8 +136,18 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 10
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    # 'PAGE_SIZE': 10,
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework_datatables.renderers.DatatablesRenderer',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework_datatables.filters.DatatablesFilterBackend',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework_datatables.pagination.DatatablesPageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 AUTH_USER_MODEL = 'UserApp.MyUser'
@@ -179,3 +191,5 @@ LOGGING = {
         }
     }
 }
+
+TAGGIT_CASE_INSENSITIVE = True

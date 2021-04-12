@@ -8,7 +8,7 @@ from .constants import ProductTypes
 import string
 import random
 from django.core.exceptions import ValidationError
-from ..Category.models import Category
+from ..wrapper import get_taggable_manager, get_key_value_store
 
 
 def validate_product_type(value):
@@ -36,8 +36,9 @@ class ProductQuerySet(models.query.QuerySet):
         return self.filter(featured=True, active=True)
 
     def search(self, query):
-        lookups = (Q(title__icontains=query) |
-                   Q(description__icontains=query)
+        lookups = (Q(name__icontains=query) |
+                   Q(description__icontains=query) |
+                   Q(tags__name__icontains=query)
                    )
         return self.filter(lookups).distinct()
 
@@ -68,6 +69,7 @@ class Product(TimeStampModel):
     discounted_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     featured = models.BooleanField(default=False)
     active = models.BooleanField(default=True)
+    tags = get_taggable_manager()
 
     objects = ProductManager()
 
@@ -79,6 +81,10 @@ class Product(TimeStampModel):
 
     def __str__(self):
         return self.name
+
+
+kvstore = get_key_value_store()
+kvstore.register(Product)
 
 
 def product_pre_save_receiver(sender, instance, *args, **kwargs):
