@@ -19,7 +19,7 @@ class Issue(models.Model):
     status = models.CharField(max_length=20,choices=[(status.name, status.value) for status in Status], default=Status.TODO.value)
     final_resolution = models.CharField(max_length=200, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True,auto_now=True)
 
     def __str__(self):
         return self.issue_title + " id - " + str(self.pk)

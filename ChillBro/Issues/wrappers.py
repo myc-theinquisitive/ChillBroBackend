@@ -6,11 +6,11 @@ class Departments(enum.Enum):
     FINANCE = "FINANCE"
 
 
-def getProducts():
-    products = ['1', '2', '3']
-    return products
+def productExists(product_id):
+    # check condition and return True or False
+    return True
 
 
-def getOrders():
-    orders = ['1', '2', '3']
-    return orders
+def orderExists(order_id):
+    # check condition and return True or False
+    return True

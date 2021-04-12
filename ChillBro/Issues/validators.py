@@ -1,12 +1,12 @@
 from django.core.exceptions import ValidationError
-from .wrappers import getProducts, getOrders
+from .wrappers import orderExists,productExists
 
 
 def checkProductId(product_id):
-    if product_id not in getProducts():
+    if not productExists(product_id):
         raise ValidationError("Product {} is not valid product".format(product_id))
 
 
 def checkOrderId(order_id):
-    if order_id not in getOrders():
+    if not orderExists(order_id):
         raise ValidationError("Order {} is not valid order".format(order_id))

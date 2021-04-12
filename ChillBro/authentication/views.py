@@ -22,6 +22,7 @@ from .serializers import PasswordResetVerifiedSerializer
 from .serializers import EmailChangeSerializer
 from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
+import jwt
 
 
 class Signup(APIView):
@@ -162,8 +163,19 @@ class Login(APIView):
                 if user.is_verified:
                     if user.is_active:
                         token, created = Token.objects.get_or_create(user=user)
-                        return Response({'token': token.key},
-                                        status=status.HTTP_200_OK)
+
+                        encoded = jwt.encode(
+                            {'token': token}, settings.SECRET_KEY, algorithm='HS256')
+
+                        response = Response()
+                        response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+                        response.data = {
+                            'user': email,
+                        }
+                        return response
+
+                    # return Response({'token': token.key},
+                    #                     status=status.HTTP_200_OK)
                     else:
                         content = {'detail': _('User account not active.')}
                         return Response(content,
@@ -443,8 +455,18 @@ class OTPValidate(APIView):
                 if user.is_active:
                     token, created = Token.objects.get_or_create(user=user)
                     user.is_verified = True
-                    return Response({"authenticate": True, "message": "Sucessfully OTP Validated", 'token': token.key},
-                                    status=status.HTTP_200_OK)
+                    encoded = jwt.encode(
+                        {'token': token}, settings.SECRET_KEY, algorithm='HS256')
+
+                    response = Response()
+                    response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+                    response.data = {
+                        "authenticate": True,
+                        "message": "Successfully OTP Validated",
+                    }
+                    return response
+                    # return Response({"authenticate": True, "message": "Sucessfully OTP Validated", 'token': token.key},
+                    #                 status=status.HTTP_200_OK)
                 else:
                     content = {'detail': _('User account not active.'), "authenticate": False,
                                "message": "User not active"}

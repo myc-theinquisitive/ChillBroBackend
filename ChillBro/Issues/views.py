@@ -5,16 +5,17 @@ from rest_framework.response import Response
 from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
 from .helpers import MultipleFieldLookupMixin
-from .constants import Status
+from .constants import Status, default_final_resolution
 
 
 class IssueList(APIView):
     serializer_class = IssueSerializer
 
-    # permission_classes = (IsAuthenticated,)
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+    permission_classes = (IsAuthenticated,)
 
+    def post(self, request):
+        request.data['user_id']=request.user.id
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Issued inserted successfully", "issue id": serializer.data['id']},
@@ -23,32 +24,30 @@ class IssueList(APIView):
             return Response({"message": "Issue not inserted", "error": serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self,request):
+    def get(self, request):
         issues = Issue.objects.all()
         serializer = self.serializer_class(issues, many=True)
         return Response(serializer.data)
 
 
 class IssueDetail(generics.RetrieveUpdateDestroyAPIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
-    lookup_field = 'id'
 
 
 class EditIssue(APIView):
     serializer_class = EditIssueSerializer
+    permission_classes = (IsAuthenticated,)
 
-    # permission_classes = (IsAuthenticated,)
-    def put(self, request, stat):
+    def put(self, request, status_flag):
         try:
             issue = Issue.objects.get(pk=request.data['issue_id'])
         except:
             return Response({"error": "Issue doesn't exist"})
-        request.data['status'] = stat
-        request.data['updated_at'] = timezone.now()
-        if stat == Status.IN_PROGRESS.value:  # for issue to pick, final resolution need not be provided.
-            request.data['final_resolution'] = "Issue is not yet resolved"
+        request.data['status'] = status_flag
+        if status_flag == Status.IN_PROGRESS.value:  # for issue to pick, final resolution need not be provided.
+            request.data['final_resolution'] = default_final_resolution
         serializer = self.serializer_class(issue, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -58,20 +57,18 @@ class EditIssue(APIView):
 
 
 class CloseIssueUser(APIView):
-    # permission_classes = (IsAuthenticated,)
-    serializer_class = EditIssueSerializer
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CloseUserIssueSerializer
 
     def put(self, request):
         try:
             issue = Issue.objects.get(pk=request.data['issue_id'])
         except:
             return Response({"error": "Issue doesn't exist"})
-        if 'user_id' not in request.data:
-            return Response({"error": "User Id is required"})
+        request.data['user_id'] = request.user.id
         request.data['status'] = Status.DONE.value
-        request.data['updated_at'] = timezone.now()
         request.data['final_resolution'] = "Issue closed by user"
-        request.data['current_employeeId'] = " "
+        request.data['current_employeeId'] = None
         serializer = self.serializer_class(issue, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -81,14 +78,14 @@ class CloseIssueUser(APIView):
 
 
 class DepartmentStatusIssues(MultipleFieldLookupMixin, generics.RetrieveAPIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
     lookup_fields = ['current_department', 'status']
 
 
 class TransferIssue(APIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     serializer_class = TransferSerializer
 
     def post(self, request):
@@ -99,7 +96,7 @@ class TransferIssue(APIView):
             issue = Issue.objects.get(id=issue_id)
             issue.status = Status.TODO.value
             issue.current_department = request.data['transferred_to']
-            issue.current_employeeId=None
+            issue.current_employeeId = None
             issue.save()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -107,8 +104,10 @@ class TransferIssue(APIView):
             return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)
 
 
-class TransferHistory(generics.RetrieveAPIView):
-    # permission_classes = (IsAuthenticated,)
-    queryset = Transfer.objects.all().order_by('created_at')
+class TransferHistory(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
     serializer_class = TransferSerializer
-    lookup_field= "id"
+
+    def get_queryset(self):
+        queryset = Transfer.objects.filter(issue_id=self.kwargs['issue_id']).order_by('created_at')
+        return queryset
