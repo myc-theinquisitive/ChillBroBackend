@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'Coupons',
     'Entity',
     'authentication',
-    'Issues'
+    'Issues',
     'Address',
     'RentalCalendar',
     'Product',
@@ -137,7 +137,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'ChillBro.authentication.JWTAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
-    )
+    ),
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     # 'PAGE_SIZE': 10,
     'DEFAULT_RENDERER_CLASSES': (
