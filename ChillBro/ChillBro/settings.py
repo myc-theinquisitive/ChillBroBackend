@@ -46,7 +46,15 @@ INSTALLED_APPS = [
     'Address',
     'Bookings',
     'Product',
+    'Notifications',
+    'fcm_django',
 ]
+
+
+FCM_DJANGO_SETTINGS = {
+        "FCM_SERVER_KEY": "AIzaSyBkAqi63WPerzKQ9-TSrA8pEAH6yTXLrfs"
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -1,19 +1,21 @@
 import enum
 
 
-class Type(enum.Enum):
-    Hotels = "Hotels"
-    Transport = "Transport"
-    Rentals = "Rentals"
-    Resorts = "Resorts"
-    Events = "Events"
+class EntityType(enum.Enum):
+    hotels = "HOTELS"
+    transport = "TRANSPORT"
+    rentals = "RENTALS"
+    resorts = "RESORTS"
+    events = "EVENTS"
 
-class Status(enum.Enum):
-    PENDING = "PENDING"
-    ONGOING = "ONGOING"
-    CANCELLED = "CANCELLED"
-    DONE =  "DONE"
 
-class Pay_status(enum.Enum):
-    PENDING = "PENDING"
-    DONE = "DONE"
+class BookingStatus(enum.Enum):
+    pending = "PENDING"
+    ongoing = "ONGOING"
+    cancelled = "CANCELLED"
+    done = "DONE"
+
+
+class PayStatus(enum.Enum):
+    pending = "PENDING"
+    done = "DONE"

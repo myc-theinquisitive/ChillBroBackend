@@ -9,7 +9,7 @@ from rest_framework import generics
 import threading
 from datetime import datetime, timedelta
 from .helpers import get_date_format
-from ..models import OrderedProducts
+from ..models import BookedProducts
 
 # Lock for creating a new booking or updating the booking timings
 _booking_lock = threading.Lock()
@@ -30,8 +30,7 @@ def are_overlapping_time_spans(start_time1, end_time1, start_time2, end_time2):
 def get_bookings_of_product(product_id, start_time, end_time, is_cancelled=False, order_by='start_time'):
 
     # getting active booking on the same product with in the new booking timings
-    #full doubtsss
-    return OrderedProducts.objects\
+    return BookedProducts.objects\
         .filter(product_id=product_id, is_cancelled=is_cancelled)\
         .filter(
             Q(Q(start_time__lte=start_time) & Q(end_time__gt=start_time)) |
@@ -59,7 +58,7 @@ def create_booking(booking_id, product_id, product_quantity, start_time, end_tim
             return Response({"message": "Booking Not Allowed"}, 400)
 
         try:
-            OrderedProducts.objects.create(booking_id=booking_id, product_id=product_id,
+            BookedProducts.objects.create(booking_id=booking_id, product_id=product_id,
                                        start_time=start_time, end_time=end_time)
         except:
             return Response({"message": "Exception in Booking Creation: Product & Booking Id should be unique"}, 400)
@@ -73,14 +72,14 @@ def update_booking(booking_id, product_id, product_quantity, start_time, end_tim
         if not valid_booking(product_id, product_quantity+1, start_time, end_time):
             return Response({"message": "Booking Not Allowed"}, 400)
 
-        OrderedProducts.objects.filter(booking_id=booking_id, product_id=product_id) \
+        BookedProducts.objects.filter(booking_id=booking_id, product_id=product_id) \
             .update(start_time=start_time, end_time=end_time)
 
     return Response({"message": "Booking Updated"}, 200)
 
 
 def cancel_booking(booking_id, product_id):
-    OrderedProducts.objects.filter(booking_id=booking_id, product_id=product_id)\
+    BookedProducts.objects.filter(booking_id=booking_id, product_id=product_id)\
         .update(is_cancelled=True)
     return Response({"message": "Booking Cancelled"}, 200)
 
@@ -124,7 +123,7 @@ def product_availability(product_id, product_quantity, start_time, end_time):
 
 
 class CreateUpdateRentalBooking(APIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, format=None):
         serializer = RentBookingWithQuantitySerializer(data=request.data)
@@ -156,7 +155,7 @@ class CreateUpdateRentalBooking(APIView):
 
 
 class CancelRentalBooking(APIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, format=None):
         serializer = RentBookingIdSerializer(data=request.data)
@@ -170,7 +169,7 @@ class CancelRentalBooking(APIView):
 
 
 class GetProductAvailability(APIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, format=None):
         serializer = ProductAvailabilitySerializer(data=request.data)
@@ -187,13 +186,13 @@ class GetProductAvailability(APIView):
 
 
 class RentalBookingList(generics.ListAPIView):
-    # permission_classes = (IsAuthenticated,)
-    queryset = OrderedProducts.objects.all()
+    permission_classes = (IsAuthenticated,)
+    queryset = BookedProducts.objects.all()
     serializer_class = RentBookingSerializer
 
 
 class ProductBookingList(APIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     @staticmethod
     def post(request, format=None):
@@ -211,7 +210,7 @@ class ProductBookingList(APIView):
 
 
 class CancelledBookingList(APIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     @staticmethod
     def post(request, format=None):
