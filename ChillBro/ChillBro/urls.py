@@ -23,8 +23,9 @@ urlpatterns = [
     path('coupons/', include('Coupons.urls')),
     path('issues/', include('Issues.urls')),
     path('address/', include('Address.urls')),
-    path('rental_calendar/', include('RentalCalendar.urls')),
+    path('bookings/', include('Bookings.urls')),
     path('', include('Product.urls')),
+    path('notifications/',include('Notifications.urls')),
 ]
 
 
