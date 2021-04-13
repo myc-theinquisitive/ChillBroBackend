@@ -1,20 +1,20 @@
 # Create your views here.
+from rest_framework.generics import ListCreateAPIView
 from .serializers import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
-from .helpers import MultipleFieldLookupMixin
-from .constants import Status, default_final_resolution
+from .constants import Status, DEFAULT_FINAL_RESOLUTION
 
 
-class IssueList(APIView):
+class IssueList(ListCreateAPIView):
     serializer_class = IssueSerializer
 
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        request.data['user_id']=request.user.id
+        request.data['user_id'] = request.user.id
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -44,10 +44,10 @@ class EditIssue(APIView):
         try:
             issue = Issue.objects.get(pk=request.data['issue_id'])
         except:
-            return Response({"error": "Issue doesn't exist"})
+            return Response({"error": "Issue doesn't exist"},status=status.HTTP_404_NOT_FOUND)
         request.data['status'] = status_flag
         if status_flag == Status.IN_PROGRESS.value:  # for issue to pick, final resolution need not be provided.
-            request.data['final_resolution'] = default_final_resolution
+            request.data['final_resolution'] = DEFAULT_FINAL_RESOLUTION
         serializer = self.serializer_class(issue, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -64,7 +64,7 @@ class CloseIssueUser(APIView):
         try:
             issue = Issue.objects.get(pk=request.data['issue_id'])
         except:
-            return Response({"error": "Issue doesn't exist"})
+            return Response({"error": "Issue doesn't exist"},status=status.HTTP_404_NOT_FOUND)
         request.data['user_id'] = request.user.id
         request.data['status'] = Status.DONE.value
         request.data['final_resolution'] = "Issue closed by user"
@@ -77,11 +77,14 @@ class CloseIssueUser(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class DepartmentStatusIssues(MultipleFieldLookupMixin, generics.RetrieveAPIView):
+class DepartmentStatusIssues(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
-    queryset = Issue.objects.all()
-    serializer_class = IssueSerializer
-    lookup_fields = ['current_department', 'status']
+    serializer_class=IssueSerializer
+
+    def get_queryset(self):
+        queryset = Issue.objects.filter(current_department=self.kwargs['current_department'],
+                                           status=self.kwargs['status']).order_by('created_at')
+        return queryset
 
 
 class TransferIssue(APIView):
@@ -89,7 +92,6 @@ class TransferIssue(APIView):
     serializer_class = TransferSerializer
 
     def post(self, request):
-        request.data['updated_at'] = timezone.now()
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             issue_id = request.data['issue_id']
@@ -106,7 +108,7 @@ class TransferIssue(APIView):
 
 class TransferHistory(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = TransferSerializer
+    serializer_class=TransferSerializer
 
     def get_queryset(self):
         queryset = Transfer.objects.filter(issue_id=self.kwargs['issue_id']).order_by('created_at')

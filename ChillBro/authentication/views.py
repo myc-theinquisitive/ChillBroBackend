@@ -6,12 +6,14 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
 from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.authentication import TokenAuthentication
 
 from .models import SignupCode, EmailChangeCode, PasswordResetCode, OTPCode
 from .models import send_multi_format_email
@@ -24,14 +26,16 @@ from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 import jwt
 
+from .wrapper import sendOTP
+
 
 class Signup(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (AllowAny)
     mail_serializer_class = MailSignUpSerializer
     phone_serializer_class = PhoneSignUpSerializer
 
     def mailSignUp(self, serializer, email, password, first_name, last_name):
-        must_validate_email = getattr(settings, "AUTH_EMAIL_VERIFICATION", True)
+        must_validate_email = getattr(settings, "AUTH_VERIFICATION", True)
 
         try:
             user = get_user_model().objects.get(email=email)
@@ -100,8 +104,7 @@ class Signup(APIView):
             # Create and associate signup code
             ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
             signup_code = SignupCode.objects.create_signup_code(user, ipaddr)
-            # signup_code.send_signup_email()
-            # sendOTP()
+            sendOTP(signup_code, phone_number)
 
         content = {'phone_number': phone_number, 'first_name': first_name,
                    'last_name': last_name}
@@ -151,6 +154,7 @@ class Login(APIView):
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
 
+    @csrf_exempt
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
 
@@ -165,17 +169,15 @@ class Login(APIView):
                         token, created = Token.objects.get_or_create(user=user)
 
                         encoded = jwt.encode(
-                            {'token': token}, settings.SECRET_KEY, algorithm='HS256')
+                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
 
-                        response = Response()
+                        response = Response(status=status.HTTP_200_OK)
                         response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
                         response.data = {
                             'user': email,
+                            'message': "Login Successful"
                         }
                         return response
-
-                    # return Response({'token': token.key},
-                    #                     status=status.HTTP_200_OK)
                     else:
                         content = {'detail': _('User account not active.')}
                         return Response(content,
@@ -204,8 +206,12 @@ class Logout(APIView):
         tokens = Token.objects.filter(user=request.user)
         for token in tokens:
             token.delete()
-        content = {'success': _('User logged out.')}
-        return Response(content, status=status.HTTP_200_OK)
+        response = Response(status=status.HTTP_200_OK)
+        response.delete_cookie('token')
+        response.data = {
+            "message": "logged out"
+        }
+        return response
 
 
 class PasswordReset(APIView):
@@ -406,6 +412,8 @@ class UserMe(APIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = UserSerializer
 
+    # authentication_classes = [JWTAuthentication]
+
     def get(self, request, format=None):
         return Response(self.serializer_class(request.user).data)
 
@@ -417,7 +425,6 @@ def checkPhoneExists(phone):
     except:
         return False
 
-
 class OTPLogin(APIView):
     serializer_class = OTPCreateSerializer
 
@@ -427,6 +434,7 @@ class OTPLogin(APIView):
             phone = request.data['phone']
             if checkPhoneExists(phone):
                 serializer.save()
+                sendOTP(serializer.data['otp'],phone)
                 return Response({'otp': serializer.data['otp']}, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
@@ -455,10 +463,13 @@ class OTPValidate(APIView):
                 if user.is_active:
                     token, created = Token.objects.get_or_create(user=user)
                     user.is_verified = True
-                    encoded = jwt.encode(
-                        {'token': token}, settings.SECRET_KEY, algorithm='HS256')
 
-                    response = Response()
+                    token, created = Token.objects.get_or_create(user=user)
+
+                    encoded = jwt.encode(
+                        {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
+
+                    response = Response(status=status.HTTP_200_OK)
                     response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
                     response.data = {
                         "authenticate": True,

@@ -21,7 +21,7 @@ class API(object):
         return self.BASE_PATH + self.URLS[key]
 
     def _get_complete_url(self, path):
-        return'{base_uri}/{path}'.format(base_uri=self.base_uri, path=path)
+        return '{base_uri}/{path}'.format(base_uri=self.base_uri, path=path)
 
     def _request(self, method, path, params=None, payload=None):
         url = self._get_complete_url(path)
@@ -185,3 +185,6 @@ class Authemail(API):
         self._set_attrs_to_values(response)
         return response
 
+
+def sendOTP(otp_code, phone_number):
+    pass

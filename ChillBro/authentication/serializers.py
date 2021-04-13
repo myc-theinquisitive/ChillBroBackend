@@ -70,4 +70,4 @@ class OTPValidateSerializer(serializers.Serializer):
 
 
 class OTPResendSerializer(OTPValidateSerializer):
-    time = serializers.DateTimeField(default=timezone.now())
+    time = serializers.DateTimeField(default=timezone.now)

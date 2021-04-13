@@ -7,4 +7,4 @@ class Status(enum.Enum):
     DONE = "DONE"
 
 
-default_final_resolution = "Issue is not yet resolved"
+DEFAULT_FINAL_RESOLUTION = "Issue is not yet resolved"
