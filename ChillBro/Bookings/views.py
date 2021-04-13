@@ -112,7 +112,7 @@ class UserOrdersList(generics.ListCreateAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class CancelOrderList(generics.RetrieveUpdateAPIView):
+class CancelOrderView(generics.RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = BookingsSerializer
 

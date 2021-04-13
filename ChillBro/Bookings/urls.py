@@ -10,7 +10,7 @@ urlpatterns = [
     path('orderedproducts',OrderedProductsList.as_view()),
     path('<int:pk>',OrderDeleteList.as_view()),
     path('userorders',UserOrdersList.as_view()),
-    path('cancelorder',CancelOrderList.as_view()),
+    path('cancelorder',CancelOrderView.as_view()),
     path('orderdetails',OrderDetailsListFilter.as_view()),
     path('statistics',BookingsStatistics.as_view()),
 
