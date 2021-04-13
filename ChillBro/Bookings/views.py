@@ -61,8 +61,8 @@ class OrdersList(generics.ListCreateAPIView):
                 for product in products_list:
                     total_money += product_values[product['product_id']]['price'] * product['quantity']
                 is_valid, copoun_reducted_money = getCouponValue(request.data['coupon'], product_ids, entity_ids, total_money)
-                if is_valid == "Invalid":
-                    return Response({"error": "Coupon is invalid"}, 400)
+                if is_valid:
+                    return Response({"message": "Coupon is invalid"}, 400)
                 request.data['total_money'] = total_money - copoun_reducted_money
                 bookings_object = BookingsSerializer()
                 bookings_id = (bookings_object.create(request.data))
@@ -71,7 +71,7 @@ class OrdersList(generics.ListCreateAPIView):
                     product["product_value"] = product_values[product['product_id']]['price']
                 ordered_product_serializer_object = BookedProductsSerializer()
                 ordered_product_serializer_object.bulk_create(products_list)
-                return Response("Success")
+                return Response("Success", 200)
             else:
                 return Response({product_id +" "+comment}, 400)
         else:
@@ -82,17 +82,17 @@ class OrderedProductsList(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        serializer_class = BookingIdSerializer(data=request.data)
-        if serializer_class.is_valid():
+        input_serializer = BookingIdSerializer(data=request.data)
+        if input_serializer.is_valid():
             booking_id = request.data['booking_id']
 
             booked_products = BookedProducts.objects.filter(booking_id=booking_id)
             if len(booked_products) == 0:
-                return Response({"error": "Order does'nt exist"}, 400)
+                return Response({"message": "Order does'nt exist"}, 400)
             serialize = BookedProductsSerializer(booked_products, many=True)
-            return Response(serialize.data)
+            return Response(serialize.data, 200)
         else:
-            return Response(serializer_class.errors, 400)
+            return Response(input_serializer.errors, 400)
 
 
 class OrderDeleteList(generics.RetrieveUpdateDestroyAPIView):
@@ -117,60 +117,60 @@ class CancelOrderList(generics.RetrieveUpdateAPIView):
     serializer_class = BookingsSerializer
 
     def put(self, request, *args, **kwargs):
-        serializer_class = BookingIdSerializer(data=request.data)
-        if serializer_class.is_valid():
+        input_serializer = BookingIdSerializer(data=request.data)
+        if input_serializer.is_valid():
             try:
                 booking = Bookings.objects.get(booking_id=request.data['booking_id'])
             except:
-                return Response({"error": "Order does'nt exist"}, 400)
+                return Response({"message": "Order does'nt exist"}, 400)
             request.data['user'] = request.user.id
             request.data['coupon'] = booking.coupon
             request.data['booking_status'] = BookingStatus.cancelled.value
             serializer = self.serializer_class(booking, data=request.data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data)
+                return Response(serializer.data, 200)
             else:
                 return Response(serializer.errors, 400)
         else:
-            return Response(serializer_class.errors, 400)
+            return Response(input_serializer.errors, 400)
 
 
 class OrderDetailsListFilter(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        serializer_class = OrderDetailsSerializer(data = request.data)
-        if serializer_class.is_valid():
+        input_serializer = OrderDetailsSerializer(data = request.data)
+        if input_serializer.is_valid():
             booking_filter = request.data['booking_filter']
             entity_filter = getEntityType(request.data['entity_filter'])
             status = getStatus(request.data['status'])
             from_date, to_date = getTimePeriod(booking_filter)
             if from_date is None and to_date is None:
-                return Response({"errors": "Invalid Date Filter!!!"}, 400)
+                return Response({"message": "Invalid Date Filter!!!"}, 400)
             elif entity_filter is None:
-                return Response({"errors": "Invalid Entity Filter!!!"}, 400)
+                return Response({"message": "Invalid Entity Filter!!!"}, 400)
             else:
                 bookings = Bookings.objects \
                     .filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
                               & Q(entity_type__in=entity_filter) & Q(booking_status__in=status)))
             serializer = BookingsSerializer(bookings, many=True)
-            return Response(serializer.data)
+            return Response(serializer.data, 200)
         else:
-            return Response(serializer_class.errors, 400)
+            return Response(input_serializer.errors, 400)
 
 
 class BookingsStatistics(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        serializer_class = StatisticsSerializer(data = request.data)
-        if serializer_class.is_valid():
+        input_serializer = StatisticsSerializer(data = request.data)
+        if input_serializer.is_valid():
             booking_filter = request.data['booking_filter']
             entity_filter = getEntityType(request.data['entity_filter'])
             from_date, to_date = getTimePeriod(booking_filter)
             if from_date is None and to_date is None:
-                return Response({"errors": "Invalid Date Filter!!!"}, 400)
+                return Response({"message": "Invalid Date Filter!!!"}, 400)
             else:
 
                 ongoing_bookings = Bookings.objects \
@@ -185,9 +185,9 @@ class BookingsStatistics(generics.RetrieveAPIView):
 
             return HttpResponse({"\nongoing : " + str(len(ongoing_bookings))
                                     , "\npending : " + str(len(pending_bookings))
-                                    , "\ncancelled : " + str(len(cancelled_bookings))})
+                                    , "\ncancelled : " + str(len(cancelled_bookings))}, 200)
         else:
-            return Response(serializer_class.errors, 400)
+            return Response(input_serializer.errors, 400)
 
 
 def getEntityType(entity_filter):

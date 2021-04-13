@@ -16,8 +16,8 @@ def getIndividualProductValue(product_ids):
 
 
 def getCouponValue(coupon_id, product_ids, entity_ids, total_money):
-    return "Valid", 100.0
-    # return "Invalid", 0
+    return True, 100.0
+    # return False, 0
 
 
 def getCoupons(coupon_id):
