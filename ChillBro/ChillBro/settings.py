@@ -44,6 +44,11 @@ INSTALLED_APPS = [
     'Entity',
     'authentication',
     'Issues'
+    'Address',
+    'RentalCalendar',
+    'Product',
+    'taggit',
+    'kvstore',
 ]
 
 MIDDLEWARE = [
@@ -112,19 +117,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+MEDIA_URL = 'http://127.0.0.1:8000/'
 
 
 REST_FRAMEWORK = {
@@ -132,6 +138,18 @@ REST_FRAMEWORK = {
         'ChillBro.authentication.JWTAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
     )
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    # 'PAGE_SIZE': 10,
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework_datatables.renderers.DatatablesRenderer',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework_datatables.filters.DatatablesFilterBackend',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework_datatables.pagination.DatatablesPageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 AUTH_USER_MODEL = 'UserApp.MyUser'
@@ -139,7 +157,7 @@ AUTH_USER_MODEL = 'UserApp.MyUser'
 
 # Constants
 
-DSC_COUPON_CODE_LENGTH = 10
+DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
@@ -156,12 +174,26 @@ EMAIL_HOST_PASSWORD = 'MissionMyc'
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 
-LANGUAGE_CODE = 'en-us'
+LOGGING = {
+    'version': 1,
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+        }
+    },
+    'loggers': {
+        'django.db.backends': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        }
+    }
+}
 
-TIME_ZONE =  'Asia/Kolkata'
-
-USE_I18N = True
-
-USE_L10N = True
-
-USE_TZ = False
+TAGGIT_CASE_INSENSITIVE = True
