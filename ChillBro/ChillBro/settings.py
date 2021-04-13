@@ -39,15 +39,18 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
-    'authemail',
     'UserApp',
     'Coupons',
     'Entity',
+    'authentication',
+    'Issues',
     'Address',
     'Bookings',
     'Product',
     'Notifications',
     'fcm_django',
+    'taggit',
+    'kvstore',
 ]
 
 
@@ -140,10 +143,21 @@ MEDIA_URL = 'http://127.0.0.1:8000/'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
+        'ChillBro.authentication.JWTAuthentication',
+        # 'rest_framework.authentication.TokenAuthentication',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 10
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    # 'PAGE_SIZE': 10,
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework_datatables.renderers.DatatablesRenderer',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework_datatables.filters.DatatablesFilterBackend',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework_datatables.pagination.DatatablesPageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 AUTH_USER_MODEL = 'UserApp.MyUser'
@@ -155,16 +169,18 @@ DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
-EMAIL_FROM = os.environ.get('AUTHEMAIL_DEFAULT_EMAIL_FROM') or '<YOUR DEFAULT_EMAIL_FROM HERE>'
-EMAIL_BCC = os.environ.get('AUTHEMAIL_DEFAULT_EMAIL_BCC') or '<YOUR DEFAULT_EMAIL_BCC HERE>'
+EMAIL_FROM = 'myc.theinquisitive@gmail.com'
+EMAIL_BCC = 'team.theinquisitive@gmail.com' # Any mail for BCC can be given
 
-EMAIL_HOST = os.environ.get('AUTHEMAIL_EMAIL_HOST') or 'smtp.gmail.com'
-EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587
-EMAIL_HOST_USER = os.environ.get('AUTHEMAIL_EMAIL_HOST_USER') or '<YOUR EMAIL_HOST_USER HERE>'
-EMAIL_HOST_PASSWORD = os.environ.get('AUTHEMAIL_EMAIL_HOST_PASSWORD') or '<YOUR EMAIL_HOST_PASSWORD HERE>'
+# EMAIL_HOST = os.environ.get('AUTHEMAIL_EMAIL_HOST') or 'smtp.gmail.com'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587
+EMAIL_PORT = 587
+EMAIL_HOST_USER = ' myc.theinquisitive@gmail.com'
+EMAIL_HOST_PASSWORD = 'MissionMyc'
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-
 
 LOGGING = {
     'version': 1,
@@ -187,3 +203,5 @@ LOGGING = {
         }
     }
 }
+
+TAGGIT_CASE_INSENSITIVE = True

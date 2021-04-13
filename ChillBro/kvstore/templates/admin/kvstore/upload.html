@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+  <h1>Set KV Tags</h1>
+
+  <h2>CSV Upload</h2>
+  <div>
+    Mass set KV tags using CSV file with the following fields (do not include header row):<br />
+    <b><i>object_id, key, value</i></b>
+    <br /><br />
+  </div>
+
+  <form method="POST" action="{% url 'admin:kvstore_upload_csv' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ csv_upload_form.as_p }}
+
+    <input type="submit" value="Upload File and Set Tags" />
+  </form>
+
+  <br><hr><br>
+
+  <h2>Bulk Entry</h2>
+  <div>
+    Paste in the the following format to mass set KV tags:<br />
+    <b><i>object_id, key, value</i></b>
+    <br /><br />
+  </div>
+
+  <form method="POST" action="{% url 'admin:kvstore_upload_bulk' %}">
+    {% csrf_token %}
+    {{ bulk_entry_form.as_p }}
+
+    <input type="submit" value="Set Tags" />
+  </form>
+{% endblock %}
