@@ -1,9 +1,13 @@
 from rest_framework import serializers
 from .models import Product, ProductImage
-from ..Category.serializers import CategorySerializer
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    features = serializers.SerializerMethodField('get_features')
+
+    @staticmethod
+    def get_features(instance):
+        return []
 
     class Meta:
         model = Product
@@ -16,11 +20,17 @@ class ProductSerializer(serializers.ModelSerializer):
         if "active" not in validated_data:
             validated_data["active"] = True
 
-        return Product.objects.create(
+        product = Product.objects.create(
             name=validated_data["name"], description=validated_data["description"],
             type=validated_data["type"], category_id=validated_data["category"], price=validated_data["price"],
             discounted_price=validated_data["discounted_price"], featured=validated_data["featured"],
             active=validated_data["active"])
+
+        if "tags" in validated_data:
+            product.tags.add(*validated_data["tags"])
+        if "features" in validated_data:
+            product.kvstore.set(validated_data["features"])
+        return product
 
     def update(self, instance, validated_data):
         if "featured" not in validated_data:
@@ -35,6 +45,15 @@ class ProductSerializer(serializers.ModelSerializer):
         instance.price = validated_data["price"]
         instance.discounted_price = validated_data["discounted_price"]
         instance.featured = validated_data["featured"]
+
+        if "tags" in validated_data:
+            instance.tags.set(*validated_data["tags"])
+        if "features" in validated_data:
+            if "add" in validated_data["features"]:
+                instance.kvstore.set(validated_data["features"]["add"])
+            if "delete" in validated_data["features"]:
+                for key in validated_data["features"]["delete"]:
+                    instance.kvstore.delete(key)
         instance.save()
 
 
