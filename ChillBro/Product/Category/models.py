@@ -1,5 +1,5 @@
 from django.db import models
-from .helpers import image_upload_to_category
+from .helpers import image_upload_to_category, iconUrlImage
 
 
 class Category(models.Model):
@@ -7,6 +7,7 @@ class Category(models.Model):
     description = models.TextField()
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE,
                                         blank=True, null=True, verbose_name="Parent Category")
+    icon_url = models.ImageField(upload_to=iconUrlImage)
 
     def __str__(self):
         return "Category - Nº{0}".format(self.name)

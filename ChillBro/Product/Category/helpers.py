@@ -9,3 +9,10 @@ def image_upload_to_category(instance, filename):
     new_filename = "%s-%s.%s" % (slug, str(uuid.uuid4()), file_extension)
     return "static/images/Category/%s/%s" % (slug, new_filename)
 
+
+def iconUrlImage(instance, filename):
+    name = instance.id
+    slug = slugify(name)
+    basename, file_extension = filename.split(".")
+    new_filename = "%s-%s.%s" % (slug, str(uuid.uuid4()), file_extension)
+    return "static/images/icons/%s/%s" % (slug, new_filename)

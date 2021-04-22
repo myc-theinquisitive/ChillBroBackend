@@ -19,3 +19,22 @@ class BookingStatus(enum.Enum):
 class PayStatus(enum.Enum):
     pending = "PENDING"
     done = "DONE"
+
+
+class DateFilters(enum.Enum):
+    today = "TODAY"
+    yesterday = "YESTERDAY"
+    week = "WEEK"
+    month = "MONTH"
+
+
+class IdProofType(enum.Enum):
+    aadhar_card = "AADHAR_CARD"
+    pan_card = "PAN_CARD"
+    voter_id = "VOTER_ID"
+
+
+class PayMode(enum.Enum):
+    upi = "UPI"
+    cod = "COD"
+    card = "CARD"
