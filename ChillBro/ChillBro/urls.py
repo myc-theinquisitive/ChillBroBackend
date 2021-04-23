@@ -24,8 +24,8 @@ urlpatterns = [
     path('issues/', include('Issues.urls')),
     path('address/', include('Address.urls')),
     path('bookings/', include('Bookings.urls')),
+    path('review/',include('ReviewsRatings.urls')),
     path('', include('Product.urls')),
-    path('notifications/',include('Notifications.urls')),
 ]
 
 

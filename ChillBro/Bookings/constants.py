@@ -34,7 +34,4 @@ class IdProofType(enum.Enum):
     voter_id = "VOTER_ID"
 
 
-class PayMode(enum.Enum):
-    upi = "UPI"
-    cod = "COD"
-    card = "CARD"
+

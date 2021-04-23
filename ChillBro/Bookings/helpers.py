@@ -21,8 +21,25 @@ def get_user_model():
 
 
 def image_upload_to_user_id_proof(instance, filename):
-    name = instance.id
-    slug = slugify(name)
+    id = instance.booking.booking_id
     basename, file_extension = filename.split(".")
-    new_filename = "%s-%s.%s" % (slug, str(uuid.uuid4()), file_extension)
-    return "static/images/users_id_proof/%s/%s" % (slug, new_filename)
+    new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
+    return "static/images/users_id_proof/%s/%s" % (id, new_filename)
+
+
+def check_in_images(instance, filename):
+    id = instance.check_in.booking_id
+    basename, file_extension = filename.split(".")
+    new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
+    return "static/images/check_in/%s/%s" % (id, new_filename)
+
+
+def check_out_images(instance, filename):
+    id = instance.check_out.booking_id
+    basename, file_extension = filename.split(".")
+    new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
+    return "static/images/check_out/%s/%s" % (id, new_filename)
+
+
+def get_date_format():
+    return settings.DATE_FORMAT if hasattr(settings, 'DATE_FORMAT') else "%Y-%m-%dT%H:%M:%S"
