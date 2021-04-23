@@ -17,6 +17,7 @@ class BaseProductDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'slug'
 
 
+
 class BaseProductImageCreate(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = ProductImage.objects.all()

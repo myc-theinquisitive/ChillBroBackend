@@ -2,7 +2,8 @@ from django.urls import path, re_path
 from .views import CategoryList, CategoryDetail, CategoryImageCreate, GetCategoriesLevelWise, \
     BaseProductList, BaseProductDetail, BaseProductImageCreate, AmenitiesList, ProductList, ProductDetail, \
     GetProductsByCategory, GetSpecificCategoriesLevelWise, CategoryImageDelete, BaseProductImageDelete, \
-    SearchProducts, SellerProductList, SellerProductDetail, GetSellerProductList
+    SearchProducts, SellerProductList, SellerProductDetail, GetSellerProductList, ProductNetPrice, ProductSellerMapper, \
+    ProductSellerStatus, ProductQuantity
 
 
 urlpatterns = [
@@ -28,9 +29,17 @@ urlpatterns = [
     path('product/seller/<int:pk>/', SellerProductDetail.as_view()),
     path('product/seller/', SellerProductList.as_view()),
     path('product/seller/<str:seller>', GetSellerProductList.as_view()),
+    # path('product/<int:pk>/',ProductSellerMapper.as_view()),
+    path('product/<int:seller_id>/<str:status>/',ProductSellerStatus.as_view()),
+
+    #url of net prices
+    path('product/net_price/', ProductNetPrice.as_view()),
+
+    #url of update product
+    path('product/quantity/<int:product_id>/', ProductQuantity.as_view()),
 
     re_path('^product/category/(?P<slug>[-\w]+)/$', GetProductsByCategory.as_view()),
-    re_path('^product/(?P<slug>[-\w]+)/$', ProductDetail.as_view()),
+    re_path('^product/(?P<id>[-\w]+)/$', ProductDetail.as_view()),
 
     # urls for base products
     path('base_product/', BaseProductList.as_view()),
