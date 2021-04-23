@@ -18,7 +18,7 @@ class IssueList(ListCreateAPIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Issued inserted successfully", "issue id": serializer.data['id']},
+            return Response({"message": "Issue inserted successfully", "issue id": serializer.data['id']},
                             status=status.HTTP_200_OK)
         else:
             return Response({"message": "Issue not inserted", "error": serializer.errors},
@@ -35,6 +35,18 @@ class IssueDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
 
+    def put(self, request,pk):
+        try:
+            issue = Issue.objects.get(id=pk)
+        except:
+            return Response({"error": "Issue doesn't exist"},status=status.HTTP_404_NOT_FOUND)
+        request.data['user_id'] = request.user.id
+        serializer = self.serializer_class(issue, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class EditIssue(APIView):
     serializer_class = EditIssueSerializer
