@@ -4,7 +4,7 @@ from django.db import models
 from .validators import checkCouponId, checkProductId
 from .constants import BookingStatus, PayStatus, EntityType, IdProofType
 from datetime import datetime, date, timedelta
-from .helpers import get_user_model, image_upload_to_user_id_proof, check_in_images, check_out_images
+from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, image_upload_to_check_out
 from django.db.models import Count
 
 
@@ -17,81 +17,40 @@ class BookingsManager(models.Manager):
 
     def received_bookings(self, from_date, to_date, entity_filter, entity_id):
         return self.filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
-                    & Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id))) \
-                    .aggregate(count=Count('booking_id'))['count']
+                             & Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)))
 
-    def ongoing_bookings(self, from_date, to_date, entity_filter, entity_id):
+    def ongoing_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
-                    & Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__gt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
+        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
+                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__gt=today_date))
 
-    def pending_bookings(self, from_date, to_date, entity_filter, entity_id):
+    def pending_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
-                    & Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
+        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
+                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__gt=today_date))
 
-    def cancelled_bookings(self, from_date, to_date, entity_filter, entity_id):
-        return self.filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
-                    & Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.cancelled.value)) \
-                    .aggregate(count=Count('booking_id'))['count']
-
-    def customer_take_aways_bookings(self, from_date, to_date, entity_filter, entity_id):
+    def customer_take_aways_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
-                    & Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
+        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
+                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lt=today_date))
 
-    def return_bookings(self, from_date, to_date, entity_filter, entity_id):
+    def return_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
-                    & Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
+        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
+                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lt=today_date))
 
     def total_received_bookings(self, entity_filter, entity_id):
-        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id))) \
-                    .aggregate(count=Count('booking_id'))['count']
-
-    def total_ongoing_bookings(self, entity_filter, entity_id):
-        today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__gt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
-
-    def total_pending_bookings(self, entity_filter, entity_id):
-        today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
+        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)))
 
     def total_cancelled_bookings(self, entity_filter, entity_id):
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.cancelled.value)) \
-                    .aggregate(count=Count('booking_id'))['count']
-
-    def total_customer_take_aways_bookings(self, entity_filter, entity_id):
-        today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
-
-    def total_return_bookings(self, entity_filter, entity_id):
-        today_date = date.today() + timedelta(1)
-        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                    & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lt=today_date)) \
-                    .aggregate(count=Count('booking_id'))['count']
+                           & Q(booking_status=BookingStatus.cancelled.value))
 
 
 class Bookings(models.Model):
     user_model = get_user_model()
     user = models.ForeignKey(user_model, on_delete=models.CASCADE)
-    coupon = models.CharField(max_length=36, validators=[checkCouponId], verbose_name="Coupon Id")
+    coupon = models.CharField(max_length=36, verbose_name="Coupon Id")
     booking_id = models.CharField(max_length=36, primary_key=True, default=getId, verbose_name="Booking Id")
     booking_date = models.DateTimeField(default=datetime.now)
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -116,8 +75,7 @@ class Bookings(models.Model):
 
 
 class BookedProducts(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, default=getId)
-    booking = models.ForeignKey('Bookings', on_delete=models.CASCADE, verbose_name="Booking Id")
+    booking = models.ForeignKey('Bookings', on_delete=models.CASCADE, verbose_name="Booking")
     product_id = models.CharField(max_length=36, verbose_name="Product Id")
     quantity = models.IntegerField()
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -134,6 +92,14 @@ class BookedProducts(models.Model):
         return "Ordered Product Nº{0}, Nº{1}".format(self.id, self.product_id)
 
 
+class CheckInDetailsManager(models.Manager):
+    def customer_taken(self, from_date, to_date, entity_filter, entity_id):
+        return self.select_related('booking') \
+            .filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id) \
+            & Q(booking__booking_status=BookingStatus.pending.value) \
+            & Q(check_in__gt=from_date) & Q(check_in__lt=to_date)))
+
+
 class CheckInDetails(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=getId)
     booking = models.ForeignKey('Bookings', on_delete=models.CASCADE)
@@ -145,8 +111,18 @@ class CheckInDetails(models.Model):
                                      default=IdProofType.aadhar_card.value)
     id_image = models.ImageField(upload_to=image_upload_to_user_id_proof)
 
+    objects = CheckInDetailsManager()
+
     def __str__(self):
         return str(self.booking)
+
+
+class CheckOutDetailsManager(models.Manager):
+    def returned_bookings(self, from_date, to_date, entity_filter, entity_id):
+        return self.select_related('booking') \
+            .filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id) \
+            & Q(booking__booking_status=BookingStatus.ongoing.value) \
+            & Q(check_out__gt=from_date) & Q(check_out__lt=to_date)))
 
 
 class CheckOutDetails(models.Model):
@@ -156,14 +132,26 @@ class CheckOutDetails(models.Model):
     caution_deposit_deductions = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     reason_for_deduction = models.CharField(max_length=10000, default='')
 
+    objects = CheckOutDetailsManager()
+
     def __str__(self):
         return str(self.booking)
+
+
+class CancelledDetailsManager(models.Manager):
+    def cancelled_bookings(self, from_date, to_date, entity_filter, entity_id):
+        return self.select_related('booking') \
+                .filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id) \
+                & Q(booking__booking_status=BookingStatus.cancelled.value)\
+                & Q(cancelled_time__gt=from_date) & Q(cancelled_time__lt=to_date)))
 
 
 class CancelledDetails(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=getId)
     booking = models.ForeignKey('Bookings', on_delete=models.CASCADE)
     cancelled_time = models.DateTimeField(default=datetime.now)
+
+    objects = CancelledDetailsManager()
 
     def __str__(self):
         return str(self.booking)
@@ -172,13 +160,13 @@ class CancelledDetails(models.Model):
 class CheckInImages(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=getId)
     check_in = models.ForeignKey('CheckInDetails', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=check_in_images)
+    image = models.ImageField(upload_to=image_upload_to_check_in)
 
 
 class CheckOutImages(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=getId)
     check_out = models.ForeignKey('CheckOutDetails', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=check_out_images)
+    image = models.ImageField(upload_to=image_upload_to_check_out)
 
 
 class BusinessClientReportOnCustomer(models.Model):

@@ -1,5 +1,5 @@
 from django.db import models
-from .helpers import image_upload_to_category, iconUrlImage
+from .helpers import uploadImageToCategoryIcons, iconUrlImage
 
 
 class Category(models.Model):
@@ -15,7 +15,7 @@ class Category(models.Model):
 
 class CategoryImage(models.Model):
     category = models.ForeignKey("Category", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_category)
+    image = models.ImageField(upload_to=uploadImageToCategoryIcons)
     order = models.IntegerField()
 
     class Meta:

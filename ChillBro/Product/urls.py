@@ -2,7 +2,7 @@ from django.urls import path, re_path
 from .views import CategoryList, CategoryDetail, CategoryImageCreate, GetCategoriesLevelWise, \
     BaseProductList, BaseProductDetail, BaseProductImageCreate, AmenitiesList, ProductList, ProductDetail, \
     GetProductsByCategory, GetSpecificCategoriesLevelWise, CategoryImageDelete, BaseProductImageDelete, \
-    SearchProducts, SellerProductList, SellerProductDetail, GetSellerProductList, CategoryTopeLevelList
+    SearchProducts, SellerProductList, SellerProductDetail, GetSellerProductList, CategoryTopLevelList
 
 
 urlpatterns = [
@@ -14,7 +14,7 @@ urlpatterns = [
     path('category/image/<int:pk>/', CategoryImageDelete.as_view()),
     path('category/level_wise/', GetCategoriesLevelWise.as_view()),
     re_path('^category/level_wise/(?P<slug>[-\w]+)/$', GetSpecificCategoriesLevelWise.as_view()),
-    path('category/top_level/',CategoryTopeLevelList.as_view()),
+    path('category/top_level/',CategoryTopLevelList.as_view()),
 
     # urls for all products
     path('product/', ProductList.as_view()),

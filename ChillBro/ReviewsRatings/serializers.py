@@ -10,9 +10,14 @@ class ReviewsRatingsSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         object = ReviewsRatings(
-            related_id = validated_data['related_id'],
-            comment = validated_data['comment'],
+            related_id=validated_data['related_id'],
+            comment=validated_data['comment'],
             rating=validated_data['rating'],
-            reviewed_by = validated_data['reviewed_by']
+            reviewed_by=validated_data['reviewed_by']
         )
         return object.save()
+
+
+class CustomerReviewSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(required=True)
+    comment = serializers.CharField(required=True)

@@ -15,12 +15,5 @@ class CategoryImageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CategoryResponseSerializer(serializers.Serializer):
-    name = serializers.CharField(required=True)
-    description = serializers.CharField(required=True)
-    icon_url = serializers.CharField(required=True)
 
-
-class CategoryTopLevelListSerializer(serializers.Serializer):
-    all_levels = CategoryResponseSerializer(many=True)
 

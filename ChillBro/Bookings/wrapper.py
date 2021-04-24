@@ -1,5 +1,6 @@
 from ReviewsRatings.exportapi import *
 from Payments.models import *
+from Payments.exportapi import *
 
 
 def getProductData(product_id_list):
@@ -36,14 +37,22 @@ def getTotalQuantityOfProduct(product_id):
 
 def businessClientReviewOnCustomer(review, rating, booking_id, user):
     data = {'related_id': booking_id, 'comment': review, 'rating': int(rating), 'reviewed_by': user}
-    print(data)
-    print('wrapper')
     return insertRating(data)
 
 
 def getTransactionDetailsByBookingId(booking_id):
-    return TransactionDetails.objects.get(booking_id=booking_id)
+    return transactionDetailsByBookingId(booking_id)
 
 
 def getTransactionDetails():
     return TransactionDetails.objects.all()
+
+
+def getReviewByBookingId(booking_id):
+    return ReviewByBookingId(booking_id)
+
+
+def getProductsDetails(product_ids):
+    return { "df8966f9-f6ce-4a46-9a00-80ac3988f818": {'name': 'xyz', 'type': 'type'},
+             "df8966f9-f6ce-4a46-9a00-80ac3988f819": {'name': 'xyz', 'type': 'type'},
+             "df8966f9-f6ce-4a46-9a00-80ac3988f820": {'name': 'xyz', 'type': 'type'}}

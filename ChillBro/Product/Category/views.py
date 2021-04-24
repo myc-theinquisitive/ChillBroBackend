@@ -3,7 +3,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from .models import Category, CategoryImage
 from rest_framework.response import Response
-from .serializers import CategorySerializer, CategoryImageSerializer, CategoryTopLevelListSerializer
+from .serializers import CategorySerializer, CategoryImageSerializer
 from rest_framework.views import APIView
 from collections import defaultdict
 
@@ -32,14 +32,10 @@ class CategoryImageDelete(generics.DestroyAPIView):
     serializer_class = CategoryImageSerializer
 
 
-class CategoryTopeLevelList(generics.ListAPIView):
+class CategoryTopLevelList(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
-
-    def get(self, request, *args, **kwargs):
-        top_level = Category.objects.filter(parent_category=None)
-        data = {'all_levels':top_level}
-        serializer = CategoryTopLevelListSerializer(data)
-        return Response(serializer.data,200)
+    queryset = Category.objects.filter(parent_category=None)
+    serializer_class = CategorySerializer
 
 
 def convert_category_to_dict(category):
