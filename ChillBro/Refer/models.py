@@ -5,7 +5,6 @@ import uuid
 # Create your models here.
 
 class ReferBusinessClient(models.Model):
-    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False,max_length=100)
     business_type = models.CharField(max_length=100)
     business_name = models.CharField(max_length=100)
     owner_name = models.CharField(max_length=100)

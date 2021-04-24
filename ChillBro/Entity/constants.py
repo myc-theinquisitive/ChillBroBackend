@@ -7,9 +7,9 @@ class Status(enum.Enum):
 
 
 class EntityTypes(enum.Enum):
-    Hotel = "Hotel"
-    Transport = "Transport"
-    Rental = "Rental"
+    HOTEL = "HOTEL"
+    TRANSPORT = "TRANSPORT"
+    RENTAL = "RENTAL"
 
 class Cities(enum.Enum):
    VSKP = "VISAKHAPATNAM"

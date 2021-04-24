@@ -1,4 +1,4 @@
-from .views import get_entity_ids
+from .views import get_entity_ids_for_business_client as entity_ids
 
-def get_entity_ids_of_business_client(business_client_id):
-    return get_entity_ids(business_client_id)
+def get_entity_ids_for_business_client(business_client_id):
+    return entity_ids(business_client_id)

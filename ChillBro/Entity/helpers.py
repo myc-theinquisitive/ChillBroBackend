@@ -7,26 +7,24 @@ def get_user_model():
     return settings.AUTH_USER_MODEL
 
 
-def image_upload(instance, filename, type):
-    name = instance.id
-    slug = slugify(name)
-    # basename, file_extension = filename.split(".")
+def upload_image_for_entity(instance, filename, type):
+    id = instance.id
     file_extension = filename.split(".")[-1]
-    new_filename = "%s-%s.%s" % (slug, str(uuid.uuid4()), file_extension)
-    return "static/images/entity/%s/%s/%s" % (type, slug, new_filename)
+    new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
+    return "static/images/entity/%s/%s/%s" % (type, id, new_filename)
 
 
-def image_upload_pan(instance, filename):
-    return image_upload(instance, filename, "pan")
+def upload_pan_image_for_entity(instance, filename):
+    return upload_image_for_entity(instance, filename, "pan")
 
 
-def image_upload_registration(instance, filename):
-    return image_upload(instance, filename, "registration")
+def upload_registration_image_for_entity(instance, filename):
+    return upload_image_for_entity(instance, filename, "registration")
 
 
-def image_upload_gst(instance, filename):
-    return image_upload(instance, filename, "gst")
+def upload_gst_image_for_entity(instance, filename):
+    return upload_image_for_entity(instance, filename, "gst")
 
 
-def image_upload_aadhar(instance, filename):
-    return image_upload(instance, filename, "aadhar")
+def upload_aadhar_image_for_entity(instance, filename):
+    return upload_image_for_entity(instance, filename, "aadhar")

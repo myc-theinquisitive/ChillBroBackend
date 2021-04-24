@@ -8,10 +8,10 @@ from .constants import Status
 import uuid
 
 class Issue(models.Model):
-    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False,max_length=100)
+    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False,max_length=36)
     user_id = models.CharField(max_length=100)
-    current_department = models.CharField(max_length=100, choices=[(department.name, department.value) for department in Departments], default=Departments.CUSTOMER_CARE.value)
-    current_employeeId = models.CharField(max_length=100, blank=True, null=True)
+    current_department = models.CharField(max_length=30, choices=[(department.name, department.value) for department in Departments], default=Departments.CUSTOMER_CARE.value)
+    current_employeeId = models.CharField(max_length=36, blank=True, null=True)
     issue_title = models.CharField(max_length=200)
     description = models.TextField()
     entity = models.CharField(max_length=30)

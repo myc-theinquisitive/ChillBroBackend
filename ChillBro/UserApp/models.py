@@ -3,7 +3,7 @@ from django.db import models
 from authentication.models import EmailUserManager, EmailAbstractUser
 from .validations import validate_phone
 from .constants import Roles
-from .helpers import image_upload
+from .helpers import upload_employee_image
 import uuid
 
 
@@ -29,6 +29,6 @@ class Employee(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False,max_length=100)
     entity_id = models.CharField(max_length=100)
     role = models.CharField(choices=[(role.name, role.value) for role in Roles],max_length=100)
-    image = models.ImageField(upload_to=image_upload)
+    image = models.ImageField(upload_to=upload_employee_image)
     is_active = models.BooleanField(default=True)
     user_id = models.ForeignKey('MyUser', on_delete=models.CASCADE)

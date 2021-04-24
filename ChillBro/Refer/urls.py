@@ -5,8 +5,8 @@ from .views import *
 
 urlpatterns = [
     path('business_client/',ReferBusinessClientList.as_view()),
-    path('business_client/<str:pk>/',ReferBusinessClientDetail.as_view())
-
+    path('business_client/<str:pk>/',ReferBusinessClientDetail.as_view()),
+    path('share_app/', ShareApp.as_view()),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

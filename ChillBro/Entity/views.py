@@ -4,65 +4,88 @@ from rest_framework import generics
 from .models import MyEntity, BusinessClientEntity
 from rest_framework.response import Response
 from rest_framework import status
-from django.http import  HttpResponse
-from .constants import SHARE_APP_MESSAGE
+from django.http import HttpResponse
+from .wrappers import post_address_data
+
 
 class EntityList(generics.ListCreateAPIView):
     queryset = MyEntity.objects.all()
     serializer_class = EntitySerializer
+
+    def post(self, request, *args, **kwargs):
+        if 'city' not in request.data or 'pincode' not in request.data:
+            return Response({"message": "City and Pincode are required"}, status=status.HTTP_400_BAD_REQUEST)
+        address_id = post_address_data(request.data['city'], request.data['pincode'])
+        if address_id:
+            request.data['address_id'] = address_id
+            serializer = self.serializer_class(data=request.data)
+            if serializer.is_valid():
+                instance = serializer.save()
+                entity_id = serializer.data['id']
+                request.data['entity_id'] = entity_id
+                request.data['business_client_id'] = request.user.id
+                business_client_entity_serializer = BusinessClientEntityList.serializer_class(data=request.data)
+                if business_client_entity_serializer.is_valid():
+                    business_client_entity_serializer.save()
+                    return Response({"message": "success"}, status=status.HTTP_200_OK)
+                else:
+                    instance.delete()
+                    return Response(business_client_entity_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"message": "City or Pincode is invalid"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = MyEntity.objects.all()
     serializer_class = EntitySerializer
 
+
 class EntityStatusAll(generics.GenericAPIView):
     serializer_class = EntityStatusSerializer
 
-    def put(self,request):
-        serializer =self.serializer_class(data=request.data)
+    def put(self, request):
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            queryset = MyEntity.objects.all()
+            entity_ids = BusinessClientEntity.objects.filter(business_client_id=request.user.id).values_list(
+                'entity_id', flat=True)
+            queryset = MyEntity.objects.filter(id__in=entity_ids)
             queryset.update(status=serializer.data['status'])
-            return Response({"Message":"Success"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "success"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class EntityStatus(generics.GenericAPIView):
     serializer_class = EntityStatusSerializer
 
-    def put(self, request,pk):
+    def put(self, request, pk):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             queryset = MyEntity.objects.get(id=pk)
-            queryset.status=serializer.data['status']
+            queryset.status = serializer.data['status']
             queryset.save()
-            return Response({"Message": "Success"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "success"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class BusinessClientEntityList(generics.CreateAPIView):
     queryset = BusinessClientEntity.objects.all()
     serializer_class = BusinessClientEntitySerializer
 
-class BusinessClientEntityDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = BusinessClientEntity.objects.all()
-    serializer_class = BusinessClientEntitySerializer
 
-class BusinessClientOutlets(generics.ListAPIView):
+class BusinessClientEntities(generics.ListAPIView):
     serializer_class = EntitySerializer
+    queryset = BusinessClientEntity.objects.all()
 
-    def get_queryset(self):
-        queryset = BusinessClientEntity.objects.filter(business_client_id=self.kwargs['bc_id'])
-        return queryset
+    def get(self, request, bc_id):
+        entity_ids = get_entity_ids_for_business_client(self.kwargs['bc_id'])
+        entities = MyEntity.objects.filter(id__in=entity_ids)
+        serializer = self.serializer_class(entities, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def get(self,request,bc_id):
-        entity_ids=self.get_queryset().values_list('entity_id',flat=True)
-        entities=MyEntity.objects.filter(id__in=entity_ids)
-        serializer=self.serializer_class(entities,many=True)
-        return Response(serializer.data)
 
-def ShareApp(request):
-    return HttpResponse(SHARE_APP_MESSAGE)
-
-def get_entity_ids(business_client_id):
-    entity_ids=BusinessClientEntity.objects.filter(business_client_id=business_client_id).values_list('entity_id',flat=True)
+def get_entity_ids_for_business_client(business_client_id):
+    entity_ids = BusinessClientEntity.objects.filter(business_client_id=business_client_id).values_list('entity_id',
+                                                                                                        flat=True)
     return entity_ids

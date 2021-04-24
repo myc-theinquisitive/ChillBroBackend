@@ -22,7 +22,7 @@ class BusinessClientAdd(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            request.data._mutable = True
+            # request.data._mutable = True
             request.data['is_verified'] = True
             user_serializer = MyUserList.serializer_class(data=request.data)
             if user_serializer.is_valid():
@@ -98,7 +98,7 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         business_client = Employee.objects.filter(id=self.kwargs['pk']). \
-            values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'entity', 'role', 'is_active', 'image')[0]
+            values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'entity_id', 'role', 'is_active', 'image')[0]
         return Response(business_client)
 
 
