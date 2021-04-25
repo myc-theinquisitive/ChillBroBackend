@@ -17,11 +17,8 @@ class BookedProductsSerializer(serializers.ModelSerializer):
         new_products = []
         for product in validated_data:
             add_booking_product = BookedProducts(
-                booking_id=product["booking_id"],
+                booking=product["booking"],
                 product_id=product["product_id"],
-                entity_id=product["entity_id"],
-                start_time=product["start_time"],
-                end_time=product["end_time"],
                 product_value=product["product_value"],
                 quantity=product["quantity"]
             )
@@ -29,33 +26,182 @@ class BookedProductsSerializer(serializers.ModelSerializer):
         return BookedProducts.objects.bulk_create(new_products)
 
 
-class BookingIdSerializer(serializers.Serializer):
+class CheckInDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckInDetails
+        fields = '__all__'
+
+
+class CheckOutDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckOutDetails
+        fields = '__all__'
+
+
+class CancelledDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CancelledDetails
+        fields = '__all__'
+
+    def create(self, booking):
+        return CancelledDetails.objects.create(booking=booking)
+
+
+class CheckInImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckInImages
+        fields = '__all__'
+
+    def bulk_create(self, images):
+        all_images = []
+        for image in images:
+            each_image = CheckInImages(
+                check_in=image['check_in'],
+                image=image['image']
+            )
+            all_images.append(each_image)
+        return CheckInImages.objects.bulk_create(all_images)
+
+
+class CheckOutImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckOutImages
+        fields = '__all__'
+
+    def bulk_create(self, images):
+        all_images = []
+        for image in images:
+            each_image = CheckOutImages(
+                check_out=image['check_out'],
+                image=image['image']
+            )
+            all_images.append(each_image)
+        return CheckOutImages.objects.bulk_create(all_images)
+
+
+class ReportCustomerForBooking(serializers.ModelSerializer):
+    class Meta:
+        model = BusinessClientReportOnCustomer
+        fields = '__all__'
+
+    def create(self, validated_data):
+        object = BusinessClientReportOnCustomer(
+            booking=validated_data['booking'],
+            reasons_selected=validated_data['reasons_selected'],
+            additional_info=validated_data['additional_info']
+        )
+        return object.save()
+
+
+class ReportCustomerResonsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportCustomerResons
+        fields = '__all__'
+
+
+class CancelBookingSerializer(serializers.Serializer):
     booking_id = serializers.CharField(min_length=36, max_length=36)
 
 
-class NewProductSerializer(serializers.Serializer):
-    product_id = serializers.CharField(required=True,min_length=36, max_length=36)
-    entity_id = serializers.CharField(required=True,min_length=36, max_length=36)
-    start_time = serializers.DateTimeField(required=True)
-    end_time = serializers.DateTimeField(required=True)
+class UpdateBookingIdSerializer(serializers.Serializer):
+    booking_id = serializers.CharField(min_length=36, max_length=36)
+    booking_status = serializers.CharField(required=True)
+
+
+class BookedProductSerializer(serializers.Serializer):
+    product_id = serializers.CharField(required=True, min_length=36, max_length=36)
     quantity = serializers.IntegerField(required=True)
 
 
 class NewBookingSerializer(serializers.Serializer):
-    coupon = serializers.CharField(required=True,min_length=36, max_length=36)
-    products = NewProductSerializer(many=True)
+    coupon = serializers.CharField(required=True, min_length=36, max_length=36)
+    products = BookedProductSerializer(many=True)
     entity_type = serializers.CharField(required=True)
-    payment_status = serializers.CharField(required=True)
+    entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    start_time = serializers.DateTimeField(required=True)
+    end_time = serializers.DateTimeField(required=True)
+
+
+class CustomDatesSerializer(serializers.Serializer):
+    from_date = serializers.DateTimeField(required=True)
+    to_date = serializers.DateTimeField(required=True)
 
 
 class StatisticsSerializer(serializers.Serializer):
-    booking_filter = serializers.CharField(required=True)
-    entity_type = serializers.CharField(required=False)
+    date_filter = serializers.CharField(required=True)
+    entity_filter = serializers.ListField(
+        child=serializers.CharField()
+    )
+    entity_id = serializers.ListField(
+        child=serializers.CharField(min_length=36, max_length=36)
+    )
+    custom_dates = CustomDatesSerializer(required=False)
 
-class OrderDetailsSerializer(serializers.Serializer):
-    booking_filter = serializers.CharField(required=True)
-    entity_type = serializers.CharField(required=False)
-    status = serializers.ListField(
+
+class GetBookingsStatisticsDetailsSerializer(StatisticsSerializer):
+    statistics_details_type = serializers.CharField(required=True)
+
+
+class StatisticsDetailsSerializer(serializers.Serializer):
+    user = serializers.CharField(required=True)
+    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    booking_date = serializers.DateTimeField(required=True)
+    total_money = serializers.DecimalField(decimal_places=2, max_digits=20, required=True)
+    start_time = serializers.DateTimeField(required=True)
+    end_time = serializers.DateTimeField(required=True)
+    coupon = serializers.DateTimeField(required=True)
+
+
+class CancelProductStatusSerializer(serializers.Serializer):
+    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    product_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    product_status = serializers.CharField(required=True)
+
+
+class UserSerializer(serializers.Serializer):
+    name = serializers.CharField(required=True)
+    contact_number = serializers.CharField(required=True)
+    email = serializers.CharField(required=True)
+
+
+class GetSpecificBookingDetailsSerializer(serializers.Serializer):
+    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    booking_date = serializers.DateTimeField(required=True)
+    total_money = serializers.DecimalField(decimal_places=2, max_digits=20)
+    booking_status = serializers.CharField(required=True)
+    entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    start_time = serializers.DateTimeField(required=True)
+    end_time = serializers.DateTimeField(required=True)
+    products = BookedProductSerializer(many=True)
+    User_Details = UserSerializer()
+
+
+class GetBookingDetailsViewSerializer(serializers.Serializer):
+    date_filter = serializers.CharField(required=True)
+    category_filter = serializers.ListField(
+        child=serializers.CharField()
+    )
+    status_filter = serializers.ListField(
+        child=serializers.CharField()
+    )
+    entity_id = serializers.ListField(
         child=serializers.CharField()
     )
 
+
+class BookingStartSerializer(serializers.Serializer):
+    booking_id = serializers.CharField(min_length=36, max_length=36)
+    id_proof_type = serializers.CharField(required=True)
+    id_image = serializers.FileField(required=True)
+    other_images = serializers.ListField(
+        child=serializers.FileField()
+    )
+
+
+class BookingEndSerializer(serializers.Serializer):
+    booking_id = serializers.CharField(min_length=36, max_length=36)
+    caution_deposit_deductions = serializers.CharField()
+    rating = serializers.CharField()
+    product_images = serializers.ListField(
+        child=serializers.FileField()
+    )

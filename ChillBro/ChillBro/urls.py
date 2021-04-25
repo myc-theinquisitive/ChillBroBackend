@@ -24,6 +24,8 @@ urlpatterns = [
     path('issues/', include('Issues.urls')),
     path('address/', include('Address.urls')),
     path('bookings/', include('Bookings.urls')),
+    path('review/',include('ReviewsRatings.urls')),
+    path('payments/',include('Payments.urls')),
     path('user/',include('UserApp.urls')),
     path('entity/',include('Entity.urls')),
     path('refer/',include('Refer.urls')),

@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'Product',
     'taggit',
     'kvstore',
+    'Payments',
+    'ReviewsRatings',
     'Refer',
 ]
 
@@ -73,7 +75,7 @@ ROOT_URLCONF = 'ChillBro.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

@@ -1,3 +1,8 @@
+from ReviewsRatings.exportapi import *
+from Payments.models import *
+from Payments.exportapi import *
+
+
 def getProductData(product_id_list):
     # here have to wirte orm query to fetch the product details having products_id in product_id_list
     products = {'df8966f9-f6ce-4a46-9a00-80ac3988f818': {'price': 100.0},
@@ -6,8 +11,6 @@ def getProductData(product_id_list):
     if len(products) == 0:
         return None
     return products
-
-
 
 
 def getIndividualProductValue(product_ids):
@@ -26,3 +29,34 @@ def getCoupons(coupon_id):
     if coupon_id in coupons:
         return coupon_id
     return None
+
+
+def getTotalQuantityOfProduct(product_id):
+    return 30
+
+
+def businessClientReviewOnCustomer(review, rating, booking_id, user):
+    data = {'related_id': booking_id, 'comment': review, 'rating': int(rating), 'reviewed_by': user}
+    return insertRating(data)
+
+
+def getTransactionDetailsByBookingId(booking_id):
+    return transactionDetailsByBookingId(booking_id)
+
+
+def getTransactionDetails():
+    return TransactionDetails.objects.all()
+
+
+def getReviewByBookingId(booking_id):
+    return ReviewByBookingId(booking_id)
+
+
+def getProductsDetails(product_ids):
+    return { "df8966f9-f6ce-4a46-9a00-80ac3988f818": {'name': 'xyz', 'type': 'type'},
+             "df8966f9-f6ce-4a46-9a00-80ac3988f819": {'name': 'xyz', 'type': 'type'},
+             "df8966f9-f6ce-4a46-9a00-80ac3988f820": {'name': 'xyz', 'type': 'type'}}
+
+
+def createTransaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date):
+    return newTransaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date)

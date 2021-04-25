@@ -14,3 +14,6 @@ class CategoryImageSerializer(serializers.ModelSerializer):
         model = CategoryImage
         fields = '__all__'
 
+
+
+

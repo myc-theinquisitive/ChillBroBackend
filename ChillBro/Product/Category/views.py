@@ -32,6 +32,12 @@ class CategoryImageDelete(generics.DestroyAPIView):
     serializer_class = CategoryImageSerializer
 
 
+class CategoryTopLevelList(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = Category.objects.filter(parent_category=None)
+    serializer_class = CategorySerializer
+
+
 def convert_category_to_dict(category):
     return {
         "id": category.id,
@@ -41,6 +47,8 @@ def convert_category_to_dict(category):
         "sub_categories": [],
         "images": []
     }
+
+
 
 
 def recursive_category_grouping(group_categories_by_parent_id, group_images_by_category_id,
