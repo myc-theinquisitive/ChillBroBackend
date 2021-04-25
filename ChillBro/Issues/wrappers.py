@@ -1,16 +1,8 @@
-import enum
-
-
-class Departments(enum.Enum):
-    CUSTOMER_CARE = "CUSTOMER_CARE"
-    FINANCE = "FINANCE"
-
-
-def productExists(product_id):
+def is_product_id_valid(product_id):
     # check condition and return True or False
     return True
 
 
-def orderExists(order_id):
+def is_order_id_valid(order_id):
     # check condition and return True or False
     return True

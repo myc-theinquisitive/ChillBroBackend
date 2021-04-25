@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'kvstore',
     'Payments',
     'ReviewsRatings',
+    'Refer',
 ]
 
 

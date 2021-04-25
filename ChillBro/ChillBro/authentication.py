@@ -1,5 +1,4 @@
 from rest_framework.authtoken.models import Token
-from django.contrib.auth.models import User
 from rest_framework import authentication
 from rest_framework import exceptions
 import jwt
@@ -20,4 +19,4 @@ class JWTAuthentication(authentication.BaseAuthentication):
         except Exception as e:
             raise exceptions.AuthenticationFailed('Invalid Token')
         
-        return (token_object.user,None)
+        return token_object.user, None
