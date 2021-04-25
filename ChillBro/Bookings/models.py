@@ -22,17 +22,17 @@ class BookingsManager(models.Manager):
     def ongoing_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__gte=today_date))
+                           & Q(booking_status=BookingStatus.ongoing.value))
 
     def pending_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__gte=today_date))
+                           & Q(booking_status=BookingStatus.pending.value))
 
-    def customer_taken_bookings(self, entity_filter, entity_id):
+    def customer_take_aways_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                           & Q(booking_status=BookingStatus.ongoing.value) & Q(start_time__lte=today_date))
+                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lte=today_date))
 
     def customer_yet_to_take(self, from_date, to_date, entity_filter, entity_id):
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
@@ -104,6 +104,11 @@ class CheckInDetailsManager(models.Manager):
             .filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id) \
             & Q(booking__booking_status=BookingStatus.ongoing.value) \
             & Q(check_in__gt=from_date) & Q(check_in__lt=to_date)))
+
+    def total_customer_taken_bookings(self, entity_filter, entity_id):
+        return self.select_related('booking') \
+            .filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id) \
+            & Q(booking__booking_status=BookingStatus.ongoing.value)))
 
 
 class CheckInDetails(models.Model):
