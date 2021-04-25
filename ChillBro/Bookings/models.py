@@ -29,16 +29,16 @@ class BookingsManager(models.Manager):
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
                            & Q(booking_status=BookingStatus.pending.value))
 
-    def customer_take_aways_bookings(self, entity_filter, entity_id):
+    def total_customer_yet_to_take_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
                            & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lte=today_date))
 
-    def customer_yet_to_take(self, from_date, to_date, entity_filter, entity_id):
+    def customer_yet_to_take_bookings(self, from_date, to_date, entity_filter, entity_id):
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
                            & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lte=to_date))
 
-    def return_bookings(self, entity_filter, entity_id):
+    def total_return_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
                            & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lte=today_date))
