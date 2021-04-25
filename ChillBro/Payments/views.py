@@ -27,16 +27,14 @@ class GetPaymentsDetailsOfEachEntityView(generics.RetrieveAPIView):
             from_date, to_date = request.data['custom_dates']['from'], request.data['custom_dates']['to']
         else:
             from_date, to_date = getTimePeriod(date_filter)
-        transactions = TransactionDetails.objects.all()
+        transactions = TransactionDetails.objects.filter(entity_id = kwargs['entity_id'])
         entity_id = kwargs['entity_id']
         bookings = getBookingDetails(entity_id, from_date, to_date, entity_filter, status)
-        print(bookings)
         if len(bookings) == 0:
             return Response({"message": "invalid entity id or no bookings"}, 400)
         bookings_data ={}
         for each_booking in bookings:
             bookings_data[each_booking['booking_id']] = each_booking
-        print(bookings_data)
         all_bookings = []
         for each_transaction in transactions:
             each_booking_list = {'booking_id': str(each_transaction.booking_id),
