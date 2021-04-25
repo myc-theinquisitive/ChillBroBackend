@@ -47,10 +47,9 @@ INSTALLED_APPS = [
     'Address',
     'Bookings',
     'Product',
-    'Notifications',
-    'fcm_django',
     'taggit',
     'kvstore',
+    'Refer',
 ]
 
 

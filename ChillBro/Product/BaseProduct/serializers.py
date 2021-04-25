@@ -22,7 +22,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
         product = Product.objects.create(
             name=validated_data["name"], description=validated_data["description"],
-            type=validated_data["type"], category_id=validated_data["category"], price=validated_data["price"],
+            type=validated_data["type"], category=validated_data["category"], price=validated_data["price"],
             discounted_price=validated_data["discounted_price"], featured=validated_data["featured"],
             active=validated_data["active"])
 
@@ -61,3 +61,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = '__all__'
+
+class ProductQuantitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['quantity']

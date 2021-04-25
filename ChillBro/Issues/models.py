@@ -5,12 +5,13 @@ from .helpers import image_upload_to_issue
 from .validators import checkProductId, checkOrderId
 from .wrappers import Departments
 from .constants import Status
-
+import uuid
 
 class Issue(models.Model):
+    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False,max_length=36)
     user_id = models.CharField(max_length=100)
-    current_department = models.CharField(max_length=100, choices=[(department.name, department.value) for department in Departments], default=Departments.CUSTOMER_CARE.value)
-    current_employeeId = models.CharField(max_length=100, blank=True, null=True)
+    current_department = models.CharField(max_length=30, choices=[(department.name, department.value) for department in Departments], default=Departments.CUSTOMER_CARE.value)
+    current_employeeId = models.CharField(max_length=36, blank=True, null=True)
     issue_title = models.CharField(max_length=200)
     description = models.TextField()
     entity = models.CharField(max_length=30)
@@ -28,6 +29,7 @@ class Issue(models.Model):
 class IssueImage(models.Model):
     issue_id = models.ForeignKey("Issue", on_delete=models.CASCADE)
     image = models.ImageField(upload_to=image_upload_to_issue)
+    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False,max_length=100)
 
     def __str__(self):
         return "Issue Image - {0}".format(self.id)
@@ -39,3 +41,4 @@ class Transfer(models.Model):
     employee_comment = models.CharField(max_length=200)
     created_at = models.DateTimeField(default=timezone.now)
     transferred_to = models.CharField(max_length=100, choices=[(department.name, department.value) for department in Departments])
+    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False,max_length=100)
