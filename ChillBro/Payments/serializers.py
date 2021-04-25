@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import *
 
 
-class TransactionDetailsSerializer(serializers.Serializer):
+class TransactionDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransactionDetails
         fields = '__all__'

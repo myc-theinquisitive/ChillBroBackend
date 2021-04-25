@@ -79,7 +79,7 @@ class CheckOutImagesSerializer(serializers.ModelSerializer):
         return CheckOutImages.objects.bulk_create(all_images)
 
 
-class ReportCustomerForBooking(serializers.Serializer):
+class ReportCustomerForBooking(serializers.ModelSerializer):
     class Meta:
         model = BusinessClientReportOnCustomer
         fields = '__all__'
@@ -93,11 +93,10 @@ class ReportCustomerForBooking(serializers.Serializer):
         return object.save()
 
 
-class BookingIdSerializer(serializers.Serializer):
-    booking_id = serializers.CharField(min_length=36, max_length=36)
-    product_status = serializers.ListField(
-        child=serializers.CharField()
-    )
+class ReportCustomerResonsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportCustomerResons
+        fields = '__all__'
 
 
 class CancelBookingSerializer(serializers.Serializer):
@@ -118,7 +117,6 @@ class NewBookingSerializer(serializers.Serializer):
     coupon = serializers.CharField(required=True, min_length=36, max_length=36)
     products = BookedProductSerializer(many=True)
     entity_type = serializers.CharField(required=True)
-    payment_status = serializers.CharField(required=True)
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
@@ -171,14 +169,11 @@ class GetSpecificBookingDetailsSerializer(serializers.Serializer):
     booking_date = serializers.DateTimeField(required=True)
     total_money = serializers.DecimalField(decimal_places=2, max_digits=20)
     booking_status = serializers.CharField(required=True)
-    payment_status = serializers.CharField(required=True)
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     products = BookedProductSerializer(many=True)
     User_Details = UserSerializer()
-    # transaction_details = TransactionSerializer(required=False)
-    # customer_review = CustomerReviewSerializer(required=False)
 
 
 class GetBookingDetailsViewSerializer(serializers.Serializer):

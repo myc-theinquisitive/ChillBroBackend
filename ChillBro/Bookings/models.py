@@ -22,22 +22,30 @@ class BookingsManager(models.Manager):
     def ongoing_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__gt=today_date))
+                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__gte=today_date))
 
     def pending_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__gt=today_date))
+                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__gte=today_date))
 
-    def customer_take_aways_bookings(self, entity_filter, entity_id):
+    def customer_taken_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lt=today_date))
+                           & Q(booking_status=BookingStatus.ongoing.value) & Q(start_time__lte=today_date))
+
+    def customer_yet_to_take(self, from_date, to_date, entity_filter, entity_id):
+        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
+                           & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lte=to_date))
 
     def return_bookings(self, entity_filter, entity_id):
         today_date = date.today() + timedelta(1)
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
-                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lt=today_date))
+                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lte=today_date))
+
+    def yet_to_return_bookings(self, from_date, to_date, entity_filter, entity_id):
+        return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)) \
+                           & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lte=to_date))
 
     def total_received_bookings(self, entity_filter, entity_id):
         return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_id)))
@@ -61,9 +69,7 @@ class Bookings(models.Model):
                                       choices=[(booking_status.value, booking_status.value) for booking_status in
                                                BookingStatus],
                                       default=BookingStatus.pending.value)
-    payment_status = models.CharField(max_length=30,
-                                      choices=[(pay_status.value, pay_status.value) for pay_status in PayStatus],
-                                      default=PayStatus.pending.value)
+
     entity_id = models.CharField(max_length=36)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
@@ -96,7 +102,7 @@ class CheckInDetailsManager(models.Manager):
     def customer_taken(self, from_date, to_date, entity_filter, entity_id):
         return self.select_related('booking') \
             .filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id) \
-            & Q(booking__booking_status=BookingStatus.pending.value) \
+            & Q(booking__booking_status=BookingStatus.ongoing.value) \
             & Q(check_in__gt=from_date) & Q(check_in__lt=to_date)))
 
 
@@ -116,12 +122,15 @@ class CheckInDetails(models.Model):
     def __str__(self):
         return str(self.booking)
 
+    class Meta:
+        unique_together = ('booking','booking')
+
 
 class CheckOutDetailsManager(models.Manager):
     def returned_bookings(self, from_date, to_date, entity_filter, entity_id):
         return self.select_related('booking') \
             .filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id) \
-            & Q(booking__booking_status=BookingStatus.ongoing.value) \
+            & Q(booking__booking_status=BookingStatus.done.value) \
             & Q(check_out__gt=from_date) & Q(check_out__lt=to_date)))
 
 
@@ -136,6 +145,9 @@ class CheckOutDetails(models.Model):
 
     def __str__(self):
         return str(self.booking)
+
+    class Meta:
+        unique_together = ('booking','booking')
 
 
 class CancelledDetailsManager(models.Manager):
@@ -155,6 +167,9 @@ class CancelledDetails(models.Model):
 
     def __str__(self):
         return str(self.booking)
+
+    class Meta:
+        unique_together = ('booking','booking')
 
 
 class CheckInImages(models.Model):
@@ -177,3 +192,10 @@ class BusinessClientReportOnCustomer(models.Model):
 
     def __str__(self):
         return str(self.booking)
+
+
+class ReportCustomerResons(models.Model):
+    reason = models.CharField(max_length=1000)
+
+    def __str__(self):
+        return "Reason - {0}".format(self.id)

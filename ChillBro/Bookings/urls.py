@@ -5,6 +5,8 @@ from .RentalCalendar.views import*
 
 urlpatterns = [
 
+    path('create_report_customer_reson/', ReportCustomerResonsList.as_view()),
+    path('detail_report_customer_reason/<int:pk>/', ReportCustomerResonsDetails.as_view()),
     path('',CreateBooking.as_view()),
     path('user_bookings/',UserBookingsList.as_view()),
     path('cancel_booking/', CancelBookingView.as_view()),

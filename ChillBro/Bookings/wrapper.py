@@ -56,3 +56,7 @@ def getProductsDetails(product_ids):
     return { "df8966f9-f6ce-4a46-9a00-80ac3988f818": {'name': 'xyz', 'type': 'type'},
              "df8966f9-f6ce-4a46-9a00-80ac3988f819": {'name': 'xyz', 'type': 'type'},
              "df8966f9-f6ce-4a46-9a00-80ac3988f820": {'name': 'xyz', 'type': 'type'}}
+
+
+def createTransaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date):
+    return newTransaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date)

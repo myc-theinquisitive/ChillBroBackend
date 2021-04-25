@@ -71,11 +71,12 @@ def getTimePeriod(date_filter):
     elif date_filter == 'Week':
         today = date.today()
         week = today - timedelta(getTodayDay())
-        return week, today + timedelta(1)
+        return week, week + timedelta(7 - getTodayDay())
     elif date_filter == 'Month':
+        days_in_months = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
         today = date.today()
         month = today - timedelta(getTodayDate())
-        return month, today + timedelta(1)
+        return month, month + timedelta(days_in_months[today.month+1])
     return None, None
 
 

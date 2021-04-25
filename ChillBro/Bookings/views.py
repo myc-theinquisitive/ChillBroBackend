@@ -38,7 +38,7 @@ def render_to_pdf(template_src, context_dict={}):
 
 
 def get_total_bookings_of_product(product_id, start_time, end_time, is_cancelled=False):
-    return BookedProducts.objects.select_related('booking') \
+    bookings_count = BookedProducts.objects.select_related('booking') \
         .filter(product_id=product_id, is_cancelled=is_cancelled) \
         .filter(
         Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gt=start_time)) |
@@ -46,6 +46,9 @@ def get_total_bookings_of_product(product_id, start_time, end_time, is_cancelled
         Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gte=end_time)) |
         Q(Q(booking__start_time__gte=start_time) & Q(booking__end_time__lte=end_time))
     ).aggregate(sum=Sum('quantity'))['sum']
+    if bookings_count is None:
+        return 0
+    return bookings_count
 
 
 def valid_booking(products_list, start_time, end_time):
@@ -58,8 +61,6 @@ def valid_booking(products_list, start_time, end_time):
         if product['quantity'] <= 0:
             return "quantity is less than 0 ", product['product_id']
         previous_bookings = get_total_bookings_of_product(product['product_id'], start_time, end_time)
-        if previous_bookings is None:
-            previous_bookings = 0
         total_quantity = getTotalQuantityOfProduct(product['product_id'])
         if total_quantity - previous_bookings < product['quantity']:
             if total_quantity - previous_bookings == 0:
@@ -87,9 +88,7 @@ def getStatus(status):
 
 
 def changeBookingStatus(booking_id, status):
-    booking = Bookings.objects.get(booking_id=booking_id)
-    booking.booking_status = status
-    return booking.save()
+    return Bookings.objects.filter(booking_id=booking_id).update(booking_status=status)
 
 
 def dateFilters(request):
@@ -122,13 +121,17 @@ class CreateBooking(generics.ListCreateAPIView):
                 if is_valid is False:
                     return Response({"message": "Coupon is invalid"}, 400)
                 request.data['total_money'] = total_money - copoun_reducted_money
+                payment_status = request.data.pop('payment_status')
                 bookings_object = BookingsSerializer()
-                bookings_id = (bookings_object.create(request.data))
+                booking_id = (bookings_object.create(request.data))
                 for product in products_list:
-                    product['booking'] = bookings_id
+                    product['booking'] = booking_id
                     product["product_value"] = product_values[product['product_id']]['price']
                 booked_product_serializer_object = BookedProductsSerializer()
                 booked_product_serializer_object.bulk_create(products_list)
+                create_transaction = createTransaction(str(booking_id), request.data['entity_id'], \
+                                    request.data['entity_type'], request.data['total_money'], payment_status, \
+                                    booking_id.booking_date)
                 return Response("Success", 200)
             else:
                 return Response({product_id + " " + comment}, 400)
@@ -154,25 +157,14 @@ class CancelBookingView(generics.ListAPIView):
     def put(self, request, *args, **kwargs):
         input_serializer = CancelBookingSerializer(data=request.data)
         if input_serializer.is_valid():
-            try:
-                booking = Bookings.objects.get(booking_id=request.data['booking_id'])
-            except:
+            booking = Bookings.objects.filter(booking_id=request.data['booking_id'])
+            if len(booking) == 0:
                 return Response({"message": "Booking does'nt exist"}, 400)
             cancelled_serializer = CancelledDetailsSerializer()
-            cancelled_serializer.create(booking)
+            cancelled_serializer.create(booking[0])
             cancelProductStatus(request.data['booking_id'])
-            request.data['user'] = request.user.id
-            request.data['coupon'] = booking.coupon
-            request.data['booking_status'] = BookingStatus.cancelled.value
-            request.data['entity_id'] = booking.entity_id
-            request.data['start_time'] = booking.start_time
-            request.data['end_time'] = booking.end_time
-            serializer = self.serializer_class(booking, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, 200)
-            else:
-                return Response(serializer.errors, 400)
+            booking.update(booking_status=BookingStatus.cancelled.value)
+            return Response({"message": "success"},200)
         else:
             return Response(input_serializer.errors, 400)
 
@@ -199,13 +191,13 @@ class BookingsStatistics(generics.RetrieveAPIView):
                     .aggregate(count=Count('booking_id'))['count']
                 return_bookings = Bookings.objects.return_bookings(entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
-                return HttpResponse([{"received : ": str(received_bookings)
-                                     , "ongoing : ": str(ongoing_bookings)
-                                     , "pending : ": str(pending_bookings)
-                                     , "cancelled : ": str(cancelled_bookings)
-                                     , "current take away : ": str(customer_take_aways_bookings)
-                                     , "return bookings : ": str(return_bookings)}], 200)
-            if date_filter == 'Custom':
+                return HttpResponse([{"received : ": str(received_bookings),
+                                     "ongoing : ": str(ongoing_bookings),
+                                     "pending : ": str(pending_bookings),
+                                     "cancelled : ": str(cancelled_bookings),
+                                     "current take away : ": str(customer_take_aways_bookings),
+                                     "return bookings : ": str(return_bookings)}], 200)
+            elif date_filter == 'Custom':
                 from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
                 received_bookings = Bookings.objects.received_bookings(from_date, to_date, entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
@@ -218,12 +210,12 @@ class BookingsStatistics(generics.RetrieveAPIView):
                 returned_bookings = \
                     CheckOutDetails.objects.returned_bookings(from_date, to_date, entity_filter, entity_id) \
                         .aggregate(count=Count('booking_id'))['count']
-                return HttpResponse([{"received : ": str(received_bookings)
-                                     , "ongoing : ": str(-1)
-                                     , "pending : ": str(-1)
-                                     , "cancelled : ": str(cancelled_bookings)
-                                     , "current take away : ": str(customer_taken_bookings)
-                                     , "return bookings : ": str(returned_bookings)}], 200)
+                return HttpResponse([{"received : ": str(received_bookings),
+                                     "ongoing : ": str(-1),
+                                     "pending : ": str(-1),
+                                     "cancelled : ": str(cancelled_bookings),
+                                     "current take away : ": str(customer_taken_bookings),
+                                     "return bookings : ": str(returned_bookings)}], 200)
             else:
                 from_date, to_date = getTimePeriod(date_filter)
                 previous_from_date, previous_to_date = getPreviousTimePeriod(date_filter)
@@ -238,30 +230,41 @@ class BookingsStatistics(generics.RetrieveAPIView):
                     .aggregate(count=Count('booking_id'))['count']
             else:
                 ongoing_bookings = pending_bookings = -1
-            cancelled_bookings = \
-                CancelledDetails.objects.cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
+            cancelled_bookings = CancelledDetails.objects \
+                    .cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
-            customer_take_aways_bookings = \
-                CheckInDetails.objects.customer_taken(from_date, to_date, entity_filter, entity_id) \
+            if date_filter != 'Yesterday':
+                customer_take_aways_bookings = Bookings.objects \
+                    .customer_yet_to_take(from_date, to_date, entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
-            return_bookings = CheckOutDetails.objects.returned_bookings(from_date, to_date, entity_filter, entity_id) \
-                .aggregate(count=Count('booking_id'))['count']
-            previous_receiving_bookings = \
-                Bookings.objects.received_bookings(previous_from_date, previous_to_date, entity_filter, entity_id) \
+                return_bookings = Bookings.objects \
+                    .yet_to_return_bookings(from_date, to_date, entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
-            previous_cancelled_bookings = \
-                CancelledDetails.objects.cancelled_bookings(previous_from_date, previous_to_date, entity_filter,
-                                                            entity_id) \
+                customer_taken_bookings = CheckInDetails.objects \
+                    .customer_taken(from_date, to_date, entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
-            return HttpResponse([{"received": str(received_bookings)
-                                , "percentage_change": str((received_bookings - previous_receiving_bookings) / 100)}
-                                , {"ongoing": str(ongoing_bookings)}
-                                , {"pending": str(pending_bookings)}
-                                , {"cancelled": str(cancelled_bookings),
-                                   "percentage_change": str(
-                                       (cancelled_bookings - previous_cancelled_bookings) / 100)}
-                                , {"current_take_away": str(customer_take_aways_bookings)}
-                                , {"return_bookings": str(return_bookings)}], 200)
+                returned_bookings = CheckOutDetails.objects \
+                    .returned_bookings(from_date, to_date, entity_filter, entity_id) \
+                    .aggregate(count=Count('booking_id'))['count']
+
+            else:
+                customer_take_aways_bookings = return_bookings = customer_taken_bookings = returned_bookings = -1
+            previous_receiving_bookings = Bookings.objects \
+                    .received_bookings(previous_from_date, previous_to_date, entity_filter, entity_id) \
+                    .aggregate(count=Count('booking_id'))['count']
+            previous_cancelled_bookings = CancelledDetails.objects \
+                    .cancelled_bookings(previous_from_date, previous_to_date, entity_filter,entity_id) \
+                    .aggregate(count=Count('booking_id'))['count']
+            return HttpResponse([{"received": str(received_bookings),
+                                "percentage_change": str((received_bookings - previous_receiving_bookings) / 100)},
+                                {"ongoing": str(ongoing_bookings)},
+                                {"pending": str(pending_bookings)},
+                                {"cancelled": str(cancelled_bookings),
+                                "percentage_change": str((cancelled_bookings - previous_cancelled_bookings) / 100)},
+                                {"customer_take_away": str(customer_take_aways_bookings)},
+                                {"return_bookings": str(return_bookings)},
+                                {'customer_taken' : str(customer_taken_bookings)},
+                                {'returned_bookings' : str(returned_bookings)}], 200)
         else:
             return Response(input_serializer.errors, 400)
 
@@ -292,39 +295,38 @@ class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
                 serializer = StatisticsDetailsSerializer(bookings, many=True)
                 return Response(serializer.data, 200)
 
-            if date_filter == 'Custom':
+            elif date_filter == 'Custom':
                 from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
             else:
                 from_date, to_date = getTimePeriod(date_filter)
             if from_date is None and to_date is None:
                 return Response({"message": "Invalid Date Filter!!!"}, 400)
             else:
+                bookings = []
                 if date_filter == 'Today':
                     if statistics_details_type == 'ongoing_bookings':
                         bookings = Bookings.objects.ongoing_bookings(entity_filter, entity_id)
                     elif statistics_details_type == 'pending_bookings':
                         bookings = Bookings.objects.pending_bookings(entity_filter, entity_id)
-                    elif statistics_details_type == 'customer_take_aways':
-                        bookings = Bookings.objects.customer_take_aways_bookings(entity_filter, entity_id)
-                    elif statistics_details_type == 'return_bookings':
-                        bookings = Bookings.objects.return_bookings(entity_filter, entity_id)
-                else:
-                    bookings = []
-                    if statistics_details_type == 'customer_take_aways':
-                        customer_taken_bookings = CheckInDetails.objects \
-                            .customer_taken(from_date, to_date, entity_filter, entity_id)
-                        booking_ids = []
-                        for each_customer in customer_taken_bookings:
-                            booking_ids.append(each_customer.booking_id)
-                        bookings = getBookingDetails(booking_ids)
-                    elif statistics_details_type == 'return_bookings':
-                        returned_bookings = CheckOutDetails.objects \
-                            .returned_bookings(from_date, to_date, entity_filter, entity_id)
-                        booking_ids = []
-                        for each_returned_booking in returned_bookings:
-                            booking_ids.append(each_returned_booking.booking_id)
-                        bookings = getBookingDetails(booking_ids)
-                if statistics_details_type == 'received_bookings':
+                if statistics_details_type == 'customer_take_aways':
+                    bookings = Bookings.objects.customer_yet_to_take(from_date, to_date, entity_filter, entity_id)
+                elif statistics_details_type == 'return_bookings':
+                    bookings = Bookings.objects.yet_to_return_bookings(from_date, to_date, entity_filter, entity_id)
+                elif statistics_details_type == 'customer_taken':
+                    customer_taken_bookings = CheckInDetails.objects \
+                        .customer_taken(from_date, to_date, entity_filter, entity_id)
+                    booking_ids = []
+                    for each_customer in customer_taken_bookings:
+                        booking_ids.append(each_customer.booking_id)
+                    bookings = getBookingDetails(booking_ids)
+                elif statistics_details_type == 'returned_bookings':
+                    returned_bookings = CheckOutDetails.objects \
+                        .returned_bookings(from_date, to_date, entity_filter, entity_id)
+                    booking_ids = []
+                    for each_returned_booking in returned_bookings:
+                        booking_ids.append(each_returned_booking.booking_id)
+                    bookings = getBookingDetails(booking_ids)
+                elif statistics_details_type == 'received_bookings':
                     bookings = Bookings.objects.received_bookings(from_date, to_date, entity_filter, entity_id)
                 elif statistics_details_type == 'cancelled_bookings':
                     cancelled_bookings = CancelledDetails.objects \
@@ -508,9 +510,7 @@ class BookingEnd(generics.ListCreateAPIView):
                 images.append(all_product_images)
             product_image_serializer = CheckOutImagesSerializer()
             product_image_serializer.bulk_create(images)
-            booking = Bookings.objects.get(booking_id=data['booking_id'])
-            booking.booking_status = BookingStatus.done.value
-            booking.save()
+            change_booking_status = changeBookingStatus(data['booking_id'], BookingStatus.done.value)
             return Response("success", 200)
         else:
             return Response(input_serializer.errors, 400)
@@ -661,3 +661,15 @@ class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
             each_booking_details['products'] = booked_product_dict[str(each_booking_of_particular_product.booking)]
             get_bookings_details_of_product.append(each_booking_details)
         return Response(get_bookings_details_of_product, 200)
+
+
+class ReportCustomerResonsList(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = ReportCustomerResons.objects.all()
+    serializer_class = ReportCustomerResonsSerializer
+
+
+class ReportCustomerResonsDetails(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = ReportCustomerResons.objects.all()
+    serializer_class = ReportCustomerResonsSerializer
