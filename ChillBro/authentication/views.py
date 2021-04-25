@@ -5,7 +5,6 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
-from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework import status
@@ -13,12 +12,10 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.authentication import TokenAuthentication
-
 from .models import SignupCode, EmailChangeCode, PasswordResetCode, OTPCode
 from .models import send_multi_format_email
-from .serializers import SignupSerializer, LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, \
-    OTPResendSerializer, MailSignUpSerializer, PhoneSignUpSerializer
+from .serializers import LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, \
+    MailSignUpSerializer, PhoneSignUpSerializer
 from .serializers import PasswordResetSerializer
 from .serializers import PasswordResetVerifiedSerializer
 from .serializers import EmailChangeSerializer
@@ -30,7 +27,7 @@ from .wrapper import sendOTP
 
 
 class Signup(APIView):
-    permission_classes = (AllowAny)
+    permission_classes = (AllowAny, )
     mail_serializer_class = MailSignUpSerializer
     phone_serializer_class = PhoneSignUpSerializer
 

@@ -1,5 +1,4 @@
 import uuid
-from django.shortcuts import get_object_or_404
 
 
 def upload_employee_image(instance, filename):

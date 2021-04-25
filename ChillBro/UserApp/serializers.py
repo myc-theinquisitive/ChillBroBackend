@@ -41,7 +41,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
         model = Employee
         fields = "__all__"
 
+
 class EmployeeActiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
-        fields = ['id','is_active']
+        fields = ['id', 'is_active']

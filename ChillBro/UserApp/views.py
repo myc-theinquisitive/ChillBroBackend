@@ -1,14 +1,10 @@
-from .models import *
 from .serializers import *
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.http import HttpResponse
 from .wrapper import get_entity_ids_for_business_client
 
-
-# Create your views here.
 
 class MyUserList(generics.ListCreateAPIView):
     queryset = MyUser.objects.all()
@@ -22,13 +18,14 @@ class BusinessClientAdd(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            # request.data._mutable = True
             request.data['is_verified'] = True
             user_serializer = MyUserList.serializer_class(data=request.data)
             if user_serializer.is_valid():
                 user_instance = user_serializer.save()
-                user_id = user_serializer.data['id']
-                request.data['user_id'] = user_id
+                user_instance.set_password(request.data['password'])
+                user_instance.save()
+
+                request.data['user_id'] = user_instance.id
                 business_client_serializer = BusinessClientSerializer(data=request.data)
                 if business_client_serializer.is_valid():
                     business_client_serializer.save()
@@ -36,6 +33,7 @@ class BusinessClientAdd(APIView):
                 else:
                     user_instance.delete()
                     return Response(business_client_serializer.errors)
+
             else:
                 return Response(user_serializer.errors)
         else:
@@ -72,6 +70,8 @@ class EmployeeAdd(APIView):
             user_serializer = MyUserList.serializer_class(data=request.data)
             if user_serializer.is_valid():
                 user_instance = user_serializer.save()
+                user_instance.set_password(request.data['password'])
+                user_instance.save()
                 user_id = user_serializer.data['id']
                 request.data['user_id'] = user_id
                 employee_serializer = EmployeeSerializer(data=request.data)
@@ -116,3 +116,4 @@ class EntityBusinessClientEmployee(generics.ListAPIView):
 class EmployeeActive(generics.RetrieveUpdateAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeActiveSerializer
+
