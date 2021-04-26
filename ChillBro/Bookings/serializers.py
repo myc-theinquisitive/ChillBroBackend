@@ -155,7 +155,6 @@ class StatisticsDetailsSerializer(serializers.Serializer):
 class CancelProductStatusSerializer(serializers.Serializer):
     booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
-    product_status = serializers.CharField(required=True)
 
 
 class UserSerializer(serializers.Serializer):
@@ -205,3 +204,7 @@ class BookingEndSerializer(serializers.Serializer):
     product_images = serializers.ListField(
         child=serializers.FileField()
     )
+
+
+class ProductStatisticsSerializer(serializers.Serializer):
+    date = serializers.DateField(required=True)

@@ -359,20 +359,13 @@ class CancelProductStatusView(generics.ListAPIView):
     def put(self, request, *args, **kwargs):
         input_serializer = CancelProductStatusSerializer(data=request.data)
         if input_serializer.is_valid():
-            try:
-                booking_product = BookedProducts.objects \
-                    .get(booking=request.data['booking_id'], product_id=request.data['product_id'])
-            except:
+            booking_product = BookedProducts.objects \
+                    .filter(booking=request.data['booking_id'], product_id=request.data['product_id'])
+            if len(booking_product) == 0:
                 return Response({"Invalid Booking id {} or product  {} " \
                                 .format(request.data['booking_id'], request.data['product_id'])}, 400)
-            request.data['quantity'] = booking_product.quantity
-            request.data['booking'] = request.data.pop('booking_id')
-            serializer = self.serializer_class(booking_product, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, 200)
-            else:
-                return Response(serializer.errors, 400)
+            booking_product.update(is_cancelled=True,product_status = BookingStatus.cancelled.value)
+            return Response({"Booking_status":" Changed successfully"})
         else:
             return Response(input_serializer.errors, 400)
 
@@ -683,3 +676,36 @@ class ReportCustomerResonsDetails(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = ReportCustomerResons.objects.all()
     serializer_class = ReportCustomerResonsSerializer
+
+
+class ProductStatistics(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        input_serializer = ProductStatisticsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            date = datetime.strptime(request.data['date'],"%Y-%m-%d")
+            tomorrow_date = date + timedelta(1)
+            product_id = kwargs['product_id']
+            total_products = getTotalQuantityOfProduct(product_id)
+            total_products_booked = BookedProducts.objects.select_related('booking') \
+                    .filter(product_id=product_id,booking__booking_date__gte=date, \
+                    booking__booking_date__lte=tomorrow_date).aggregate(count=Count('booking_id'))['count']
+            total_products_cancelled = BookedProducts.objects.select_related('booking') \
+                    .filter(product_id=product_id,booking__booking_date__gte=date, \
+                    booking__booking_date__lte=tomorrow_date, is_cancelled=True) \
+                    .aggregate(count=Count('booking_id'))['count']
+            remaining_products = total_products - total_products_booked + total_products_cancelled
+            ongoing_products = BookedProducts.objects.select_related('booking') \
+                .filter(product_id=product_id,booking__booking_date__gte=date, \
+                booking__booking_date__lte=tomorrow_date, is_cancelled=False, \
+                booking__booking_status=BookingStatus.ongoing.value).aggregate(count=Count('booking_id'))['count']
+
+
+
+            return Response({"total_products_booked" : total_products_booked,
+                             "total_products_cancelled" : total_products_cancelled,
+                             "remaining_products" : remaining_products,
+                             "ongoing_products" : ongoing_products},200)
+        else:
+            return Response(input_serializer.errors, 400)

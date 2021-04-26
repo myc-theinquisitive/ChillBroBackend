@@ -3,7 +3,7 @@ from .views import CategoryList, CategoryDetail, CategoryImageCreate, GetCategor
     BaseProductList, BaseProductDetail, BaseProductImageCreate, AmenitiesList, ProductList, ProductDetail, \
     GetProductsByCategory, GetSpecificCategoriesLevelWise, CategoryImageDelete, BaseProductImageDelete, \
     SearchProducts, SellerProductList, SellerProductDetail, GetSellerProductList, CategoryTopLevelList, \
-    ProductNetPrice, ProductSellerStatus, ProductQuantity
+    ProductNetPrice, ProductSellerStatus, ProductQuantity, BusinessClientProductDetails
 
 
 urlpatterns = [
@@ -22,6 +22,7 @@ urlpatterns = [
     path('product/image/', BaseProductImageCreate.as_view()),
     path('product/image/<int:pk>/', BaseProductImageDelete.as_view()),
     path('product/search/<str:query>/', SearchProducts.as_view()),
+    path('product/business_client/<str:product_id>/',BusinessClientProductDetails.as_view()),
 
     # urls specific to hotels
     path('product/amenities/', AmenitiesList.as_view()),
