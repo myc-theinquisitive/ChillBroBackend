@@ -67,18 +67,3 @@ class ProductQuantitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['quantity']
-
-# class PricingSerializer(serializers.Serializer):
-#     price = serializers.DecimalField(decimal_places=2,max_digits=20)
-#     discount = s
-#
-# class BusinessClientProductDetails(serializers.Serializer):
-#     id = serializers.CharField(required=True)
-#     name = serializers.CharField(required=True)
-#     description = serializers.CharField(required=True)
-#     images = serializers.ListField(
-#         child=serializers.CharField()
-#     )
-#     quantity = serializers.IntegerField(required=True)
-#     booked = serializers.IntegerField(required=True)
-#     pricing = PricingSerializer()

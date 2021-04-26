@@ -66,7 +66,7 @@ class BusinessClientProductDetails(generics.RetrieveAPIView): #need to write
         total_booked = getBookedCountOfProductId(kwargs['product_id'], today_date, tomorrow_date)
         all_images = []
         for each_image in images:
-            all_images.append(str(each_image.image))
+            all_images.append(each_image.image.url)
         discount = ((product.price - product.discounted_price)/product.price)*100
         product_details = {'product_id': product.id, 'name': product.name, 'description': product.description,
                 "images": all_images, 'quantity': product.quantity, 'booked': total_booked, 'pricing': {

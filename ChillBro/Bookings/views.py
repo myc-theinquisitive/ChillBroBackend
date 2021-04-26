@@ -690,19 +690,22 @@ class ProductStatistics(generics.RetrieveAPIView):
             total_products = getTotalQuantityOfProduct(product_id)
             total_products_booked = BookedProducts.objects.select_related('booking') \
                     .filter(product_id=product_id,booking__booking_date__gte=date, \
-                    booking__booking_date__lte=tomorrow_date).aggregate(count=Count('booking_id'))['count']
+                    booking__booking_date__lte=tomorrow_date).aggregate(count=Sum(F('quantity')))['count']
             total_products_cancelled = BookedProducts.objects.select_related('booking') \
                     .filter(product_id=product_id,booking__booking_date__gte=date, \
                     booking__booking_date__lte=tomorrow_date, is_cancelled=True) \
-                    .aggregate(count=Count('booking_id'))['count']
+                    .aggregate(count=Sum(F('quantity')))['count']
+            if total_products_cancelled is None:
+                total_products_cancelled = 0
+            if total_products_booked is None:
+                total_products_booked = 0
             remaining_products = total_products - total_products_booked + total_products_cancelled
             ongoing_products = BookedProducts.objects.select_related('booking') \
                 .filter(product_id=product_id,booking__booking_date__gte=date, \
-                booking__booking_date__lte=tomorrow_date, is_cancelled=False, \
-                booking__booking_status=BookingStatus.ongoing.value).aggregate(count=Count('booking_id'))['count']
-
-
-
+                booking__booking_date__lte=tomorrow_date, \
+                booking__booking_status=BookingStatus.ongoing.value).aggregate(count=Sum(F('quantity')))['count']
+            if ongoing_products is None:
+                ongoing_products = 0
             return Response({"total_products_booked" : total_products_booked,
                              "total_products_cancelled" : total_products_cancelled,
                              "remaining_products" : remaining_products,
