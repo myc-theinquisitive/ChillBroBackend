@@ -9,6 +9,11 @@ import string
 import random
 from django.core.exceptions import ValidationError
 from ..wrapper import get_taggable_manager, get_key_value_store
+import uuid
+
+
+def getId():
+    return str(uuid.uuid4())
 
 
 def validate_product_type(value):
@@ -24,6 +29,7 @@ def get_random_string(length=10):
 
 
 class TimeStampModel(models.Model):
+    id = models.CharField(max_length=36, primary_key=True, default= getId)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -11,7 +11,7 @@ class TimeStampModel(models.Model):
 
 
 class ReviewsRatings(models.Model):
-    related_id = models.CharField(max_length=16, verbose_name="Related Id")
+    related_id = models.CharField(max_length=36, verbose_name="Related Id")
     comment = models.TextField(verbose_name="Comment")
     rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     user_model = get_user_model()

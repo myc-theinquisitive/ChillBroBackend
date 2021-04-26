@@ -7,6 +7,7 @@ from django.utils import timezone
 from .validations import validate_pan, validate_aadhar, validate_registration, validate_gst
 from .helpers import upload_aadhar_image_for_entity, upload_gst_image_for_entity, upload_pan_image_for_entity, upload_registration_image_for_entity
 
+
 class MyEntity(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     name = models.CharField(max_length=100, verbose_name="Name")
@@ -27,7 +28,6 @@ class MyEntity(models.Model):
 
     def __str__(self):
         return self.name+' '+self.id
-
 
 
 class BusinessClientEntity(models.Model):
