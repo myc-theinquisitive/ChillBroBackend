@@ -1,5 +1,6 @@
+from Address.exportapi import *
+
 
 def post_address_data(city,pincode):
-    # address_id = submit_address_data(city,pincode)
-    address_id = "dfe4-34dj-5683kd-3829"
+    address_id = submit_address_data(city,pincode)
     return address_id

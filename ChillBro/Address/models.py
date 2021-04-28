@@ -1,15 +1,20 @@
 from django.db import models
-
 from .constants import Countries, States, Cities
+import uuid
+
+
+def getId():
+    return str(uuid.uuid4())
 
 
 class Address(models.Model):
-    name = models.CharField(max_length=100, verbose_name="Name")
-    phone_number = models.CharField(max_length=10, verbose_name="Phone Number")
+    id = models.CharField(max_length=36, primary_key=True, default=getId)
+    name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Name")
+    phone_number = models.CharField(max_length=10, blank=True, null=True, verbose_name="Phone Number")
     pincode = models.CharField(max_length=10, verbose_name="Pincode")
-    address_line = models.CharField(max_length=250, verbose_name="Address Line")
+    address_line = models.CharField(max_length=250, blank=True, null=True, verbose_name="Address Line")
     extend_address = models.CharField(max_length=250, blank=True, null=True, verbose_name="Extend Address")
-    landmark = models.CharField(max_length=250, verbose_name="Landmark")
+    landmark = models.CharField(max_length=250, blank=True, null=True, verbose_name="Landmark")
     city = models.CharField(max_length=30, default=Cities.VSKP.value,
                             choices=[(city.name, city.value) for city in Cities], verbose_name="City")
     state = models.CharField(max_length=30, default=States.AP.value,

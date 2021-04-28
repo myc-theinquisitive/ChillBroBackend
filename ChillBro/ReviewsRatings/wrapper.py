@@ -1,5 +1,5 @@
-from Bookings.exportapi import getCompltedBookingDetailsForEntityIds
+from Bookings.exportapi import get_complted_booking_details_for_entity_ids
 
 
-def getCompletedBookingsByEntityId(from_date, to_date, entity_filters, entity_id):
-    return getCompltedBookingDetailsForEntityIds(from_date, to_date, entity_filters, entity_id)
+def get_completed_bookings_by_entity_id(from_date, to_date, entity_filters, entity_id):
+    return get_complted_booking_details_for_entity_ids(from_date, to_date, entity_filters, entity_id)

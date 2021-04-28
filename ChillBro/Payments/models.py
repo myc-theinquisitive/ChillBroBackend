@@ -19,6 +19,7 @@ class TransactionDetails(models.Model):
     transaction_date = models.DateTimeField(default=datetime.now)
     entity_id = models.CharField(max_length=36)
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    total_net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     entity_type = models.CharField(max_length=30,
                                    choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in
                                             EntityType], default=EntityType.hotels.value)

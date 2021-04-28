@@ -85,7 +85,7 @@ class EntityTotalReviews(generics.ListAPIView):
             else:
                 from_date, to_date = getTimePeriod(date_filter)
             entity_id = kwargs['entity_id']
-            bookings = getCompletedBookingsByEntityId(from_date, to_date, entity_filters, entity_id)
+            bookings = get_completed_bookings_by_entity_id(from_date, to_date, entity_filters, entity_id)
             booking_ids = []
             for each_booking in bookings:
                 booking_ids.append(each_booking)

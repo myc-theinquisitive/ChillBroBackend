@@ -1,0 +1,30 @@
+from .BaseProduct.models import Product
+from .BaseProduct.views import productNetPrice
+
+
+def product_data_prices(product_ids):
+    products = Product.objects.filter(id__in=product_ids)
+    product_prices = {}
+    for each_product in products:
+        discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
+        product_prices[each_product.id] = {'price':each_product.price,\
+                                           'net_value': productNetPrice(each_product.price, discount),\
+                                           'quantity': each_product.quantity}
+    return product_prices
+
+
+def products_total_quantity(product_ids):
+    products = Product.objects.filter(id__in=product_ids)
+    product_quantity = {}
+    for each_product in products:
+        product_quantity[each_product.id] = {'quantity':each_product.quantity}
+    return product_quantity
+
+
+def product_details(product_ids):
+    products = Product.objects.filter(id__in=product_ids)
+    details_of_product = {}
+    for each_product in products:
+        details_of_product[each_product.id] = {'name':each_product.name,
+                                               'type':each_product.type}
+    return details_of_product

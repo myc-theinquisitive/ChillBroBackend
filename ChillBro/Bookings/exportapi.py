@@ -3,7 +3,7 @@ from django.db.models import Sum, Q, FloatField, F
 from .serializers import *
 
 
-def getBookingDetailsForPayments(entity_id, from_date, to_date, entity_filter, status):
+def get_booking_details_for_payments(entity_id, from_date, to_date, entity_filter, status):
     bookings =  Bookings.objects.filter(Q(Q(entity_id=entity_id) \
                                      & Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
                                      & Q(entity_type__in=entity_filter) & Q(booking_status__in=status)))
@@ -11,7 +11,7 @@ def getBookingDetailsForPayments(entity_id, from_date, to_date, entity_filter, s
     return serializer.data
 
 
-def getCompltedBookingDetailsForEntityIds(from_date, to_date, entity_filter, entity_id):
+def get_complted_booking_details_for_entity_ids(from_date, to_date, entity_filter, entity_id):
     bookings =  CheckOutDetails.objects.select_related('booking') \
                 .filter(Q(booking__booking_date__gte=from_date) & Q(booking__booking_date__lte=to_date)\
                 & Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id=entity_id))
@@ -23,7 +23,7 @@ def getCompltedBookingDetailsForEntityIds(from_date, to_date, entity_filter, ent
     return all_bookings
 
 
-def bookedCountOfProductId(product_id, from_date, to_date):
+def booked_count_of_product_id(product_id, from_date, to_date):
     return BookedProducts.objects.select_related('booking') \
             .filter(Q(booking__booking_date__gte = from_date) & Q(booking__booking_date__lte = to_date)\
             & Q(product_id = product_id )).aggregate(count = Sum(F('quantity')))['count']

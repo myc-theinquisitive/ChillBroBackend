@@ -20,7 +20,8 @@ class BookedProductsSerializer(serializers.ModelSerializer):
                 booking=product["booking"],
                 product_id=product["product_id"],
                 product_value=product["product_value"],
-                quantity=product["quantity"]
+                quantity=product["quantity"],
+                net_value=product["net_value"]
             )
             new_products.append(add_booking_product)
         return BookedProducts.objects.bulk_create(new_products)
@@ -114,7 +115,7 @@ class BookedProductSerializer(serializers.Serializer):
 
 
 class NewBookingSerializer(serializers.Serializer):
-    coupon = serializers.CharField(required=True, min_length=36, max_length=36)
+    coupon = serializers.CharField(required=True, max_length=100)
     products = BookedProductSerializer(many=True)
     entity_type = serializers.CharField(required=True)
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
