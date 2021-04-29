@@ -1,5 +1,8 @@
+from django.db.models import Count
+
 from .BaseProduct.models import Product
 from .BaseProduct.views import productNetPrice
+from .Seller.models import SellerProduct
 
 
 def product_data_prices(product_ids):
@@ -28,3 +31,12 @@ def product_details(product_ids):
         details_of_product[each_product.id] = {'name':each_product.name,
                                                'type':each_product.type}
     return details_of_product
+
+
+def check_cart_product_is_valid_or_not_by_entity_id(product_id):
+    try:
+        seller = SellerProduct.objects.get(product=product_id)
+        product = Product.objects.get(id=product_id)
+    except:
+        return None, None
+    return seller.seller_id, product.type

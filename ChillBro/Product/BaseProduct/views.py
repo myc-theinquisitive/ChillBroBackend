@@ -52,7 +52,7 @@ class BaseProductImageDelete(generics.DestroyAPIView):
     serializer_class = ProductImageSerializer
 
 
-class BusinessClientProductDetails(generics.RetrieveAPIView): #need to write
+class BusinessClientProductDetails(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):

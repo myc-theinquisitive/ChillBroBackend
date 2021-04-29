@@ -53,8 +53,8 @@ def get_total_bookings_of_product(product_id, start_time, end_time, is_cancelled
 
 def valid_booking(products_list, start_time, end_time):
     now = datetime.now()
-    if now.strftime(get_date_format()) >= start_time:
-        return "Start time is greater than persent time", ""
+    # if now.strftime(get_date_format()) >= start_time.strftime(get_date_format()):
+    #     return "Start time is greater than persent time", ""
     if start_time >= end_time:
         return "end time is less than start time", ""
     product_ids = []
