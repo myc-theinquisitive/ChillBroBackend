@@ -18,6 +18,7 @@ from xhtml2pdf import pisa
 import os
 # library for generating excel
 import xlwt
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsUserOwner, IsBookingOwner
 
 
 # Create your views here.
@@ -151,8 +152,9 @@ class UserBookingsList(generics.ListAPIView):
 
 
 class CancelBookingView(generics.ListAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBookingOwner)
     serializer_class = BookingsSerializer
+    # check booking whether users or not.
 
     def put(self, request, *args, **kwargs):
         input_serializer = CancelBookingSerializer(data=request.data)
@@ -160,6 +162,7 @@ class CancelBookingView(generics.ListAPIView):
             booking = Bookings.objects.filter(booking_id=request.data['booking_id'])
             if len(booking) == 0:
                 return Response({"message": "Booking does'nt exist"}, 400)
+            self.check_object_permissions(request,booking[0])
             cancelled_serializer = CancelledDetailsSerializer()
             cancelled_serializer.create(booking[0])
             cancelProductStatus(request.data['booking_id'])
@@ -170,8 +173,8 @@ class CancelBookingView(generics.ListAPIView):
 
 
 class BookingsStatistics(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
-
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,)
+# check entity by business client
     def get(self, request, *args, **kwargs):
         input_serializer = StatisticsSerializer(data=request.data)
         if input_serializer.is_valid():
@@ -276,8 +279,8 @@ class BookingsStatistics(generics.RetrieveAPIView):
 
 
 class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
-
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,)
+# same as upper
     def get(self, request, *args, **kwargs):
         input_serializer = GetBookingsStatisticsDetailsSerializer(data=request.data)
         if input_serializer.is_valid():
@@ -353,7 +356,7 @@ class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
 
 
 class CancelProductStatusView(generics.ListAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBookingOwner)
     serializer_class = BookedProductsSerializer
 
     def put(self, request, *args, **kwargs):
@@ -362,9 +365,11 @@ class CancelProductStatusView(generics.ListAPIView):
             try:
                 booking_product = BookedProducts.objects \
                     .get(booking=request.data['booking_id'], product_id=request.data['product_id'])
+                booking = Bookings.objects.get(booking_id=request.data['booking_id'])
             except:
                 return Response({"Invalid Booking id {} or product  {} " \
                                 .format(request.data['booking_id'], request.data['product_id'])}, 400)
+            self.check_object_permissions(request,booking)
             request.data['quantity'] = booking_product.quantity
             request.data['booking'] = request.data.pop('booking_id')
             serializer = self.serializer_class(booking_product, data=request.data)
@@ -385,6 +390,8 @@ class GetSpecificBookingDetails(generics.RetrieveAPIView):
             booking = Bookings.objects.select_related('user').get(booking_id=kwargs['booking_id'])
         except:
             return Response({"message: invalid booking id in url"}, 400)
+        booking = Bookings.objects.get(booking_id=kwargs['booking_id'])
+        self.check_object_permissions(request,booking)
         user_data = Bookings.objects.none()
         user_data.name = booking.user.first_name + booking.user.last_name
         user_data.contact_number = booking.user.phone_number
@@ -405,7 +412,7 @@ class GetSpecificBookingDetails(generics.RetrieveAPIView):
 
 
 class GetBookingDetailsView(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
 
     def get(self, request, *args, **kwargs):
         input_serializer = GetBookingDetailsViewSerializer(data=request.data)
@@ -477,9 +484,11 @@ class GetBookingDetailsView(generics.RetrieveAPIView):
 
 
 class BookingStart(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBookingOwner)
 
     def post(self, request, *args, **kwargs):
+        booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+        self.check_object_permissions(request,booking)
         input_serializer = BookingStartSerializer(data=request.data)
         if input_serializer.is_valid():
             other_images = request.data.pop('other_images', None)
@@ -499,9 +508,11 @@ class BookingStart(generics.ListCreateAPIView):
 
 
 class BookingEnd(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBookingOwner)
 
     def post(self, request, *args, **kwargs):
+        booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+        self.check_object_permissions(request,booking)
         input_serializer = BookingEndSerializer(data=request.data)
         if input_serializer.is_valid():
             data = request.data.dict()
@@ -527,9 +538,11 @@ class BookingEnd(generics.ListCreateAPIView):
 
 
 class BookingEndBookingIdDetialsView(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBookingOwner)
 
     def get(self, request, *args, **kwargs):
+        booking = Bookings.objects.get(booking_id=kwargs['booking_id'])
+        self.check_object_permissions(request,booking)
         try:
             check_in_object = CheckInDetails.objects.get(booking_id=kwargs['booking_id'])
         except:
@@ -549,13 +562,14 @@ class BookingEndBookingIdDetialsView(generics.RetrieveAPIView):
 
 
 class ReportCustomerForBooking(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBookingOwner)
 
     def post(self, request, *args, **kwargs):
         try:
             booking = Bookings.objects.get(booking_id=request.data['booking_id'])
         except:
             return Response({"message:": "Invalid booking id"}, 400)
+        self.check_object_permissions(request,booking)
         request.data['booking'] = booking
         report_customer = ReportCustomerForBooking()
         report_customer.create(request.data)
@@ -625,7 +639,7 @@ def generate_excel(request):
 
 
 class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
 
     def get(self, request, *args, **kwargs):
         all_booked_products = BookedProducts.objects.all()
@@ -674,12 +688,12 @@ class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
 
 
 class ReportCustomerResonsList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee, )
     queryset = ReportCustomerResons.objects.all()
     serializer_class = ReportCustomerResonsSerializer
 
 
 class ReportCustomerResonsDetails(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
     queryset = ReportCustomerResons.objects.all()
     serializer_class = ReportCustomerResonsSerializer

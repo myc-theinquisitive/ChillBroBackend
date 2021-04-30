@@ -7,7 +7,7 @@ from .helpers import *
 from .wrapper import *
 from rest_framework.response import Response
 from django.db.models import Sum, Q, FloatField, F
-
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, CheckBusinessClientEntityById
 
 # Create your views here.
 class CreateBookingTransaction(generics.CreateAPIView):
@@ -17,9 +17,10 @@ class CreateBookingTransaction(generics.CreateAPIView):
 
 
 class GetPaymentsDetailsOfEachEntityView(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
-
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, CheckBusinessClientEntityById)
+# check entity id
     def get(self, request, *args, **kwargs):
+        self.check_object_permissions(request,kwargs['entity_id'])
         date_filter = request.data['date_filter']
         entity_filter = getEntityType(request.data['category_filters'])
         status = getStatus(request.data['status_filters'])
@@ -50,7 +51,7 @@ class GetPaymentsDetailsOfEachEntityView(generics.RetrieveAPIView):
 
 
 class PaymentRevenueStatisticsView(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
 
     def get(self, request, *args, **kwargs):
         input_serializer = PaymentRevenueStatisticsViewSerializer(data=request.data)

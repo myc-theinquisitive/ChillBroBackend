@@ -6,33 +6,36 @@ from rest_framework.response import Response
 from .serializers import CategorySerializer, CategoryImageSerializer
 from rest_framework.views import APIView
 from collections import defaultdict
-
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsGet
 
 class CategoryList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet, )
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
 class CategoryDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee | IsGet, )
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
 class CategoryImageCreate(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee, )
     permission_classes = (IsAuthenticated,)
     queryset = CategoryImage.objects.all()
     serializer_class = CategoryImageSerializer
 
 
 class CategoryImageDelete(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee, )
     permission_classes = (IsAuthenticated,)
     queryset = CategoryImage.objects.all()
     serializer_class = CategoryImageSerializer
 
 
 class CategoryTopLevelList(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee | IsGet, )
     permission_classes = (IsAuthenticated,)
     queryset = Category.objects.filter(parent_category=None)
     serializer_class = CategorySerializer

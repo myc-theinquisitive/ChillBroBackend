@@ -13,3 +13,7 @@ class BusinessClientEntitySerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessClientEntity
         fields = '__all__'
+
+class AddressSerializer(serializers.Serializer):
+    city=serializers.CharField(max_length=100)
+    pincode = serializers.CharField(max_length=6,validators=[MinLengthValidator(6)])

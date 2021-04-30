@@ -5,6 +5,7 @@ from .serializers import ProductSerializer, ProductImageSerializer
 from ..Seller.serializers import SellerProductSerializer
 from rest_framework.response import Response
 from rest_framework import status
+from ChillBro.permissions import IsBusinessClient, CheckSellerProduct
 
 class BaseProductList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
@@ -38,13 +39,23 @@ class BaseProductDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class BaseProductImageCreate(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBusinessClient, CheckSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
+
+    def post(self,request,*args, **kwargs):
+        product_id = request.data['product']
+        self.check_object_permissions(request,product_id)
+        super().post(request, *args, **kwargs)
 
 
 class BaseProductImageDelete(generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBusinessClient, CheckSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
+
+    def delete(self,request,*args, **kwargs):
+        product_id = request.data['product']
+        self.check_object_permissions(request,product_id)
+        super().delete(request, *args, **kwargs)
 

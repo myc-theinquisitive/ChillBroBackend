@@ -30,7 +30,7 @@ urlpatterns = [
     path('product/seller/<int:pk>/', SellerProductDetail.as_view()),
     path('product/seller/', SellerProductList.as_view()),
     path('product/seller/<str:seller>', GetSellerProductList.as_view()),
-    path('product/<int:seller_id>/<str:status>/',ProductSellerStatus.as_view()),
+    path('product/<str:seller_id>/<str:status>/',ProductSellerStatus.as_view()),
 
     #url of net prices
     path('product/net_price/', ProductNetPrice.as_view()),
