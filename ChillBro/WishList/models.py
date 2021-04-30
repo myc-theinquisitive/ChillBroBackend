@@ -1,0 +1,23 @@
+from django.db import models
+import uuid
+from .constants import *
+from .helpers import *
+from datetime import datetime
+# Create your models here.
+
+
+def getId():
+    return str(uuid.uuid4())
+
+
+class WishList(models.Model):
+    id = models.CharField(max_length=36, primary_key=True, default=getId)
+    entity_id = models.CharField(max_length=36)
+    entity_type = models.CharField(max_length=30,
+                                   choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in
+                                            EntityType], default=EntityType.hotels.value)
+
+    user_model = get_user_model()
+    user = models.ForeignKey(user_model, on_delete=models.CASCADE)
+    product_id = models.CharField(max_length=36)
+    date = models.DateTimeField(default=datetime.now)

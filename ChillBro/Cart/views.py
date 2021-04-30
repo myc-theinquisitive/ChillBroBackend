@@ -4,7 +4,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .serializers import *
-from .wrapper import valid_product
+from .wrapper import valid_product, get_product_details_with_image
 # Create your views here.
 
 
@@ -16,6 +16,7 @@ class CreateCart(generics.ListCreateAPIView):
         if input_serializer.is_valid():
             entity_id, entity_type = valid_product(request.data['product_id'], request.data['quantity'], \
                           request.data['start_time'], request.data['end_time'])
+
             if entity_id is None:
                 return Response({"message": entity_type})
             try:
@@ -26,10 +27,10 @@ class CreateCart(generics.ListCreateAPIView):
                 cart = serializer.create({'entity_id': entity_id, 'entity_type': entity_type,\
                                       'start_time':request.data['start_time'],'end_time':request.data['end_time'],\
                                       'user': request.user})
-            cart_product_serializer = CartProductsSerializer()
-            cart_product = cart_product_serializer.create({"cart":cart, "product_id":request.data['product_id'],
-                                                           "quantity":request.data['quantity']})
-            return Response({"message":"success"},200)
+                cart_product_serializer = CartProductsSerializer()
+                cart_product = cart_product_serializer.create({"cart":cart, "product_id":request.data['product_id'],
+                                                               "quantity":request.data['quantity']})
+                return Response({"message":"success"},200)
         else:
             return Response(input_serializer.errors, 400)
 
@@ -42,10 +43,12 @@ class UpdateCartProductQuantity(generics.RetrieveUpdateAPIView):
                         .filter(cart=request.data['cart'], product_id = request.data['product_id'])
         if len(cart_product) == 0:
             return Response({"message":"invalid cart id or product id"}, 400)
+
         entity_id, entity_type = valid_product(request.data['product_id'], request.data['quantity'], \
                                                cart_product[0].cart.start_time, cart_product[0].cart.end_time)
         if entity_id is None:
             return Response({"message": entity_type})
+
         cart_product.update(quantity=request.data['quantity'])
         return Response({"message":"success"},200)
 
@@ -57,9 +60,19 @@ class CartDetails(generics.ListAPIView):
         total_carts = Cart.objects.filter(user=request.user)
         all_carts_products = {}
         total_carts_products = CartProducts.objects.select_related('cart').filter(cart__user=request.user)
+        if len(total_carts_products) == 0:
+            return Response({"message":"Sorry, There are no carts"},200)
+
+        product_ids = []
+        for each_product in total_carts_products:
+            product_ids.append(each_product.product_id)
+        product_details = get_product_details_with_image(product_ids)
+
         for each_product in total_carts_products:
             all_carts_products[each_product.cart_id] = all_carts_products.get(each_product.cart_id,[])+[
-                {'id':each_product.id,'product_id':each_product.product_id, 'quantity':each_product.quantity}
+                {'id':each_product.id,'product_id':each_product.product_id, 'quantity':each_product.quantity,
+                 'product_name': product_details[each_product.product_id]['name'],
+                 'product_image_url': product_details[each_product.product_id]['image_url']}
             ]
         all_carts = []
         for each_cart in total_carts:

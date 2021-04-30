@@ -19,6 +19,3 @@ class CreateCartSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(required=True)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
-
-
-

@@ -9,6 +9,4 @@ urlpatterns = [
     path('delete_product_from_cart/<int:pk>/',DeleteProductFromCart.as_view()),
     path('delete_cart/<str:pk>/',DeleteCart.as_view()),
     path('check_availability_of_all_products/',CheckAvailabilityOfAllProducts.as_view()),
-
 ]
-
