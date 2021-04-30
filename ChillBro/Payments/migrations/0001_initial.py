@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TransactionDetails',
             fields=[
-                ('id', models.CharField(default=Payments.models.getId, max_length=36, primary_key=True, serialize=False)),
+                ('id', models.CharField(default=Payments.models.get_id, max_length=36, primary_key=True, serialize=False)),
                 ('booking_id', models.CharField(max_length=36)),
                 ('transaction_id', models.CharField(max_length=50)),
                 ('utr', models.CharField(max_length=50)),

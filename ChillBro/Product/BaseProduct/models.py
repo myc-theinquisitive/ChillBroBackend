@@ -65,7 +65,7 @@ class ProductManager(models.Manager):
 
 class Product(TimeStampModel):
     name = models.CharField(max_length=120)
-    slug= models.SlugField(blank=True)
+    slug = models.SlugField(blank=True)
     description = models.TextField()
     type = models.CharField(max_length=30, default=ProductTypes.Rental.value,
                             choices=[(product_type.value, product_type.value) for product_type in ProductTypes],

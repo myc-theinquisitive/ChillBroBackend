@@ -16,9 +16,9 @@ class BookingStatus(enum.Enum):
     done = "DONE"
 
 
-class PayStatus(enum.Enum):
-    pending = "PENDING"
-    done = "DONE"
+class ProductBookingStatus(enum.Enum):
+    booked = "BOOKED"
+    cancelled = "CANCELLED"
 
 
 class DateFilters(enum.Enum):
@@ -32,6 +32,4 @@ class IdProofType(enum.Enum):
     aadhar_card = "AADHAR_CARD"
     pan_card = "PAN_CARD"
     voter_id = "VOTER_ID"
-
-
 

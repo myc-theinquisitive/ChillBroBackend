@@ -1,6 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
-from UserApp.models import Employee
+from UserApp.models import Employee, BusinessClient
 
 
 class IsSuperAdminOrMYCEmployee(permissions.BasePermission):
@@ -19,6 +19,17 @@ class IsSuperAdminOrMYCEmployee(permissions.BasePermission):
         if employee.entity_id == "MYC":
             return True
         return False
+
+
+class IsBusinessClient(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        try:
+            business_client = BusinessClient.objects.get(user_id=user.id)
+        except ObjectDoesNotExist:
+            return False
 
 
 class IsOwner(permissions.BasePermission):

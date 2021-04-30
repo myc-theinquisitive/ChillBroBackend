@@ -5,12 +5,12 @@ from .constants import PayMode, PayStatus, EntityType
 
 
 # Create your models here.
-def getId():
+def get_id():
     return str(uuid.uuid4())
 
 
 class TransactionDetails(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, default=getId)
+    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     booking_id = models.CharField(max_length=36)
     transaction_id = models.CharField(max_length=50)
     utr = models.CharField(max_length=50)

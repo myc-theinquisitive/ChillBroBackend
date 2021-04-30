@@ -95,7 +95,7 @@ class ReportCustomerForBooking(serializers.ModelSerializer):
 
 class ReportCustomerResonsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ReportCustomerResons
+        model = ReportCustomerReasons
         fields = '__all__'
 
 
@@ -127,7 +127,7 @@ class CustomDatesSerializer(serializers.Serializer):
     to_date = serializers.DateTimeField(required=True)
 
 
-class StatisticsSerializer(serializers.Serializer):
+class BookingStatisticsSerializer(serializers.Serializer):
     date_filter = serializers.CharField(required=True)
     entity_filter = serializers.ListField(
         child=serializers.CharField()
@@ -138,13 +138,13 @@ class StatisticsSerializer(serializers.Serializer):
     custom_dates = CustomDatesSerializer(required=False)
 
 
-class GetBookingsStatisticsDetailsSerializer(StatisticsSerializer):
+class GetBookingsStatisticsDetailsSerializer(BookingStatisticsSerializer):
     statistics_details_type = serializers.CharField(required=True)
 
 
 class StatisticsDetailsSerializer(serializers.Serializer):
-    user = serializers.CharField(required=True)
-    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    created_by = serializers.CharField(required=True)
+    id = serializers.CharField(required=True, min_length=36, max_length=36)
     booking_date = serializers.DateTimeField(required=True)
     total_money = serializers.DecimalField(decimal_places=2, max_digits=20, required=True)
     start_time = serializers.DateTimeField(required=True)
@@ -164,7 +164,7 @@ class UserSerializer(serializers.Serializer):
 
 
 class GetSpecificBookingDetailsSerializer(serializers.Serializer):
-    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    id = serializers.CharField(required=True, min_length=36, max_length=36)
     booking_date = serializers.DateTimeField(required=True)
     total_money = serializers.DecimalField(decimal_places=2, max_digits=20)
     booking_status = serializers.CharField(required=True)
@@ -172,12 +172,12 @@ class GetSpecificBookingDetailsSerializer(serializers.Serializer):
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     products = BookedProductSerializer(many=True)
-    User_Details = UserSerializer()
+    user_details = UserSerializer()
 
 
 class GetBookingDetailsViewSerializer(serializers.Serializer):
     date_filter = serializers.CharField(required=True)
-    category_filter = serializers.ListField(
+    entity_filter = serializers.ListField(
         child=serializers.CharField()
     )
     status_filter = serializers.ListField(
@@ -207,4 +207,11 @@ class BookingEndSerializer(serializers.Serializer):
 
 
 class ProductStatisticsSerializer(serializers.Serializer):
-    date = serializers.DateField(required=True)
+    date_filter = serializers.CharField(required=True)
+    custom_dates = CustomDatesSerializer(required=False)
+
+
+class ProductStatisticsDetailsSerializer(serializers.Serializer):
+    date_filter = serializers.CharField(required=True)
+    custom_dates = CustomDatesSerializer(required=False)
+    statistics_details_type = serializers.CharField(required=True)
