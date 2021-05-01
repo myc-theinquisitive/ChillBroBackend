@@ -63,5 +63,5 @@ def get_products_details(product_ids):
              "df8966f9-f6ce-4a46-9a00-80ac3988f820": {'name': 'xyz', 'type': 'type'}}
 
 
-def create_transaction(booking_id, entity_id, entity_type, total_money, booking_date):
-    return newTransaction(booking_id, entity_id, entity_type, total_money, booking_date)
+def create_transaction(booking_id, entity_id, entity_type, total_money, booking_date, booking_start, paid_to, paid_by):
+    return newTransaction(booking_id, entity_id, entity_type, total_money, booking_date, booking_start, paid_to, paid_by)

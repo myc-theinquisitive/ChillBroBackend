@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from .serializers import *
 from .wrapper import *
 from .helpers import *
-from .constants import BookingStatus, DateFilters, ProductBookingStatus
+from .constants import BookingStatus, DateFilters, ProductBookingStatus, PaymentUser
 from collections import defaultdict
 # libraries for generating pdf
 from io import BytesIO
@@ -30,7 +30,7 @@ def render_to_pdf(template_src, context_dict={}):
 
 
 def get_total_bookings_count_of_product(product_id, start_time, end_time):
-    bookings_count = BookedProducts.objects.select_related('booking') \
+    bookings_count = BookedProducts.objects.active().select_related('booking') \
         .filter(product_id=product_id) \
         .filter(~Q(booking_status=ProductBookingStatus.cancelled.value)) \
         .filter(
@@ -78,6 +78,7 @@ def valid_booking(booking_products_list, start_time, end_time):
 
 def cancel_booking(booking):
     # TODO: refund need to be handled
+    # TODO: update payment amount to be paid to business client
     booked_products = BookedProducts.objects.select_related('booking').filter(booking=booking)
     booked_products.update(booking_status=ProductBookingStatus.cancelled.value)
     booking.update(booking_status=BookingStatus.cancelled.value)
@@ -185,6 +186,9 @@ class CreateBooking(generics.ListCreateAPIView):
         request.data['total_money'] = coupon_reduced_money
 
         # Create Booking
+        payment_mode = request.data['payment_mode']
+        if payment_mode == PaymentMode.cod.value:
+            request.data['payment_status'] = PaymentStatus.not_required.value
         bookings_serializer = BookingsSerializer()
         booking = bookings_serializer.create(request.data)
 
@@ -196,10 +200,22 @@ class CreateBooking(generics.ListCreateAPIView):
         booked_product_serializer_object.bulk_create(product_list)
 
         # Create transaction for amount to be paid to entity
-        create_transaction(booking.id, request.data['entity_id'], request.data['entity_type'],
-                           request.data['total_money'], booking.booking_date)
+        if payment_mode == PaymentMode.online.value:
+            # TODO: should use net value here
+            create_transaction(booking.id, request.data['entity_id'], request.data['entity_type'],
+                               request.data['total_money'], booking.booking_date, booking.start_time,
+                               PaymentUser.entity.value, PaymentUser.myc.value)
+        else:
+            # TODO: should update net values
+            create_transaction(booking.id, request.data['entity_id'], request.data['entity_type'],
+                               request.data['total_money'], booking.booking_date, booking.start_time,
+                               PaymentUser.entity.value, PaymentUser.customer.value)
+            # TODO: should use commission value here
+            create_transaction(booking.id, request.data['entity_id'], request.data['entity_type'],
+                               request.data['total_money'], booking.booking_date, booking.start_time,
+                               PaymentUser.myc.value, PaymentUser.entity.value)
 
-        return Response({"message": "Booking created"}, 200)
+        return Response({"message": "Booking created", "booking_id": booking.id}, 200)
 
 
 class UserBookingsList(generics.ListAPIView):
@@ -218,6 +234,7 @@ class CancelBookingView(generics.ListAPIView):
     serializer_class = BookingsSerializer
 
     def put(self, request, *args, **kwargs):
+        # TODO: Should handle refund and update payment details to be payed to entity
         input_serializer = CancelBookingSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
@@ -368,6 +385,7 @@ class CancelProductStatusView(generics.ListAPIView):
     serializer_class = BookedProductsSerializer
 
     def put(self, request, *args, **kwargs):
+        # TODO: Should handle refund and update payment details to be payed to entity
         input_serializer = CancelProductStatusSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
@@ -431,20 +449,20 @@ class GetBookingDetailsView(generics.ListAPIView):
         from_date, to_date = get_time_period(date_filter)
 
         if from_date and to_date:
-            self.queryset = Bookings.objects.filter(
+            self.queryset = Bookings.objects.active().filter(
                 Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date)
                   & Q(entity_type__in=entity_filter) & Q(booking_status__in=status_filter)
                   & Q(entity_id__in=entity_id))).order_by('booking_date')
         elif from_date:
-            self.queryset = Bookings.objects.filter(
+            self.queryset = Bookings.objects.active().filter(
                 Q(Q(booking_date__gte=from_date) & Q(entity_type__in=entity_filter)
                   & Q(booking_status__in=status_filter) & Q(entity_id__in=entity_id))).order_by('booking_date')
         elif to_date:
-            self.queryset = Bookings.objects.filter(
+            self.queryset = Bookings.objects.active().filter(
                 Q(Q(booking_date__lte=to_date) & Q(entity_type__in=entity_filter)
                   & Q(booking_status__in=status_filter) & Q(entity_id__in=entity_id))).order_by('booking_date')
         else:
-            self.queryset = Bookings.objects.filter(
+            self.queryset = Bookings.objects.active().filter(
                 Q(Q(entity_type__in=entity_filter) & Q(booking_status__in=status_filter)
                   & Q(entity_id__in=entity_id))).order_by('booking_date')
 

@@ -12,7 +12,7 @@ def getBookingDetailsForPayments(entity_id, from_date, to_date, entity_filter, s
 
 
 def getCompltedBookingDetailsForEntityIds(from_date, to_date, entity_filter, entity_id):
-    bookings =  CheckOutDetails.objects.select_related('booking') \
+    bookings = CheckOutDetails.objects.select_related('booking') \
                 .filter(Q(booking__booking_date__gte=from_date) & Q(booking__booking_date__lte=to_date)\
                 & Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id=entity_id))
     all_bookings = {}

@@ -6,6 +6,7 @@ class BookingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookings
         fields = '__all__'
+        read_only_fields = ('booking_status', 'total_money', 'payment_status')
 
 
 class BookedProductsSerializer(serializers.ModelSerializer):
@@ -116,10 +117,11 @@ class BookedProductSerializer(serializers.Serializer):
 class NewBookingSerializer(serializers.Serializer):
     coupon = serializers.CharField(required=True, min_length=36, max_length=36)
     products = BookedProductSerializer(many=True)
-    entity_type = serializers.CharField(required=True)
+    entity_type = serializers.CharField(required=True, max_length=30)
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
+    payment_mode = serializers.CharField(required=True, max_length=30)
 
 
 class CustomDatesSerializer(serializers.Serializer):
@@ -172,6 +174,8 @@ class GetSpecificBookingDetailsSerializer(serializers.Serializer):
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     products = BookedProductSerializer(many=True)
+    payment_status = serializers.CharField(max_length=30)
+    payment_mode = serializers.CharField(max_length=30)
     user_details = UserSerializer()
 
 

@@ -23,11 +23,11 @@ def getEntityType(entity_filter):
 
 def getStatus(status):
     if len(status) == 0:
-        return [status.value for status in BookingStatus]
+        return [status.value for status in PayStatus]
     return status
 
 
-def getTimePeriod(date_filter):
+def get_time_period(date_filter):
     if date_filter == 'Today':
         today = date.today()
         tomorrow = today + timedelta(1)

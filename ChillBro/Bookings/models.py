@@ -1,7 +1,7 @@
 import uuid
 from django.db.models import Q
 from django.db import models
-from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus
+from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, PaymentMode
 from datetime import datetime
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
@@ -14,42 +14,45 @@ def get_id():
 
 class BookingsManager(models.Manager):
 
+    def active(self):
+        return self.filter(~Q(payment_status=PaymentStatus.failed.value))
+
     def received_bookings(self, from_date, to_date, entity_types, entity_ids):
         if from_date and to_date:
-            return self.filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date)
-                                 & Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)))
+            return self.active().filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date)
+                                          & Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)))
         elif from_date:
-            return self.filter(Q(Q(booking_date__gte=from_date) & Q(entity_type__in=entity_types)
-                                 & Q(entity_id__in=entity_ids)))
+            return self.active().filter(Q(Q(booking_date__gte=from_date) & Q(entity_type__in=entity_types)
+                                          & Q(entity_id__in=entity_ids)))
         elif to_date:
-            return self.filter(Q(Q(booking_date__lte=to_date) & Q(entity_type__in=entity_types)
-                                 & Q(entity_id__in=entity_ids)))
+            return self.active().filter(Q(Q(booking_date__lte=to_date) & Q(entity_type__in=entity_types)
+                                        & Q(entity_id__in=entity_ids)))
         else:
-            return self.filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)))
+            return self.active().filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)))
 
     def ongoing_bookings(self, entity_types, entity_ids):
-        return self.filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)) \
-                           & Q(booking_status=BookingStatus.ongoing.value))
+        return self.active().filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)) \
+                                    & Q(booking_status=BookingStatus.ongoing.value))
 
     def pending_bookings(self, entity_types, entity_ids):
-        return self.filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)) \
-                           & Q(booking_status=BookingStatus.pending.value))
+        return self.active().filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids)) \
+                                    & Q(booking_status=BookingStatus.pending.value))
 
     def yet_to_take_bookings(self, from_date, to_date, entity_types, entity_ids):
         if to_date:
-            return self.filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids))
-                               & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lte=to_date))
+            return self.active().filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids))
+                                        & Q(booking_status=BookingStatus.pending.value) & Q(start_time__lte=to_date))
         else:
-            return self.filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids))
-                               & Q(booking_status=BookingStatus.pending.value))
+            return self.active().filter(Q(Q(entity_type__in=entity_types) & Q(entity_id__in=entity_ids))
+                                        & Q(booking_status=BookingStatus.pending.value))
 
     def yet_to_return_bookings(self, from_date, to_date, entity_filter, entity_ids):
         if to_date:
-            return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_ids))
-                               & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lte=to_date))
+            return self.active().filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_ids))
+                                        & Q(booking_status=BookingStatus.ongoing.value) & Q(end_time__lte=to_date))
         else:
-            return self.filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_ids))
-                               & Q(booking_status=BookingStatus.ongoing.value))
+            return self.active().filter(Q(Q(entity_type__in=entity_filter) & Q(entity_id__in=entity_ids))
+                                        & Q(booking_status=BookingStatus.ongoing.value))
 
 
 class Bookings(models.Model):
@@ -65,6 +68,12 @@ class Bookings(models.Model):
     booking_status = models.CharField(
         max_length=30, choices=[(booking_status.value, booking_status.value) for booking_status in BookingStatus],
         default=BookingStatus.pending.value)
+    payment_status = models.CharField(
+        max_length=30, choices=[(pay_status.value, pay_status.value) for pay_status in PaymentStatus],
+        default=PaymentStatus.pending.value)
+    payment_mode = models.CharField(
+        max_length=30, choices=[(pay_mode.value, pay_mode.value) for pay_mode in PaymentMode],
+        default=PaymentMode.online.value)
 
     entity_id = models.CharField(max_length=36)
     start_time = models.DateTimeField()
@@ -78,35 +87,39 @@ class Bookings(models.Model):
 
 class BookedProductManager(models.Manager):
 
+    def active(self):
+        return self.filter(~Q(booking__payment_status=PaymentStatus.failed.value))
+
     def total_bookings_for_product(self, product_id):
-        return self.filter(product_id=product_id)
+        return self.active().filter(product_id=product_id)
 
     def received_bookings_for_product(self, product_id, from_date, to_date):
         if from_date and to_date:
-            return self.filter(product_id=product_id, booking__booking_date__gte=from_date,
-                               booking__booking_date__lte=to_date)
+            return self.active().filter(product_id=product_id, booking__booking_date__gte=from_date,
+                                        booking__booking_date__lte=to_date)
         elif from_date:
-            return self.filter(product_id=product_id, booking__booking_date__gte=from_date)
+            return self.active().filter(product_id=product_id, booking__booking_date__gte=from_date)
         elif to_date:
-            return self.filter(product_id=product_id, booking__booking_date__lte=to_date)
+            return self.active().filter(product_id=product_id, booking__booking_date__lte=to_date)
         else:
-            return self.filter(product_id=product_id)
+            return self.active().filter(product_id=product_id)
 
     def cancelled_bookings_for_product(self, product_id, from_date, to_date):
         if from_date and to_date:
-            return self.filter(product_id=product_id, booking__booking_date__gte=from_date,
-                               booking__booking_date__lte=to_date, booking_status=ProductBookingStatus.cancelled.value)
+            return self.active().filter(product_id=product_id, booking__booking_date__gte=from_date,
+                                        booking__booking_date__lte=to_date,
+                                        booking_status=ProductBookingStatus.cancelled.value)
         elif from_date:
-            return self.filter(product_id=product_id, booking__booking_date__gte=from_date,
-                               booking_status=ProductBookingStatus.cancelled.value)
+            return self.active().filter(product_id=product_id, booking__booking_date__gte=from_date,
+                                        booking_status=ProductBookingStatus.cancelled.value)
         elif to_date:
-            return self.filter(product_id=product_id, booking__booking_date__lte=to_date,
-                               booking_status=ProductBookingStatus.cancelled.value)
+            return self.active().filter(product_id=product_id, booking__booking_date__lte=to_date,
+                                        booking_status=ProductBookingStatus.cancelled.value)
         else:
-            return self.filter(product_id=product_id, booking_status=ProductBookingStatus.cancelled.value)
+            return self.active().filter(product_id=product_id, booking_status=ProductBookingStatus.cancelled.value)
 
     def ongoing_bookings_for_product(self, product_id):
-        return self.filter(product_id=product_id, booking__booking_status=BookingStatus.ongoing.value)
+        return self.active().filter(product_id=product_id, booking__booking_status=BookingStatus.ongoing.value)
 
 
 class BookedProducts(models.Model):
@@ -129,22 +142,26 @@ class BookedProducts(models.Model):
 
 
 class CheckInDetailsManager(models.Manager):
+
+    def active(self):
+        return self.filter(~Q(booking__payment_status=PaymentStatus.failed.value))
+
     def customer_taken(self, from_date, to_date, entity_types, entity_ids):
         if from_date and to_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.ongoing.value)
-                                 & Q(check_in__gt=from_date) & Q(check_in__lt=to_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.ongoing.value)
+                                        & Q(check_in__gt=from_date) & Q(check_in__lt=to_date)))
         elif from_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.ongoing.value)
-                                 & Q(check_in__gt=from_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.ongoing.value)
+                                        & Q(check_in__gt=from_date)))
         elif to_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.ongoing.value)
-                                 & Q(check_in__lt=to_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.ongoing.value)
+                                        & Q(check_in__lt=to_date)))
         else:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.ongoing.value)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.ongoing.value)))
 
 
 class CheckInDetails(models.Model):
@@ -164,22 +181,26 @@ class CheckInDetails(models.Model):
 
 
 class CheckOutDetailsManager(models.Manager):
+
+    def active(self):
+        return self.filter(~Q(booking__payment_status=PaymentStatus.failed.value))
+
     def returned_bookings(self, from_date, to_date, entity_types, entity_ids):
         if from_date and to_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.done.value)
-                                 & Q(check_out__gt=from_date) & Q(check_out__lt=to_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.done.value)
+                                        & Q(check_out__gt=from_date) & Q(check_out__lt=to_date)))
         elif from_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.done.value)
-                                 & Q(check_out__gt=from_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.done.value)
+                                        & Q(check_out__gt=from_date)))
         elif to_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.done.value)
-                                 & Q(check_out__lt=to_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.done.value)
+                                        & Q(check_out__lt=to_date)))
         else:
-            return self.filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
-                                 & Q(booking__booking_status=BookingStatus.done.value)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_types) & Q(booking__entity_id__in=entity_ids)
+                                        & Q(booking__booking_status=BookingStatus.done.value)))
 
 
 class CheckOutDetails(models.Model):
@@ -195,22 +216,26 @@ class CheckOutDetails(models.Model):
 
 
 class CancelledDetailsManager(models.Manager):
+
+    def active(self):
+        return self.filter(~Q(booking__payment_status=PaymentStatus.failed.value))
+
     def cancelled_bookings(self, from_date, to_date, entity_filter, entity_id):
         if from_date and to_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
-                                 & Q(booking__booking_status=BookingStatus.cancelled.value)
-                                 & Q(cancelled_time__gt=from_date) & Q(cancelled_time__lt=to_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
+                                        & Q(booking__booking_status=BookingStatus.cancelled.value)
+                                        & Q(cancelled_time__gt=from_date) & Q(cancelled_time__lt=to_date)))
         elif from_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
-                                 & Q(booking__booking_status=BookingStatus.cancelled.value)
-                                 & Q(cancelled_time__gt=from_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
+                                        & Q(booking__booking_status=BookingStatus.cancelled.value)
+                                        & Q(cancelled_time__gt=from_date)))
         elif to_date:
-            return self.filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
-                                 & Q(booking__booking_status=BookingStatus.cancelled.value)
-                                 & Q(cancelled_time__lt=to_date)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
+                                        & Q(booking__booking_status=BookingStatus.cancelled.value)
+                                        & Q(cancelled_time__lt=to_date)))
         else:
-            return self.filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
-                                 & Q(booking__booking_status=BookingStatus.cancelled.value)))
+            return self.active().filter(Q(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id__in=entity_id)
+                                        & Q(booking__booking_status=BookingStatus.cancelled.value)))
 
 
 class CancelledDetails(models.Model):

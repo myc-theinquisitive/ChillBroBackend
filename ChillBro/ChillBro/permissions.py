@@ -1,6 +1,11 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from UserApp.models import Employee, BusinessClient
+from django.conf import settings
+
+
+def get_myc_id():
+    return settings.MYC_ID if hasattr(settings, 'MYC_ID') else "MYC"
 
 
 class IsSuperAdminOrMYCEmployee(permissions.BasePermission):

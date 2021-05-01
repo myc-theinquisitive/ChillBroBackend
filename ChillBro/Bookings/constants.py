@@ -16,6 +16,18 @@ class BookingStatus(enum.Enum):
     done = "DONE"
 
 
+class PaymentStatus(enum.Enum):
+    pending = "PENDING"
+    failed = "FAILED"
+    done = "DONE"
+    not_required = "NOT_REQUIRED"
+
+
+class PaymentMode(enum.Enum):
+    cod = "COD"
+    online = "ONLINE"
+
+
 class ProductBookingStatus(enum.Enum):
     booked = "BOOKED"
     cancelled = "CANCELLED"
@@ -33,3 +45,8 @@ class IdProofType(enum.Enum):
     pan_card = "PAN_CARD"
     voter_id = "VOTER_ID"
 
+
+class PaymentUser(enum.Enum):
+    entity = "ENTITY"
+    myc = "MYC"
+    customer = "CUSTOMER"
