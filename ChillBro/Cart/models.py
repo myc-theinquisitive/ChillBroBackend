@@ -5,12 +5,12 @@ from .helpers import get_user_model
 # Create your models here.
 
 
-def getId():
+def get_id():
     return str(uuid.uuid4())
 
 
 class Cart(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, default=getId)
+    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     entity_id = models.CharField(max_length=36)
     entity_type = models.CharField(max_length=30,
                                    choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in

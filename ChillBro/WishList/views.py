@@ -37,9 +37,9 @@ class UserWishListDetails(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         input_serializer = UserWishListDetailsSerializer(data=request.data)
         if input_serializer.is_valid():
-            category_filters = getEntityType(request.data['category_filters'])
+            entity_type_filters = getEntityType(request.data['entity_type_filters'])
 
-            wishlist = WishList.objects.filter(user = request.user, entity_type__in=category_filters)
+            wishlist = WishList.objects.filter(user = request.user, entity_type__in=entity_type_filters)
             if len(wishlist) == 0:
                 return Response({"message":"Sorry, There are no Wish Lists"},200)
 
@@ -54,7 +54,7 @@ class UserWishListDetails(generics.ListAPIView):
                                          'entity_type': each_wishlist.entity_type, 'product_id': each_wishlist.product_id,
                                          'product_name': product_details[each_wishlist.product_id]['name'],
                                          'product_image_url': product_details[each_wishlist.product_id]['image_url'],
-                                         'added_date': each_wishlist.date}
+                                         'added_date': each_wishlist.created_at}
                 all_wish_list_products.append(each_wishlist_details)
             return Response({"results":all_wish_list_products},200)
         else:

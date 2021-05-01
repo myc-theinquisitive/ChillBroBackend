@@ -3,15 +3,15 @@ from .constants import Countries, States, Cities
 import uuid
 
 
-def getId():
+def get_id():
     return str(uuid.uuid4())
 
 
 class Address(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, default=getId)
+    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Name")
     phone_number = models.CharField(max_length=10, blank=True, null=True, verbose_name="Phone Number")
-    pincode = models.CharField(max_length=10, verbose_name="Pincode")
+    pincode = models.CharField(max_length=10, blank=True, null=True, verbose_name="Pincode")
     address_line = models.CharField(max_length=250, blank=True, null=True, verbose_name="Address Line")
     extend_address = models.CharField(max_length=250, blank=True, null=True, verbose_name="Extend Address")
     landmark = models.CharField(max_length=250, blank=True, null=True, verbose_name="Landmark")

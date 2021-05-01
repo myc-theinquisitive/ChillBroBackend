@@ -11,20 +11,9 @@ def get_product_data(product_id_list):
     return products
 
 
-def get_individual_product_data(product_ids):
-    product = get_product_data(product_ids)
-    return product
-
-
 def get_coupon_value(coupon_id, user, entity_ids, product_ids, total_money):
-    value = coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
-    if len(value) == 2:
-        return False, "Invalid Coupon"
-    return True, value['new_price']
+    return coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
 
-
-def get_product_ids_total_quantity(product_ids):
-    return products_total_quantity(product_ids)
 
 
 def business_client_review_on_customer(review, rating, booking_id, user):
@@ -45,4 +34,6 @@ def get_product_details(product_ids):
 
 
 def create_transaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date,total_net_value):
-    return new_transaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date,total_net_value)
+    return new_transaction({'booking_id':booking_id, 'entity_id': entity_id, 'entity_type': entity_type, \
+                            'total_money': total_money, 'payment_status': payment_status, 'booking_date':booking_date,\
+                            'total_net_value':total_net_value})

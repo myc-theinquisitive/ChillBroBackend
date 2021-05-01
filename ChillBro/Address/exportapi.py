@@ -1,8 +1,12 @@
 from .serializers import AddressSerializer
 
 
-def submit_address_data(city, pincode):
-    address_create = AddressSerializer()
-    address = address_create.create({'city':city, 'pincode':pincode})
-    return address.id
+def create_address(address_details):
+    valid_serializer = AddressSerializer(data=address_details)
+    if valid_serializer.is_valid():
+        address_create = AddressSerializer()
+        address = address_create.create(address_details)
+        return address.id
+    else:
+        return valid_serializer.errors
 

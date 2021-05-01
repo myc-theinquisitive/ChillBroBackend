@@ -16,14 +16,6 @@ def product_data_prices(product_ids):
     return product_prices
 
 
-def products_total_quantity(product_ids):
-    products = Product.objects.filter(id__in=product_ids)
-    product_quantity = {}
-    for each_product in products:
-        product_quantity[each_product.id] = {'quantity':each_product.quantity}
-    return product_quantity
-
-
 def product_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
     details_of_product = {}
@@ -35,11 +27,10 @@ def product_details(product_ids):
 
 def check_cart_product_is_valid_or_not_by_entity_id(product_id):
     try:
-        seller = SellerProduct.objects.get(product=product_id)
-        product = Product.objects.get(id=product_id)
+        seller = SellerProduct.objects.select_related('product').get(product=product_id)
     except:
         return None, None
-    return seller.seller_id, product.type
+    return seller.seller_id, seller.product.type
 
 
 def product_details_with_image(product_ids):

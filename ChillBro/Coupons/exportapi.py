@@ -12,9 +12,8 @@ def coupon_value(coupon_code, user, entity_ids, product_ids, order_value):
             "message": "Coupon does not exist!"
         }
     if not validation_data['valid']:
-        content = {'message': validation_data['message']}
-        return content
+        return validation_data
 
-    new_price = get_discounted_value(coupon=coupon, order_value=order_value)
-    content = {'new_price': new_price}
+    discounted_value = get_discounted_value(coupon=coupon, order_value=order_value)
+    content = {"valid":True, 'discounted_value': discounted_value}
     return content

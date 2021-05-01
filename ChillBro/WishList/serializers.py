@@ -13,6 +13,6 @@ class CreateWishListSerializer(serializers.Serializer):
 
 
 class UserWishListDetailsSerializer(serializers.Serializer):
-    category_filters = serializers.ListField(
+    entity_type_filters = serializers.ListField(
         child=serializers.CharField()
     )

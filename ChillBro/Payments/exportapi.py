@@ -10,13 +10,11 @@ def transaction_details_by_booking_id(booking_id):
         return {}
 
 
-def new_transaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date,total_net_value):
-    transaction = TransactionDetails()
-    transaction.booking_id = booking_id
-    transaction.entity_id = entity_id
-    transaction.entity_type = entity_type
-    transaction.total_money = total_money
-    transaction.total_net_value = total_net_value
-    transaction.payment_status = payment_status
-    transaction.booking_date = booking_date
-    return transaction.save()
+def new_transaction(trasaction_data):
+    valid_serializer = TransactionDetailsSerializer(data=trasaction_data)
+    if valid_serializer.is_valid():
+        serializer = TransactionDetailsSerializer()
+        serializer.create(trasaction_data)
+        return {"status":True,"errors":""}
+    else:
+        return {"status":False,"errors":valid_serializer.errors}

@@ -6,12 +6,12 @@ from datetime import datetime
 # Create your models here.
 
 
-def getId():
+def get_id():
     return str(uuid.uuid4())
 
 
 class WishList(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, default=getId)
+    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     entity_id = models.CharField(max_length=36)
     entity_type = models.CharField(max_length=30,
                                    choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in
@@ -20,4 +20,4 @@ class WishList(models.Model):
     user_model = get_user_model()
     user = models.ForeignKey(user_model, on_delete=models.CASCADE)
     product_id = models.CharField(max_length=36)
-    date = models.DateTimeField(default=datetime.now)
+    created_at = models.DateTimeField(default=datetime.now)

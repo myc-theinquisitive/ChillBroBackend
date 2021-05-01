@@ -5,7 +5,7 @@ from .models import MyEntity, BusinessClientEntity
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
-from .wrappers import post_address_data
+from .wrappers import post_create_address
 
 
 class EntityList(generics.ListCreateAPIView):
@@ -15,7 +15,7 @@ class EntityList(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         if 'city' not in request.data or 'pincode' not in request.data:
             return Response({"message": "City and Pincode are required"}, status=status.HTTP_400_BAD_REQUEST)
-        address_id = post_address_data(request.data['city'], request.data['pincode'])
+        address_id = post_create_address(request.data['city'], request.data['pincode'])
         if address_id:
             request.data['address_id'] = address_id
             serializer = self.serializer_class(data=request.data)
