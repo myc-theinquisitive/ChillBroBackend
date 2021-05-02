@@ -23,6 +23,7 @@ urlpatterns = [
     path('generate_pdf/',GeneratePDF.as_view()),
     path('generate_excel/',generate_excel),
     path('product/<str:product_id>/',GetBookingDetailsOfProductId.as_view()),
+    path('product_statistics/<str:product_id>/',ProductStatistics.as_view()),
 
 
     path('add', CreateUpdateRentalBooking.as_view()),

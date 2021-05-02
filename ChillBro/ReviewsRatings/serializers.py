@@ -21,3 +21,20 @@ class ReviewsRatingsSerializer(serializers.ModelSerializer):
 class CustomerReviewSerializer(serializers.Serializer):
     rating = serializers.IntegerField(required=True)
     comment = serializers.CharField(required=True)
+
+
+class CustomDatesSerializer(serializers.Serializer):
+    from_date = serializers.DateTimeField(required=True)
+    to_date = serializers.DateTimeField(required=True)
+
+
+class EntityTotalReviewsSerializer(serializers.Serializer):
+    date_filter = serializers.CharField(required=True)
+    category_filters = serializers.ListField(
+        child = serializers.CharField()
+    )
+    comment_required = serializers.BooleanField(required=True)
+    rating_filters = serializers.ListField(
+        child = serializers.CharField()
+    )
+    custom_dates = CustomDatesSerializer(required=False)
