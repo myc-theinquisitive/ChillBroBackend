@@ -1,10 +1,12 @@
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from .serializers import *
 from .helpers import *
 from rest_framework.response import Response
+from .wrapper import *
 
 
 class UpdatePaymentDetailsFromMyc(APIView):
@@ -132,7 +134,7 @@ class PaymentRevenueStatisticsView(APIView):
             }, 200)
 
 
-class GetPaymentsDetailsOfEachEntityView(APIView):
+class GetPaymentsRevenueStatisticsDetailsView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
@@ -169,3 +171,34 @@ class GetPaymentsDetailsOfEachEntityView(APIView):
 
         transaction_serializer = BookingTransactionDetailsSerializer(transactions, many=True)
         return Response(transaction_serializer.data, 200)
+
+
+class RefundTransactionList(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = RefundTransaction.objects.all()
+    serializer_class = RefundTransactionDetailsSerializer
+
+    def post(self, request, *args, **kwargs):
+        if "booking_id" not in request.data:
+            return Response({"message": "Can't create refund transaction",
+                             "error": "Booking Id should is present in Input"}, 400)
+
+        booking_id = request.data["booking_id"]
+        is_valid, booking_details = get_booking_details(booking_id)
+        if not is_valid:
+            return Response({"message": "Can't create refund transaction",
+                             "error": "Invalid Booking Id"}, 400)
+
+        request.data["entity_id"] = booking_details["entity_id"]
+        request.data["entity_type"] = booking_details["entity_type"]
+        request.data["booking_date"] = booking_details["booking_date"]
+        request.data["booking_start"] = booking_details["booking_start"]
+
+        request.data["initiated_by"] = request.user.id
+        return super().post(request, args, kwargs)
+
+
+class RefundTransactionDetail(generics.RetrieveUpdateAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = RefundTransaction.objects.all()
+    serializer_class = RefundTransactionDetailsSerializer

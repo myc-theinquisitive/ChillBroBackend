@@ -1,5 +1,6 @@
 from datetime import datetime, date, timedelta
 from .constants import *
+from django.conf import settings
 
 
 def getTodayDay():
@@ -45,3 +46,8 @@ def get_time_period(date_filter):
         month = today - timedelta(getTodayDate())
         return month, today + timedelta(1)
     return None, None
+
+
+def get_user_model():
+    return settings.AUTH_USER_MODEL
+

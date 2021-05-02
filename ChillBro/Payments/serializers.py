@@ -8,6 +8,12 @@ class BookingTransactionDetailsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class RefundTransactionDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RefundTransaction
+        fields = '__all__'
+
+
 class UpdateBookingTransactionSerializer(serializers.Serializer):
     booking_ids = serializers.ListField(
         child=serializers.CharField(max_length=36, required=True)

@@ -709,9 +709,9 @@ class GenerateExcel(APIView):
         row_num = 0
         font_style = xlwt.XFStyle()
         font_style.font.bold = True
-        coloumns = ['Booking Id', 'Booking Date', 'Booking Status']
-        for col_num in range(len(coloumns)):
-            ws.write(row_num, col_num, coloumns[col_num], font_style)
+        columns = ['Booking Id', 'Booking Date', 'Booking Status']
+        for col_num in range(len(columns)):
+            ws.write(row_num, col_num, columns[col_num], font_style)
 
         font_style = xlwt.XFStyle()
 
