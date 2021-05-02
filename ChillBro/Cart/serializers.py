@@ -14,7 +14,7 @@ class CartProductsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CreateCartSerializer(serializers.Serializer):
+class AddProductToCartSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
     quantity = serializers.IntegerField(required=True)
     start_time = serializers.DateTimeField(required=True)

@@ -25,7 +25,7 @@ def product_details(product_ids):
     return details_of_product
 
 
-def check_cart_product_is_valid_or_not_by_entity_id(product_id):
+def get_entity_id_and_entity_type(product_id):
     try:
         seller = SellerProduct.objects.select_related('product').get(product=product_id)
     except:

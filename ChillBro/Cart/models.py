@@ -18,7 +18,7 @@ class Cart(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     user_model = get_user_model()
-    user = models.ForeignKey(user_model, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
 
     def __str__(self):
         return (self.id)

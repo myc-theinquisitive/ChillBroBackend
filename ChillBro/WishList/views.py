@@ -2,33 +2,36 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .wrapper import *
-from .serializers import WishListSerializer, CreateWishListSerializer, UserWishListDetailsSerializer
+from .serializers import WishListSerializer, AddProductToWishListSerializer, UserWishListDetailsSerializer
 from .models import *
 from .helpers import getEntityType
 
 # Create your views here.
 
 
-class CreateWishList(generics.CreateAPIView):
+class AddProductToWishList(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        input_serializer = CreateWishListSerializer(data=request.data)
+        input_serializer = AddProductToWishListSerializer(data=request.data)
         if input_serializer.is_valid():
-            previous_wishlist = WishList.objects.filter(user=request.user, product_id=request.data['product_id'])
+            previous_wishlist = WishList.objects.filter(created_by=request.user, product_id=request.data['product_id'])
             if len(previous_wishlist) > 0:
-                return Response({"message": "You already added this product {}".format(request.data['product_id'])})
+                return Response({"message":"Can't add the product to wishlist", \
+                                 "errors": "You already added this product {}".format(request.data['product_id'])})
 
             entity_id, entity_type = getEntityDetailsOfProduct(request.data['product_id'])
             if entity_id is None and entity_type is None:
-                return Response({"message": "Invalid Product Id {}".format(request.data['product_id'])},400)
+                return Response({"message":"Can't add the product to wishlist", \
+                                 "errors": "Invalid Product Id {}".format(request.data['product_id'])},400)
 
-            request.data['user'] = request.user
+            request.data['created_by'] = request.user
             serializer = WishListSerializer()
             wishlist = serializer.create(request.data)
-            return Response({"message":"Product {} is successfully added to wishlist".format(request.data['product_id'])},200)
+            return Response({"message":"Product {} is successfully added to wishlist" \
+                            .format(request.data['product_id'])},200)
         else:
-            return Response(input_serializer.errors, 400)
+            return Response({"message":"Can't add the product to wishlist", "errors":input_serializer.errors}, 400)
 
 
 class UserWishListDetails(generics.ListAPIView):
@@ -39,7 +42,7 @@ class UserWishListDetails(generics.ListAPIView):
         if input_serializer.is_valid():
             entity_type_filters = getEntityType(request.data['entity_type_filters'])
 
-            wishlist = WishList.objects.filter(user = request.user, entity_type__in=entity_type_filters)
+            wishlist = WishList.objects.filter(created_by = request.user, entity_type__in=entity_type_filters)
             if len(wishlist) == 0:
                 return Response({"message":"Sorry, There are no Wish Lists"},200)
 
@@ -58,10 +61,17 @@ class UserWishListDetails(generics.ListAPIView):
                 all_wish_list_products.append(each_wishlist_details)
             return Response({"results":all_wish_list_products},200)
         else:
-            return Response(input_serializer.errors, 400)
+            return Response({"message":"Can't get the details of wishlist","errors":input_serializer.errors}, 400)
 
 
 class DeletProductFromWishList(generics.DestroyAPIView):
     permission_classes = (IsAuthenticated,)
-    queryset = WishList.objects.all()
-    serializer_class = WishListSerializer
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            delete_product = WishList.objects.get(created_by=request.user, product_id=kwargs['product_id'])
+        except:
+            return Response({"message": "Can't delete product", "errors":"Invalid product id - {}"\
+                            .format(kwargs['product_id'])},400)
+        delete_product.delete()
+        return Response({"message":"Successfully deleted product from wishlist"},200)

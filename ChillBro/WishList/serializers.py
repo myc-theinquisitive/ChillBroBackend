@@ -8,7 +8,7 @@ class WishListSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CreateWishListSerializer(serializers.Serializer):
+class AddProductToWishListSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
 
 

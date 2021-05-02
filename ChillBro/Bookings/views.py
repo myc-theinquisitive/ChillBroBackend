@@ -124,11 +124,11 @@ class CreateBooking(generics.ListCreateAPIView):
                 total_money = 0.0
                 for product in products_list:
                     total_money += float(product_values[product['product_id']]['price']) * product['quantity']
-                content_from_coupon_app = get_coupon_value(request.data['coupon'],request.user, entity_id, \
+                coupoun_details = get_coupon_value(request.data['coupon'],request.user, entity_id, \
                                                                  product_ids, total_money)
-                if not content_from_coupon_app['valid']:
-                    return Response({"message": content_from_coupon_app['message']}, 400)
-                request.data['total_money'] = content_from_coupon_app['discounted_value']
+                if not coupoun_details['is_valid']:
+                    return Response({"message": coupoun_details['message']}, 400)
+                request.data['total_money'] = coupoun_details['discounted_value']
                 payment_status = request.data.pop('payment_status')
                 bookings_object = BookingsSerializer()
                 booking_id = (bookings_object.create(request.data))
@@ -143,11 +143,9 @@ class CreateBooking(generics.ListCreateAPIView):
                 transaction_response = create_transaction(str(booking_id), request.data['entity_id'], \
                                     request.data['entity_type'], request.data['total_money'], payment_status, \
                                     booking_id.booking_date,total_net_value)
-                if not transaction_response['status']:
-                    return Response(transaction_response['errors'],400)
-                return Response("Success", 200)
+                return Response({"message":"Booking created successfully"}, 200)
             else:
-                return Response({product_id + " " + comment}, 400)
+                return Response({"errors":product_id + " " + comment}, 400)
         else:
             return Response(new_booking_serializer.errors, 400)
 

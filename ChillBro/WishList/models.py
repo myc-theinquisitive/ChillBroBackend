@@ -18,6 +18,6 @@ class WishList(models.Model):
                                             EntityType], default=EntityType.hotels.value)
 
     user_model = get_user_model()
-    user = models.ForeignKey(user_model, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
     product_id = models.CharField(max_length=36)
     created_at = models.DateTimeField(default=datetime.now)
