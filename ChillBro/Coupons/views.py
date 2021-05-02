@@ -212,7 +212,7 @@ class CouponList(generics.ListCreateAPIView):
 
 
 class CouponDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsGet,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet,)
     serializer_class = CouponSerializer
     queryset = Coupon.objects.select_related(
         'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',

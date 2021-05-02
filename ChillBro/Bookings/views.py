@@ -156,10 +156,8 @@ class UserBookingsList(generics.ListAPIView):
 
 
 class CancelBookingView(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsOwner | IsBookingBusinessClient)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsOwner | IsBookingBusinessClient | IsBookingEmployee)
     serializer_class = BookingsSerializer
-
-    # check booking whether users or not.
 
     def put(self, request, *args, **kwargs):
         input_serializer = CancelBookingSerializer(data=request.data)
@@ -365,7 +363,7 @@ class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
 
 
 class CancelProductStatusView(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsOwner)
+    permission_classes = (IsAuthenticated, IsOwner | IsBookingBusinessClient | IsBookingEmployee)
     serializer_class = BookedProductsSerializer
 
     def put(self, request, *args, **kwargs):
@@ -385,7 +383,7 @@ class CancelProductStatusView(generics.ListAPIView):
 
 
 class GetSpecificBookingDetails(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated, IsOwner)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsOwner | IsBookingBusinessClient | IsBookingEmployee )
 
     def get(self, request, *args, **kwargs):
         try:
@@ -644,7 +642,7 @@ def generate_excel(request):
 
 class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
     permission_classes = (
-    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBookingBusinessClient | IsBookingEmployee)
+    IsAuthenticated, IsSuperAdminOrMYCEmployee |  IsBookingBusinessClient | IsBookingEmployee)
 
     def get(self, request, *args, **kwargs):
         all_booked_products = BookedProducts.objects.all()
@@ -658,8 +656,10 @@ class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
         get_bookings_details_of_product = []
         bookings_of_particular_product = BookedProducts.objects.select_related('booking') \
             .filter(product_id=kwargs['product_id'])
-        for booking in bookings_of_particular_product:
-            self.check_object_permissions(request, booking)
+
+        if len(bookings_of_particular_product)>0:
+            first_booking = bookings_of_particular_product[0]
+            self.check_object_permissions(request, first_booking.booking)
         booking_check_in_details = CheckInDetails.objects.all()
         check_in_details = {}
         for each_check_in in booking_check_in_details:
