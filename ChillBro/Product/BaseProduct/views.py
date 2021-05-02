@@ -5,10 +5,10 @@ from .serializers import ProductSerializer, ProductImageSerializer
 from ..Seller.serializers import SellerProductSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from ChillBro.permissions import IsBusinessClient, CheckSellerProduct
 from datetime import date, timedelta
 from ..wrapper import getBookedCountOfProductId
 from ..constants import *
+from ChillBro.permissions import IsBusinessClient, IsSellerProduct
 
 class BaseProductList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
@@ -41,7 +41,7 @@ class BaseProductDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class BaseProductImageCreate(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient, CheckSellerProduct)
+    permission_classes = (IsAuthenticated, IsSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
 
@@ -52,7 +52,7 @@ class BaseProductImageCreate(generics.CreateAPIView):
 
 
 class BaseProductImageDelete(generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient, CheckSellerProduct)
+    permission_classes = (IsAuthenticated, IsSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
 

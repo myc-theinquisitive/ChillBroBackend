@@ -198,7 +198,7 @@ class UseCoupon(APIView):
 
 
 class CouponList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsGet, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet,)
     serializer_class = CouponSerializer
     queryset = Coupon.objects.select_related(
         'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
@@ -206,23 +206,17 @@ class CouponList(generics.ListCreateAPIView):
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, args, kwargs)
-
         for coupon in response.data["results"]:
             convert_json_dumps_fields(coupon)
-
         return response
 
 
 class CouponDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsGet, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsGet,)
     serializer_class = CouponSerializer
     queryset = Coupon.objects.select_related(
         'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
         'ruleset__max_uses', 'ruleset__validity').all()
-
-
-
-
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, args, kwargs)
@@ -232,7 +226,7 @@ class CouponDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CouponHistoryList(generics.ListAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee, )
     serializer_class = CouponHistorySerializer
 
     def get(self, request, *args, **kwargs):

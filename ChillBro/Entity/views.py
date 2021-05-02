@@ -7,13 +7,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
 from .wrappers import create_address
-from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, CheckBusinessClientEntity, IsOwnerById
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, IsEmployee, IsGet, IsEmployeeEntity
 
 
-class EntityList(generics.ListCreateAPIView):
+class EntityList(generics.CreateAPIView):
     queryset = MyEntity.objects.all()
     serializer_class = EntitySerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,)
+    permission_classes = (IsAuthenticated, IsBusinessClient,)
 
     def post(self, request, *args, **kwargs):
         serializer = AddressSerializer(data=request.data)
@@ -45,7 +45,7 @@ class EntityList(generics.ListCreateAPIView):
 class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = MyEntity.objects.all()
     serializer_class = EntitySerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, CheckBusinessClientEntity)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | (IsEmployee & IsGet), IsBusinessClientEntity)
 
     def check_entity_permission(self, request):
         try:
@@ -88,7 +88,7 @@ class EntityStatusAll(generics.GenericAPIView):
 
 class EntityStatus(generics.GenericAPIView):
     serializer_class = EntityStatusSerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, CheckBusinessClientEntity)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
 
     def put(self, request, pk):
         serializer = self.serializer_class(data=request.data)
@@ -107,7 +107,7 @@ class EntityStatus(generics.GenericAPIView):
 class BusinessClientEntityList(generics.CreateAPIView):
     queryset = BusinessClientEntity.objects.all()
     serializer_class = BusinessClientEntitySerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,)
+    permission_classes = (IsAuthenticated, IsBusinessClient,)
 
 
 class BusinessClientEntities(generics.ListAPIView):

@@ -57,14 +57,14 @@ class BookingsManager(models.Manager):
 
 class Bookings(models.Model):
     user_model = get_user_model()
-    user = models.ForeignKey(user_model, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
     coupon = models.CharField(max_length=36, verbose_name="Coupon Id")
     booking_id = models.CharField(max_length=36, primary_key=True, default=getId, verbose_name="Booking Id")
     booking_date = models.DateTimeField(default=datetime.now)
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     entity_type = models.CharField(max_length=30,
                                    choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in
-                                            EntityType], default=EntityType.hotels.value)
+                                          EntityType], default=EntityType.hotels.value)
     booking_status = models.CharField(max_length=30,
                                       choices=[(booking_status.value, booking_status.value) for booking_status in
                                                BookingStatus],

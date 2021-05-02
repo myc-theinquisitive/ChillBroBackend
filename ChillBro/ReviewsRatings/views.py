@@ -6,9 +6,9 @@ from rest_framework.response import Response
 
 from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer
 from .models import ReviewsRatings
-from ChillBro.permissions import IsReviewOwner
 from .helpers import *
 from .wrapper import *
+from ChillBro.permissions import IsOwner
 
 class ReviewRatingList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, )
@@ -16,7 +16,7 @@ class ReviewRatingList(generics.ListCreateAPIView):
     serializer_class = ReviewsRatingsSerializer
 
     def post(self, request, *args, **kwargs):
-        request.data["reviewed_by"] = request.user.id
+        request.data["created_by"] = request.user.id
         return super().post(request, args, kwargs)
 
 
@@ -31,17 +31,17 @@ class MYCReviewRatingList(generics.CreateAPIView):
 
 
 class ReviewRatingDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsReviewOwner)
+    permission_classes = (IsAuthenticated, IsOwner)
     queryset = ReviewsRatings.objects.all()
     serializer_class = ReviewsRatingsSerializer
-# pass user object.
+
     def put(self, request, *args, **kwargs):
         try:
             review=ReviewsRatings.objects.get(id=kwargs['pk'])
             self.check_object_permissions(request,review)
         except:
             pass
-        request.data["reviewed_by"] = request.user.id
+        request.data["created_by"] = request.user.id
         return super().put( request, args, kwargs)
 
 
@@ -49,7 +49,7 @@ class RelatedReviewRatingList(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = ReviewsRatings.objects.all()
     serializer_class = ReviewsRatingsSerializer
-# did'nt understand
+
     def get(self, request, *args, **kwargs):
         related_id = kwargs['related_id']
         self.queryset = ReviewsRatings.objects.filter(related_id=related_id)
@@ -107,5 +107,3 @@ class EntityTotalReviews(generics.ListAPIView):
             return Response(booking_ratings, 200)
         else:
             return Response(input_serializer.errors, 400)
-
-

@@ -11,7 +11,7 @@ from .models import SellerProduct
 from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
 from .BaseProduct.models import Product
-from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, CheckSellerProduct
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, IsEmployeeBusinessClient
 from UserApp.models import BusinessClient
 
 class ProductView(ProductInterface):
@@ -464,7 +464,7 @@ class ProductNetPrice(APIView):
 
 class ProductSellerStatus(generics.ListAPIView):
     queryset = SellerProduct.objects.all()
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsOwnerById,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
 
 
     def get(self, request, seller_id, status):
@@ -477,7 +477,7 @@ class ProductSellerStatus(generics.ListAPIView):
 
 class ProductQuantity(APIView):
     serializer_class = ProductQuantitySerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, CheckSellerProduct ,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
 
     def put(self, request, product_id):
         try:

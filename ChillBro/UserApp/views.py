@@ -5,17 +5,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .wrapper import get_entity_ids_for_business_client
-from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, CheckBusinessClientEntity, IsOwnerById
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
+    IsEmployee, IsEmployeeEntityById, IsBusinessClientEmployee, IsOwnerById, IsEmployeeBusinessClient
 
 
 class MyUserList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
     queryset = MyUser.objects.all()
     serializer_class = MyUserSerializer
 
 
 class BusinessClientAdd(APIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee,)
     queryset = BusinessClient.objects.all()
     serializer_class = NewBusinessClientSerializer
 
@@ -46,18 +47,19 @@ class BusinessClientAdd(APIView):
 
 
 class BusinessClientAll(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee,)
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
 
 class BusinessClientDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsOwnerById)
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
     def get(self, request, *args, **kwargs):
         try:
+            self.check_object_permissions(request,kwargs['pk'])
             business_client = BusinessClient.objects.filter(id=self.kwargs['pk']). \
                 values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'business_name',
                        'secondary_contact')[0]
@@ -67,7 +69,7 @@ class BusinessClientDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class EmployeeAdd(APIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | CheckBusinessClientEntity)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntity)
     queryset = Employee.objects.all()
     serializer_class = NewEmployeeSerializer
 
@@ -95,38 +97,53 @@ class EmployeeAdd(APIView):
             return Response(serializer.errors)
 
 
-class EmployeeAll(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
-    queryset = Employee.objects.all()
-    serializer_class = EmployeeSerializer
-
-
 class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsEmployeeBusinessClient | (IsEmployee & IsOwnerById))
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
 
     def get(self, request, *args, **kwargs):
+        self.check_object_permissions(request,kwargs['pk'])
         business_client = Employee.objects.filter(id=self.kwargs['pk']). \
             values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'entity_id', 'role', 'is_active',
                    'image')[0]
         return Response(business_client)
 
+    def put(self, request, *args, **kwargs):
+        id=request.user.id
+        employee = None
+        try:
+            employee = Employee.objects.get(user_id=id)
+        except:
+            pass
+        if employee:
+            request.data['is_active']=employee.is_active
+        return super().get(request, *args, **kwargs)
+
+
 
 class EntityBusinessClientEmployee(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,IsOwnerById,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsEmployeeBusinessClient, )
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
     def get(self, request, *args, **kwargs):
-        self.check_object_permissions(request,self.kwargs['bc_id'])
+        self.check_object_permissions(request, self.kwargs['bc_id'])
         entity_ids = get_entity_ids_for_business_client(self.kwargs['bc_id'])
         employees = Employee.objects.filter(entity_id__in=entity_ids)
         serializer = EmployeeSerializer(employees, many=True)
-        return Response(serializer.data,200)
+        return Response(serializer.data, 200)
 
 
 class EmployeeActive(generics.RetrieveUpdateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEmployee)
     queryset = Employee.objects.all()
     serializer_class = EmployeeActiveSerializer
+
+    def get(self,request, *args, **kwargs):
+        self.check_object_permissions(request,kwargs['pk'])
+        super().get(request, *args, **kwargs)
+
+    def post(self,request, *args, **kwargs):
+        self.check_object_permissions(request,kwargs['pk'])
+        super().post(request, *args, **kwargs)
