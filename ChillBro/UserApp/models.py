@@ -12,6 +12,7 @@ class MyUser(EmailAbstractUser):
     date_of_birth = models.DateField(verbose_name='Date of birth', null=True, blank=True)
     phone_number = models.CharField(verbose_name='phone_number', max_length=10, unique=True, null=True, blank=True,
                                     validators=[MinLengthValidator(10), validate_phone])
+    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
 
     # Required
     objects = EmailUserManager()

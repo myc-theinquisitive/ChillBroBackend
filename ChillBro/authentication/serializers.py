@@ -41,7 +41,8 @@ class PasswordResetVerifiedSerializer(serializers.Serializer):
 
 
 class PasswordChangeSerializer(serializers.Serializer):
-    password = serializers.CharField(max_length=128)
+    old_password = serializers.CharField(max_length=128)
+    new_password = serializers.CharField(max_length=128)
 
 
 class EmailChangeSerializer(serializers.Serializer):
@@ -55,7 +56,7 @@ class EmailChangeVerifySerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ('email', 'first_name', 'last_name')
+        fields = ('email', 'first_name', 'last_name','id')
 
 
 class OTPCreateSerializer(serializers.ModelSerializer):

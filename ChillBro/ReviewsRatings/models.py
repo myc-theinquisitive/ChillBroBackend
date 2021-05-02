@@ -15,13 +15,13 @@ class ReviewsRatings(models.Model):
     comment = models.TextField(verbose_name="Comment")
     rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     user_model = get_user_model()
-    reviewed_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="Reviewed By")
+    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="Reviewed By")
 
     def __str__(self):
         return "Related Id - {0} Rating - {1}".format(self.related_id, self.rating)
 
     class Meta:
-        unique_together = ('related_id', 'reviewed_by',)
+        unique_together = ('related_id', 'created_by',)
 
 
 class ReviewImage(models.Model):

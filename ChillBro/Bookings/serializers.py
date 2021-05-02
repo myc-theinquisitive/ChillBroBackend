@@ -143,7 +143,7 @@ class GetBookingsStatisticsDetailsSerializer(StatisticsSerializer):
 
 
 class StatisticsDetailsSerializer(serializers.Serializer):
-    user = serializers.CharField(required=True)
+    created_by = serializers.CharField(required=True)
     booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
     booking_date = serializers.DateTimeField(required=True)
     total_money = serializers.DecimalField(decimal_places=2, max_digits=20, required=True)
