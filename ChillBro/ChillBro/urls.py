@@ -29,6 +29,8 @@ urlpatterns = [
     path('user/',include('UserApp.urls')),
     path('entity/',include('Entity.urls')),
     path('refer/',include('Refer.urls')),
+    path('cart/',include('Cart.urls')),
+    path('wishlist/',include('WishList.urls')),
     path('', include('Product.urls')),
 ]
 

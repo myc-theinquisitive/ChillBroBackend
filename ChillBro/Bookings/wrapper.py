@@ -1,62 +1,39 @@
 from ReviewsRatings.exportapi import *
-from Payments.models import *
 from Payments.exportapi import *
+from Product.exportapi import *
+from Coupons.exportapi import *
 
 
-def getProductData(product_id_list):
-    # here have to wirte orm query to fetch the product details having products_id in product_id_list
-    products = {'df8966f9-f6ce-4a46-9a00-80ac3988f818': {'price': 100.0},
-                'df8966f9-f6ce-4a46-9a00-80ac3988f819': {'price': 200.0},
-                'df8966f9-f6ce-4a46-9a00-80ac3988f820': {'price': 300.0}}
+def get_product_data(product_id_list):
+    products = product_data_prices(product_id_list)
     if len(products) == 0:
         return None
     return products
 
 
-def getIndividualProductValue(product_ids):
-    product = getProductData(product_ids)
-    return product
+def get_coupon_value(coupon_id, user, entity_ids, product_ids, total_money):
+    return coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
 
 
-def getCouponValue(coupon_id, product_ids, entity_ids, total_money):
-    return True, 100.0
-    # return False, 0
 
-
-def getCoupons(coupon_id):
-    coupons = ['df8966f9-f6ce-4a46-9a00-80ac3988f821', 'df8966f9-f6ce-4a46-9a00-80ac3988f822',
-               'df8966f9-f6ce-4a46-9a00-80ac3988f823']
-    if coupon_id in coupons:
-        return coupon_id
-    return None
-
-
-def getTotalQuantityOfProduct(product_id):
-    return 30
-
-
-def businessClientReviewOnCustomer(review, rating, booking_id, user):
+def business_client_review_on_customer(review, rating, booking_id, user):
     data = {'related_id': booking_id, 'comment': review, 'rating': int(rating), 'reviewed_by': user}
-    return insertRating(data)
+    return insert_rating(data)
 
 
-def getTransactionDetailsByBookingId(booking_id):
-    return transactionDetailsByBookingId(booking_id)
+def get_transaction_details_by_booking_id(booking_id):
+    return transaction_details_by_booking_id(booking_id)
 
 
-def getTransactionDetails():
-    return TransactionDetails.objects.all()
+def get_review_by_booking_id(booking_id):
+    return review_by_booking_id(booking_id)
 
 
-def getReviewByBookingId(booking_id):
-    return ReviewByBookingId(booking_id)
+def get_product_details(product_ids):
+    return product_details(product_ids)
 
 
-def getProductsDetails(product_ids):
-    return { "df8966f9-f6ce-4a46-9a00-80ac3988f818": {'name': 'xyz', 'type': 'type'},
-             "df8966f9-f6ce-4a46-9a00-80ac3988f819": {'name': 'xyz', 'type': 'type'},
-             "df8966f9-f6ce-4a46-9a00-80ac3988f820": {'name': 'xyz', 'type': 'type'}}
-
-
-def createTransaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date):
-    return newTransaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date)
+def create_transaction(booking_id, entity_id, entity_type, total_money, payment_status, booking_date,total_net_value):
+    return new_transaction({'booking_id':booking_id, 'entity_id': entity_id, 'entity_type': entity_type, \
+                            'total_money': total_money, 'payment_status': payment_status, 'booking_date':booking_date,\
+                            'total_net_value':total_net_value})

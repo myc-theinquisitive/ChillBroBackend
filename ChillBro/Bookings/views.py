@@ -61,11 +61,19 @@ def valid_booking(products_list, start_time, end_time):
         return "Start time is greater than persent time", ""
     if start_time >= end_time:
         return "end time is less than start time", ""
+    product_ids = []
+    for product in products_list:
+        product_ids.append(product['product_id'])
+    products_quantity = get_product_data(product_ids)
+    if products_quantity is None:
+        return "some invalid product is obtained ",""
+    if len(product_ids) != len(products_quantity):
+        return "some invalid product is obtained ",""
     for product in products_list:
         if product['quantity'] <= 0:
             return "quantity is less than 0 ", product['product_id']
         previous_bookings = get_total_bookings_of_product(product['product_id'], start_time, end_time)
-        total_quantity = getTotalQuantityOfProduct(product['product_id'])
+        total_quantity = products_quantity[product['product_id']]['quantity']
         if total_quantity - previous_bookings < product['quantity']:
             if total_quantity - previous_bookings == 0:
                 return "Sorry, No products are available", product['product_id']
@@ -116,30 +124,33 @@ class CreateBooking(generics.ListCreateAPIView):
                 entity_id = request.data['entity_id']
                 for product in products_list:
                     product_ids.append(product['product_id'])
-                product_values = getIndividualProductValue(product_ids)
+                product_values = get_product_data(product_ids)
                 total_money = 0.0
                 for product in products_list:
-                    total_money += product_values[product['product_id']]['price'] * product['quantity']
-                is_valid, copoun_reducted_money = getCouponValue(request.data['coupon'], product_ids, entity_id,
-                                                                 total_money)
-                if is_valid is False:
-                    return Response({"message": "Coupon is invalid"}, 400)
-                request.data['total_money'] = total_money - copoun_reducted_money
+                    total_money += float(product_values[product['product_id']]['price']) * product['quantity']
+                coupoun_details = get_coupon_value(request.data['coupon'],request.user, entity_id, \
+                                                                 product_ids, total_money)
+                if not coupoun_details['is_valid']:
+                    return Response({"message": coupoun_details['message']}, 400)
+                request.data['total_money'] = coupoun_details['discounted_value']
                 payment_status = request.data.pop('payment_status')
                 bookings_object = BookingsSerializer()
                 booking_id = (bookings_object.create(request.data))
+                total_net_value = 0
                 for product in products_list:
                     product['booking'] = booking_id
                     product["product_value"] = product_values[product['product_id']]['price']
+                    product['net_value'] = product_values[product['product_id']]['net_value']
+                    total_net_value += product_values[product['product_id']]['net_value']
                 booked_product_serializer_object = BookedProductsSerializer()
                 booked_product_serializer_object.bulk_create(products_list)
-                create_transaction = createTransaction(str(booking_id), request.data['entity_id'], \
-                                                       request.data['entity_type'], request.data['total_money'],
-                                                       payment_status, \
-                                                       booking_id.booking_date)
-                return Response("Success", 200)
+
+                transaction_response = create_transaction(str(booking_id), request.data['entity_id'], \
+                                    request.data['entity_type'], request.data['total_money'], payment_status, \
+                                    booking_id.booking_date,total_net_value)
+                return Response({"message":"Booking created successfully"}, 200)
             else:
-                return Response({product_id + " " + comment}, 400)
+                return Response({"errors":product_id + " " + comment}, 400)
         else:
             return Response(new_booking_serializer.errors, 400)
 
@@ -406,8 +417,8 @@ class GetSpecificBookingDetails(generics.RetrieveAPIView):
             products.append(some_data_product)
         booking.products = products
         serializer = GetSpecificBookingDetailsSerializer(booking).data
-        serializer['transaction_details'] = getTransactionDetailsByBookingId(booking.booking_id)
-        serializer['customer_review'] = getReviewByBookingId(booking.booking_id)
+        serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.booking_id)
+        serializer['customer_review'] = get_review_by_booking_id(booking.booking_id)
         return Response(serializer, 200)
 
 
@@ -445,7 +456,7 @@ class GetBookingDetailsView(generics.RetrieveAPIView):
             for each_booked_product in booked_product_details:
                 if each_booked_product.product_id not in product_ids:
                     product_ids.append(each_booked_product.product_id)
-            product_details = getProductsDetails(product_ids)
+            product_details = get_product_details(product_ids)
             check_in_details = {}
             for each_check_in in booking_check_in:
                 check_in_details[each_check_in.booking_id] = each_check_in
@@ -524,7 +535,7 @@ class BookingEnd(generics.ListCreateAPIView):
             rating = data.pop('rating', None)
             booking_id = request.data['booking_id']
             user = request.user
-            businessClientReviewOnCustomer(review, rating, booking_id, user)
+            business_client_review_on_customer(review, rating, booking_id, user)
             serializer = CheckOutDetailsSerializer()
             check_out = serializer.create(data)
             images = []
@@ -715,7 +726,7 @@ class ProductStatistics(generics.RetrieveAPIView):
             date = datetime.strptime(request.data['date'],"%Y-%m-%d")
             tomorrow_date = date + timedelta(1)
             product_id = kwargs['product_id']
-            total_products = getTotalQuantityOfProduct(product_id)
+            product_detials = get_product_data([product_id])
             total_products_booked = BookedProducts.objects.select_related('booking') \
                     .filter(product_id=product_id,booking__booking_date__gte=date, \
                     booking__booking_date__lte=tomorrow_date).aggregate(count=Sum(F('quantity')))['count']
@@ -727,7 +738,7 @@ class ProductStatistics(generics.RetrieveAPIView):
                 total_products_cancelled = 0
             if total_products_booked is None:
                 total_products_booked = 0
-            remaining_products = total_products - total_products_booked + total_products_cancelled
+            remaining_products = product_detials[product_id]['quantity'] - total_products_booked + total_products_cancelled
             ongoing_products = BookedProducts.objects.select_related('booking') \
                 .filter(product_id=product_id,booking__booking_date__gte=date, \
                 booking__booking_date__lte=tomorrow_date, \

@@ -1,11 +1,9 @@
 import uuid
 from django.db.models import Q
 from django.db import models
-from .validators import checkCouponId, checkProductId
 from .constants import BookingStatus, PayStatus, EntityType, IdProofType
 from datetime import datetime, date, timedelta
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, image_upload_to_check_out
-from django.db.models import Count
 
 
 # Create your models here.
@@ -85,6 +83,7 @@ class BookedProducts(models.Model):
     product_id = models.CharField(max_length=36, verbose_name="Product Id")
     quantity = models.IntegerField()
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     is_cancelled = models.BooleanField(default=False)
     product_status = models.CharField(max_length=30,
                                       choices=[(product_status.value, product_status.value) for product_status in
