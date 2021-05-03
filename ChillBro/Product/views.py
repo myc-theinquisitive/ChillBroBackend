@@ -11,7 +11,8 @@ from .models import SellerProduct
 from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
 from .BaseProduct.models import Product
-
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, IsEmployeeBusinessClient
+from UserApp.models import BusinessClient
 
 class ProductView(ProductInterface):
 
@@ -433,6 +434,7 @@ class SearchProducts(generics.ListAPIView):
 
 class ProductNetPrice(APIView):
     serializer_class = NetPriceSerializer
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
 
     def get(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -462,24 +464,27 @@ class ProductNetPrice(APIView):
 
 class ProductSellerStatus(generics.ListAPIView):
     queryset = SellerProduct.objects.all()
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
+
 
     def get(self, request, seller_id, status):
+        self.check_object_permissions(request,seller_id)
         seller_products = SellerProduct.objects.filter(seller_id=seller_id).values_list('product',flat=True)
         product_ids=Product.objects.filter(id__in=seller_products,status=status).values_list('id',flat=True)
-        # ids = list(map(lambda x: x.product_id,
-        #                filter(lambda x: Product.objects.get(id=x.product_id).status == status, seller_products)))
         product_view = ProductView()
         return Response(product_view.get_by_ids(product_ids))
 
 
 class ProductQuantity(APIView):
     serializer_class = ProductQuantitySerializer
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
 
     def put(self, request, product_id):
         try:
             product = Product.objects.get(id=product_id)
         except:
             return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+        self.check_object_permissions(request,product_id)
         serializer = self.serializer_class(product, data=request.data)
         if serializer.is_valid():
             serializer.save()

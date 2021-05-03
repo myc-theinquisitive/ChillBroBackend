@@ -18,6 +18,10 @@ from xhtml2pdf import pisa
 import os
 # library for generating excel
 import xlwt
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsUserOwner, IsOwner, IsGet, \
+    IsEmployee, \
+    IsBookingBusinessClient, IsBusinessClientEntityById, IsEmployeeEntityById, IsBookingEmployee, \
+    IsBusinessClientEntities, IsEmployeeEntities
 
 
 # Create your views here.
@@ -140,6 +144,7 @@ class CreateBooking(generics.ListCreateAPIView):
                     total_net_value += product_values[product['product_id']]['net_value']
                 booked_product_serializer_object = BookedProductsSerializer()
                 booked_product_serializer_object.bulk_create(products_list)
+
                 transaction_response = create_transaction(str(booking_id), request.data['entity_id'], \
                                     request.data['entity_type'], request.data['total_money'], payment_status, \
                                     booking_id.booking_date,total_net_value)
@@ -157,12 +162,12 @@ class UserBookingsList(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        self.queryset = Bookings.objects.filter(user=user)
+        self.queryset = Bookings.objects.filter(created_by=user)
         return super().get(request, *args, **kwargs)
 
 
 class CancelBookingView(generics.ListAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsOwner | IsBookingBusinessClient | IsBookingEmployee)
     serializer_class = BookingsSerializer
 
     def put(self, request, *args, **kwargs):
@@ -171,17 +176,18 @@ class CancelBookingView(generics.ListAPIView):
             booking = Bookings.objects.filter(booking_id=request.data['booking_id'])
             if len(booking) == 0:
                 return Response({"message": "Booking does'nt exist"}, 400)
+            self.check_object_permissions(request, booking[0])
             cancelled_serializer = CancelledDetailsSerializer()
             cancelled_serializer.create(booking[0])
             cancelProductStatus(request.data['booking_id'])
             booking.update(booking_status=BookingStatus.cancelled.value)
-            return Response({"message": "success"},200)
+            return Response({"message": "success"}, 200)
         else:
             return Response(input_serializer.errors, 400)
 
 
 class BookingsStatistics(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities | IsEmployeeEntities)
 
     def get(self, request, *args, **kwargs):
         input_serializer = StatisticsSerializer(data=request.data)
@@ -189,6 +195,7 @@ class BookingsStatistics(generics.RetrieveAPIView):
             date_filter = request.data['date_filter']
             entity_filter = getEntityType(request.data['entity_filter'])
             entity_id = request.data['entity_id']
+            self.check_object_permissions(request, entity_id)
             if date_filter == 'Total':
                 received_bookings = Bookings.objects.total_received_bookings(entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
@@ -198,7 +205,8 @@ class BookingsStatistics(generics.RetrieveAPIView):
                     .aggregate(count=Count('booking_id'))['count']
                 cancelled_bookings = Bookings.objects.total_cancelled_bookings(entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
-                customer_take_aways_bookings = Bookings.objects.total_customer_yet_to_take_bookings(entity_filter, entity_id) \
+                customer_take_aways_bookings = \
+                Bookings.objects.total_customer_yet_to_take_bookings(entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
                 return_bookings = Bookings.objects.total_return_bookings(entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
@@ -207,32 +215,32 @@ class BookingsStatistics(generics.RetrieveAPIView):
                 returned_bookings = CheckOutDetails.objects.total_returned_bookings(entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
                 return HttpResponse([{"received": received_bookings,
-                                     "ongoing": ongoing_bookings,
-                                     "pending": pending_bookings,
-                                     "cancelled": cancelled_bookings,
-                                     "customer_yet_to_take": customer_take_aways_bookings,
-                                     "yet_to_return": return_bookings,
-                                     "cutomer_taken": customer_taken_bookings,
-                                     "returned": returned_bookings}], 200)
+                                      "ongoing": ongoing_bookings,
+                                      "pending": pending_bookings,
+                                      "cancelled": cancelled_bookings,
+                                      "customer_yet_to_take": customer_take_aways_bookings,
+                                      "yet_to_return": return_bookings,
+                                      "cutomer_taken": customer_taken_bookings,
+                                      "returned": returned_bookings}], 200)
             elif date_filter == 'Custom':
                 from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
                 received_bookings = Bookings.objects.received_bookings(from_date, to_date, entity_filter, entity_id) \
                     .aggregate(count=Count('booking_id'))['count']
                 cancelled_bookings = CancelledDetails.objects \
-                        .cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
-                        .aggregate(count=Count('booking_id'))['count']
+                    .cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
+                    .aggregate(count=Count('booking_id'))['count']
                 customer_taken_bookings = CheckInDetails.objects \
-                        .customer_taken(from_date, to_date, entity_filter, entity_id) \
-                        .aggregate(count=Count('booking_id'))['count']
+                    .customer_taken(from_date, to_date, entity_filter, entity_id) \
+                    .aggregate(count=Count('booking_id'))['count']
                 returned_bookings = CheckOutDetails.objects \
-                        .returned_bookings(from_date, to_date, entity_filter, entity_id) \
-                        .aggregate(count=Count('booking_id'))['count']
+                    .returned_bookings(from_date, to_date, entity_filter, entity_id) \
+                    .aggregate(count=Count('booking_id'))['count']
                 return HttpResponse([{"received": received_bookings,
-                                     "ongoing ": -1,
-                                     "pending": -1,
-                                     "cancelled": cancelled_bookings,
-                                     "customer_taken": customer_taken_bookings,
-                                     "returned": returned_bookings}], 200)
+                                      "ongoing ": -1,
+                                      "pending": -1,
+                                      "cancelled": cancelled_bookings,
+                                      "customer_taken": customer_taken_bookings,
+                                      "returned": returned_bookings}], 200)
             else:
                 from_date, to_date = getTimePeriod(date_filter)
                 previous_from_date, previous_to_date = getPreviousTimePeriod(date_filter)
@@ -248,8 +256,8 @@ class BookingsStatistics(generics.RetrieveAPIView):
             else:
                 ongoing_bookings = pending_bookings = -1
             cancelled_bookings = CancelledDetails.objects \
-                    .cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
-                    .aggregate(count=Count('booking_id'))['count']
+                .cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
+                .aggregate(count=Count('booking_id'))['count']
             if date_filter != 'Yesterday':
                 customer_take_aways_bookings = Bookings.objects \
                     .customer_yet_to_take_bookings(from_date, to_date, entity_filter, entity_id) \
@@ -267,27 +275,27 @@ class BookingsStatistics(generics.RetrieveAPIView):
             else:
                 customer_take_aways_bookings = return_bookings = customer_taken_bookings = returned_bookings = -1
             previous_receiving_bookings = Bookings.objects \
-                    .received_bookings(previous_from_date, previous_to_date, entity_filter, entity_id) \
-                    .aggregate(count=Count('booking_id'))['count']
+                .received_bookings(previous_from_date, previous_to_date, entity_filter, entity_id) \
+                .aggregate(count=Count('booking_id'))['count']
             previous_cancelled_bookings = CancelledDetails.objects \
-                    .cancelled_bookings(previous_from_date, previous_to_date, entity_filter,entity_id) \
-                    .aggregate(count=Count('booking_id'))['count']
+                .cancelled_bookings(previous_from_date, previous_to_date, entity_filter, entity_id) \
+                .aggregate(count=Count('booking_id'))['count']
             return HttpResponse([{"received": received_bookings,
-                                "percentage_change": (received_bookings - previous_receiving_bookings) / 100},
-                                {"ongoing": ongoing_bookings},
-                                {"pending": pending_bookings},
-                                {"cancelled": cancelled_bookings,
-                                "percentage_change": (cancelled_bookings - previous_cancelled_bookings) / 100},
-                                {"customer_yet_to_take": customer_take_aways_bookings},
-                                {"yet_to_return": return_bookings},
-                                {'customer_taken' : customer_taken_bookings},
-                                {'returned' : returned_bookings}], 200)
+                                  "percentage_change": (received_bookings - previous_receiving_bookings) / 100},
+                                 {"ongoing": ongoing_bookings},
+                                 {"pending": pending_bookings},
+                                 {"cancelled": cancelled_bookings,
+                                  "percentage_change": (cancelled_bookings - previous_cancelled_bookings) / 100},
+                                 {"customer_yet_to_take": customer_take_aways_bookings},
+                                 {"yet_to_return": return_bookings},
+                                 {'customer_taken': customer_taken_bookings},
+                                 {'returned': returned_bookings}], 200)
         else:
             return Response(input_serializer.errors, 400)
 
 
 class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities | IsEmployeeEntities)
 
     def get(self, request, *args, **kwargs):
         input_serializer = GetBookingsStatisticsDetailsSerializer(data=request.data)
@@ -295,6 +303,7 @@ class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
             date_filter = request.data['date_filter']
             entity_filter = getEntityType(request.data['entity_filter'])
             entity_id = request.data['entity_id']
+            self.check_object_permissions(request, entity_id)
             statistics_details_type = request.data['statistics_details_type']
             if date_filter == 'Total':
                 if statistics_details_type == 'received_bookings':
@@ -330,7 +339,8 @@ class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
                     elif statistics_details_type == 'pending_bookings':
                         bookings = Bookings.objects.pending_bookings(entity_filter, entity_id)
                 if statistics_details_type == 'customer_take_aways':
-                    bookings = Bookings.objects.customer_yet_to_take_bookings(from_date, to_date, entity_filter, entity_id)
+                    bookings = Bookings.objects.customer_yet_to_take_bookings(from_date, to_date, entity_filter,
+                                                                              entity_id)
                 elif statistics_details_type == 'return_bookings':
                     bookings = Bookings.objects.yet_to_return_bookings(from_date, to_date, entity_filter, entity_id)
                 elif statistics_details_type == 'customer_taken':
@@ -364,7 +374,7 @@ class GetBookingsStatisticsDetails(generics.RetrieveAPIView):
 
 
 class CancelProductStatusView(generics.ListAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsOwner | IsBookingBusinessClient | IsBookingEmployee)
     serializer_class = BookedProductsSerializer
 
     def put(self, request, *args, **kwargs):
@@ -375,6 +385,8 @@ class CancelProductStatusView(generics.ListAPIView):
             if len(booking_product) == 0:
                 return Response({"Invalid Booking id {} or product  {} " \
                                 .format(request.data['booking_id'], request.data['product_id'])}, 400)
+            booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+            self.check_object_permissions(request,booking)
             booking_product.update(is_cancelled=True,product_status = BookingStatus.cancelled.value)
             return Response({"Booking_status":" Changed successfully"})
         else:
@@ -382,17 +394,19 @@ class CancelProductStatusView(generics.ListAPIView):
 
 
 class GetSpecificBookingDetails(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsOwner | IsBookingBusinessClient | IsBookingEmployee )
 
     def get(self, request, *args, **kwargs):
         try:
-            booking = Bookings.objects.select_related('user').get(booking_id=kwargs['booking_id'])
+            booking = Bookings.objects.select_related('created_by').get(booking_id=kwargs['booking_id'])
         except:
             return Response({"message: invalid booking id in url"}, 400)
+        booking = Bookings.objects.get(booking_id=kwargs['booking_id'])
+        self.check_object_permissions(request, booking)
         user_data = Bookings.objects.none()
-        user_data.name = booking.user.first_name + booking.user.last_name
-        user_data.contact_number = booking.user.phone_number
-        user_data.email = booking.user
+        user_data.name = booking.created_by.first_name + booking.created_by.last_name
+        user_data.contact_number = booking.created_by.phone_number
+        user_data.email = booking.created_by
         booking.User_Details = user_data
         all_products = BookedProducts.objects.filter(booking=booking)
         products = []
@@ -409,7 +423,8 @@ class GetSpecificBookingDetails(generics.RetrieveAPIView):
 
 
 class GetBookingDetailsView(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (
+    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities | IsEmployeeEntities)
 
     def get(self, request, *args, **kwargs):
         input_serializer = GetBookingDetailsViewSerializer(data=request.data)
@@ -418,6 +433,7 @@ class GetBookingDetailsView(generics.RetrieveAPIView):
             category_filter = getCategoryFilter(request.data['category_filter'])
             status_filter = getStatus(request.data['status_filter'])
             entity_id = request.data['entity_id']
+            self.check_object_permissions(request, entity_id)
             from_date, to_date = getTimePeriod(date_filter)
             booking_details = Bookings.objects \
                 .filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date) \
@@ -481,9 +497,11 @@ class GetBookingDetailsView(generics.RetrieveAPIView):
 
 
 class BookingStart(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
+        booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+        self.check_object_permissions(request, booking)
         input_serializer = BookingStartSerializer(data=request.data)
         if input_serializer.is_valid():
             other_images = request.data.pop('other_images', None)
@@ -503,9 +521,11 @@ class BookingStart(generics.ListCreateAPIView):
 
 
 class BookingEnd(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
+        booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+        self.check_object_permissions(request, booking)
         input_serializer = BookingEndSerializer(data=request.data)
         if input_serializer.is_valid():
             data = request.data.dict()
@@ -531,9 +551,11 @@ class BookingEnd(generics.ListCreateAPIView):
 
 
 class BookingEndBookingIdDetialsView(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def get(self, request, *args, **kwargs):
+        booking = Bookings.objects.get(booking_id=kwargs['booking_id'])
+        self.check_object_permissions(request, booking)
         try:
             check_in_object = CheckInDetails.objects.get(booking_id=kwargs['booking_id'])
         except:
@@ -553,13 +575,14 @@ class BookingEndBookingIdDetialsView(generics.RetrieveAPIView):
 
 
 class ReportCustomerForBooking(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
         try:
             booking = Bookings.objects.get(booking_id=request.data['booking_id'])
         except:
             return Response({"message:": "Invalid booking id"}, 400)
+        self.check_object_permissions(request, booking)
         request.data['booking'] = booking
         report_customer = ReportCustomerForBooking()
         report_customer.create(request.data)
@@ -629,7 +652,8 @@ def generate_excel(request):
 
 
 class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (
+    IsAuthenticated, IsSuperAdminOrMYCEmployee |  IsBookingBusinessClient | IsBookingEmployee)
 
     def get(self, request, *args, **kwargs):
         all_booked_products = BookedProducts.objects.all()
@@ -643,6 +667,10 @@ class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
         get_bookings_details_of_product = []
         bookings_of_particular_product = BookedProducts.objects.select_related('booking') \
             .filter(product_id=kwargs['product_id'])
+
+        if len(bookings_of_particular_product)>0:
+            first_booking = bookings_of_particular_product[0]
+            self.check_object_permissions(request, first_booking.booking)
         booking_check_in_details = CheckInDetails.objects.all()
         check_in_details = {}
         for each_check_in in booking_check_in_details:
@@ -678,13 +706,13 @@ class GetBookingDetailsOfProductId(generics.RetrieveAPIView):
 
 
 class ReportCustomerResonsList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet,)
     queryset = ReportCustomerResons.objects.all()
     serializer_class = ReportCustomerResonsSerializer
 
 
 class ReportCustomerResonsDetails(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet,)
     queryset = ReportCustomerResons.objects.all()
     serializer_class = ReportCustomerResonsSerializer
 

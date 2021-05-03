@@ -11,6 +11,7 @@ from .validations import validate_coupon
 from django.db.models import F, Q
 from django.utils import timezone
 import json
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsGet
 
 
 def retrieve_coupon_from_db(coupon_code):
@@ -23,7 +24,6 @@ def retrieve_coupon_from_db(coupon_code):
 
 
 def convert_json_dumps_fields(coupon):
-
     users = coupon["ruleset"]["allowed_users"]["users"]
     users = users.replace("'", '"')
     coupon["ruleset"]["allowed_users"]["users"] = json.loads(users)
@@ -81,11 +81,11 @@ def get_available_coupons(user_id, entity_ids, product_ids, order_value):
     current_time = timezone.now()
     coupons = Coupon.objects.select_related(
         'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
-        'ruleset__max_uses', 'ruleset__validity')\
+        'ruleset__max_uses', 'ruleset__validity') \
         .filter(Q(Q(times_used__lt=F('ruleset__max_uses__max_uses')) |
-                Q(ruleset__max_uses__is_infinite=True)) &
+                  Q(ruleset__max_uses__is_infinite=True)) &
                 Q(Q(ruleset__validity__start_date__lt=current_time) &
-                Q(ruleset__validity__end_date__gt=current_time)) &
+                  Q(ruleset__validity__end_date__gt=current_time)) &
                 Q(ruleset__validity__is_active=True)
                 )
 
@@ -198,7 +198,7 @@ class UseCoupon(APIView):
 
 
 class CouponList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet,)
     serializer_class = CouponSerializer
     queryset = Coupon.objects.select_related(
         'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
@@ -206,15 +206,13 @@ class CouponList(generics.ListCreateAPIView):
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, args, kwargs)
-
         for coupon in response.data["results"]:
             convert_json_dumps_fields(coupon)
-
         return response
 
 
 class CouponDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet,)
     serializer_class = CouponSerializer
     queryset = Coupon.objects.select_related(
         'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
@@ -228,7 +226,7 @@ class CouponDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CouponHistoryList(generics.ListAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee, )
     serializer_class = CouponHistorySerializer
 
     def get(self, request, *args, **kwargs):
@@ -237,7 +235,7 @@ class CouponHistoryList(generics.ListAPIView):
         except ObjectDoesNotExist:
             return Response({"errors": "Invalid Coupon!!!"}, 400)
 
-        self.queryset = CouponHistory.objects.filter(code__icontains=kwargs["slug"])\
+        self.queryset = CouponHistory.objects.filter(code__icontains=kwargs["slug"]) \
             .select_related('discount', 'ruleset__allowed_users', 'ruleset__allowed_entities',
                             'ruleset__allowed_products', 'ruleset__max_uses', 'ruleset__validity').all()
         response = super().get(request, args, kwargs)
