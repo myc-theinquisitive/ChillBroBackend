@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'Payments',
     'ReviewsRatings',
     'Refer',
+    'Cart',
+    'WishList',
 ]
 
 

@@ -6,6 +6,7 @@ class ProductTypes(enum.Enum):
     Transport = "Transport"
     Rental = "Rental"
 
+
 class ProductStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     PENDING = "PENDING"

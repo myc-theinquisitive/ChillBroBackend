@@ -102,6 +102,7 @@ class BookingTransaction(models.Model):
     entity_type = models.CharField(max_length=30, choices=[(type_of_entity.value, type_of_entity.value)
                                                            for type_of_entity in EntityType])
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    total_net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     booking_date = models.DateTimeField()
     booking_start = models.DateTimeField()
 

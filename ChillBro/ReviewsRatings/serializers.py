@@ -13,7 +13,7 @@ class ReviewsRatingsSerializer(serializers.ModelSerializer):
             related_id=validated_data['related_id'],
             comment=validated_data['comment'],
             rating=validated_data['rating'],
-            reviewed_by=validated_data['reviewed_by']
+            created_by=validated_data['created_by']
         )
         return object.save()
 

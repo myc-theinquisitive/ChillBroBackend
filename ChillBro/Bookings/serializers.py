@@ -21,7 +21,8 @@ class BookedProductsSerializer(serializers.ModelSerializer):
                 booking=product["booking"],
                 product_id=product["product_id"],
                 product_value=product["product_value"],
-                quantity=product["quantity"]
+                quantity=product["quantity"],
+                net_value=product["net_value"]
             )
             new_products.append(add_booking_product)
         return BookedProducts.objects.bulk_create(new_products)
@@ -80,7 +81,7 @@ class CheckOutImagesSerializer(serializers.ModelSerializer):
         return CheckOutImages.objects.bulk_create(all_images)
 
 
-class ReportCustomerForBooking(serializers.ModelSerializer):
+class ReportCustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessClientReportOnCustomer
         fields = '__all__'
@@ -115,7 +116,7 @@ class BookedProductSerializer(serializers.Serializer):
 
 
 class NewBookingSerializer(serializers.Serializer):
-    coupon = serializers.CharField(required=True, min_length=36, max_length=36)
+    coupon = serializers.CharField(required=True, max_length=100)
     products = BookedProductSerializer(many=True)
     entity_type = serializers.CharField(required=True, max_length=30)
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
@@ -142,16 +143,6 @@ class BookingStatisticsSerializer(serializers.Serializer):
 
 class GetBookingsStatisticsDetailsSerializer(BookingStatisticsSerializer):
     statistics_details_type = serializers.CharField(required=True)
-
-
-class StatisticsDetailsSerializer(serializers.Serializer):
-    created_by = serializers.CharField(required=True)
-    id = serializers.CharField(required=True, min_length=36, max_length=36)
-    booking_date = serializers.DateTimeField(required=True)
-    total_money = serializers.DecimalField(decimal_places=2, max_digits=20, required=True)
-    start_time = serializers.DateTimeField(required=True)
-    end_time = serializers.DateTimeField(required=True)
-    coupon = serializers.DateTimeField(required=True)
 
 
 class CancelProductStatusSerializer(serializers.Serializer):
@@ -215,7 +206,5 @@ class ProductStatisticsSerializer(serializers.Serializer):
     custom_dates = CustomDatesSerializer(required=False)
 
 
-class ProductStatisticsDetailsSerializer(serializers.Serializer):
-    date_filter = serializers.CharField(required=True)
-    custom_dates = CustomDatesSerializer(required=False)
+class ProductStatisticsDetailsSerializer(ProductStatisticsSerializer):
     statistics_details_type = serializers.CharField(required=True)

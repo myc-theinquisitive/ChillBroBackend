@@ -1,9 +1,9 @@
-from Bookings.exportapi import getBookingDetailsForPayments
+from Bookings.exportapi import get_booking_details_for_payments
 from datetime import datetime
 
 
-def getBookingDetailsWithFilters(entity_id, from_date, to_date, entity_filter, status):
-    return getBookingDetailsForPayments(entity_id, from_date, to_date, entity_filter, status)
+def get_booking_details_with_filter(entity_id, from_date, to_date, entity_filter, status):
+    return get_booking_details_for_payments(entity_id, from_date, to_date, entity_filter, status)
 
 
 def get_booking_details(booking_id):

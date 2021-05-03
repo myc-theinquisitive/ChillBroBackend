@@ -2,11 +2,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-
 from .serializers import *
 from .helpers import *
 from rest_framework.response import Response
 from .wrapper import *
+from django.db.models import Q
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClientEntities, \
+    IsEmployeeEntities
 
 
 class UpdatePaymentDetailsFromMyc(APIView):
@@ -74,16 +76,19 @@ class CODBookingTransactionView(APIView):
 
 
 class PaymentRevenueStatisticsView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities | IsEmployeeEntities, )
 
+    # check entity id
     def get(self, request, *args, **kwargs):
         input_serializer = PaymentRevenueStatisticsViewSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
 
+        entity_id = request.data['entity_ids']
         date_filter = request.data['date_filter']
         entity_filter = getEntityType(request.data['entity_filters'])
-        entity_id = request.data['entity_ids']
+
+        self.check_object_permissions(request, entity_id)
 
         if date_filter == 'Custom':
             from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']

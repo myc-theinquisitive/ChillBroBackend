@@ -6,9 +6,9 @@ from ..Seller.serializers import SellerProductSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import date, timedelta
-from ..wrapper import getBookedCountOfProductId
+from ..wrapper import get_booked_count_of_product_id
 from ..constants import *
-
+from ChillBro.permissions import IsBusinessClient, IsSellerProduct
 
 class BaseProductList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
@@ -41,18 +41,28 @@ class BaseProductDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class BaseProductImageCreate(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
+
+    def post(self,request,*args, **kwargs):
+        product_id = request.data['product']
+        self.check_object_permissions(request,product_id)
+        super().post(request, *args, **kwargs)
 
 
 class BaseProductImageDelete(generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
 
+    def delete(self,request,*args, **kwargs):
+        product_id = request.data['product']
+        self.check_object_permissions(request,product_id)
+        super().delete(request, *args, **kwargs)
 
-class BusinessClientProductDetails(generics.RetrieveAPIView): #need to write
+
+class BusinessClientProductDetails(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
@@ -63,7 +73,7 @@ class BusinessClientProductDetails(generics.RetrieveAPIView): #need to write
         images = ProductImage.objects.filter(product_id=product).order_by('order')
         today_date = date.today()
         tomorrow_date = today_date + timedelta(1)
-        total_booked = getBookedCountOfProductId(kwargs['product_id'], today_date, tomorrow_date)
+        total_booked = get_booked_count_of_product_id(kwargs['product_id'], today_date, tomorrow_date)
         all_images = []
         for each_image in images:
             all_images.append(each_image.image.url)

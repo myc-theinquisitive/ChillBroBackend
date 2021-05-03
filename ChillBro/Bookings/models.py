@@ -127,6 +127,7 @@ class BookedProducts(models.Model):
     product_id = models.CharField(max_length=36, verbose_name="Product Id")
     quantity = models.IntegerField()
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     booking_status = models.CharField(
         max_length=30, choices=[(booking_status.value, booking_status.value)
                                 for booking_status in ProductBookingStatus],

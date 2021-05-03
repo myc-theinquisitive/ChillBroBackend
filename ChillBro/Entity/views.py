@@ -1,18 +1,20 @@
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
 from .constants import VerifiedStatus
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, \
     EntityVerificationSerializer
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 from .models import MyEntity, BusinessClientEntity, EntityVerification
 from rest_framework.response import Response
 from rest_framework import status
-from .wrappers import post_address_data, get_address_details_for_address_ids
-from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient
+from .wrappers import post_create_address, get_address_details_for_address_ids
 from datetime import datetime
 from .helpers import get_date_format
 from collections import defaultdict
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
+    IsEmployee, IsGet, IsEmployeeEntity
 
 
 def add_verification_details_to_entities(entity_details_list):
@@ -73,7 +75,7 @@ class EntityList(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         if 'city' not in request.data or 'pincode' not in request.data:
             return Response({"message": "City and Pincode are required"}, status=status.HTTP_400_BAD_REQUEST)
-        address_id = post_address_data(request.data['city'], request.data['pincode'])
+        address_id = post_create_address(request.data['city'], request.data['pincode'])
 
         if not address_id:
             return Response({"message": "City or Pincode is invalid"}, status=status.HTTP_400_BAD_REQUEST)
@@ -91,8 +93,7 @@ class EntityList(generics.ListCreateAPIView):
             'entity': entity.id,
             'business_client': request.user.id
         }
-        business_client_entity_serializer = BusinessClientEntityList.serializer_class(
-            data=business_client_entity_data)
+        business_client_entity_serializer = BusinessClientEntitySerializer(data=business_client_entity_data)
         if business_client_entity_serializer.is_valid():
             business_client_entity_serializer.save()
         else:
@@ -116,13 +117,35 @@ class EntityList(generics.ListCreateAPIView):
 class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = MyEntity.objects.all()
     serializer_class = EntitySerializer
-    permission_classes = (IsAuthenticated & (IsSuperAdminOrMYCEmployee | IsBusinessClient), )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | (IsEmployee & IsGet),
+                          IsBusinessClientEntity)
+
+    def check_entity_permission(self, request):
+        try:
+            entity = MyEntity.objects.get(id=self.kwargs['pk'])
+        except ObjectDoesNotExist:
+            return
+        self.check_object_permissions(request, entity)
 
     def get(self, request, *args, **kwargs):
+        self.check_entity_permission(request)
         response = super().get(request, args, kwargs)
         add_verification_details_to_entities([response.data])
         add_address_details_to_entities([response.data])
         return response
+
+    def post(self, request, *args, **kwargs):
+        self.check_entity_permission(request)
+        super().post(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        self.check_entity_permission(request)
+        super().put(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        self.check_entity_permission(request)
+        # TODO: should only change status of entity here
+        super().delete(request, *args, **kwargs)
 
 
 class EntityListBasedOnVerificationStatus(generics.ListAPIView):
@@ -180,6 +203,7 @@ class EntityVerificationDetail(generics.UpdateAPIView):
 
 class EntityStatusAll(generics.GenericAPIView):
     serializer_class = EntityStatusSerializer
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
 
     def put(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -192,27 +216,38 @@ class EntityStatusAll(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class EntityStatus(generics.GenericAPIView):
+class EntityStatus(APIView):
     serializer_class = EntityStatusSerializer
+    permission_classes = (IsAuthenticated,
+                          IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
 
     def put(self, request, pk):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            MyEntity.objects.filter(id=pk).update(status=serializer.data['status'])
+        input_serializer = self.serializer_class(data=request.data)
+        if input_serializer.is_valid():
+            try:
+                queryset = MyEntity.objects.get(id=pk)
+            except ObjectDoesNotExist:
+                return Response({"message": "Detail not found"}, status=status.HTTP_400_BAD_REQUEST)
+            self.check_object_permissions(request, queryset)
+            queryset.status = input_serializer.data['status']
+            queryset.save()
             return Response({"message": "success"}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(input_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BusinessClientEntityList(generics.CreateAPIView):
     queryset = BusinessClientEntity.objects.all()
     serializer_class = BusinessClientEntitySerializer
+    permission_classes = (IsAuthenticated, IsBusinessClient,)
 
 
 class BusinessClientEntities(generics.ListAPIView):
     serializer_class = EntitySerializer
     queryset = BusinessClientEntity.objects.all()
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsOwnerById)
 
     def get(self, request, *args, **kwargs):
+        self.check_object_permissions(request, kwargs['bc_id'])
         entity_ids = entity_ids_for_business_client(kwargs['bc_id'])
         entities = MyEntity.objects.filter(id__in=entity_ids)
         serializer = self.serializer_class(entities, many=True)
