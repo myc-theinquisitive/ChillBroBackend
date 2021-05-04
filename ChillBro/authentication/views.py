@@ -22,6 +22,7 @@ from .serializers import EmailChangeSerializer
 from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 import jwt
+from Wallet.models import Wallet
 
 from .wrapper import sendOTP
 
@@ -60,6 +61,9 @@ class Signup(APIView):
                                     target_email=user.email)
         user.save()
 
+        wallet = Wallet(user=user)
+        wallet.save()
+
         if must_validate_email:
             # Create and associate signup code
             ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
@@ -96,6 +100,9 @@ class Signup(APIView):
             # send_multi_format_email('welcome_email',{'email': user.email, },target_email=user.email)
 
         user.save()
+
+        wallet = Wallet(user=user)
+        wallet.save()
 
         if must_validate_phone:
             # Create and associate signup code
