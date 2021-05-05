@@ -47,10 +47,13 @@ INSTALLED_APPS = [
     'Address',
     'Bookings',
     'Product',
-    'Notifications',
-    'fcm_django',
     'taggit',
     'kvstore',
+    'Payments',
+    'ReviewsRatings',
+    'Refer',
+    'Cart',
+    'WishList',
 ]
 
 
@@ -74,7 +77,7 @@ ROOT_URLCONF = 'ChillBro.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

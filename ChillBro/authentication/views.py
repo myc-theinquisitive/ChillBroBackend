@@ -5,7 +5,6 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
-from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework import status
@@ -13,12 +12,10 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.authentication import TokenAuthentication
-
 from .models import SignupCode, EmailChangeCode, PasswordResetCode, OTPCode
 from .models import send_multi_format_email
-from .serializers import SignupSerializer, LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, \
-    OTPResendSerializer, MailSignUpSerializer, PhoneSignUpSerializer
+from .serializers import LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, \
+    MailSignUpSerializer, PhoneSignUpSerializer
 from .serializers import PasswordResetSerializer
 from .serializers import PasswordResetVerifiedSerializer
 from .serializers import EmailChangeSerializer
@@ -30,13 +27,13 @@ from .wrapper import sendOTP
 
 
 class Signup(APIView):
-    permission_classes = (AllowAny)
+    permission_classes = (AllowAny, )
     mail_serializer_class = MailSignUpSerializer
     phone_serializer_class = PhoneSignUpSerializer
 
     def mailSignUp(self, serializer, email, password, first_name, last_name):
         must_validate_email = getattr(settings, "AUTH_VERIFICATION", True)
-
+        email=email.lower().strip()
         try:
             user = get_user_model().objects.get(email=email)
             if user.is_verified:
@@ -54,8 +51,8 @@ class Signup(APIView):
 
         # Set user fields provided
         user.set_password(password)
-        user.first_name = first_name
-        user.last_name = last_name
+        user.first_name = first_name.title().strip()
+        user.last_name = last_name.title().strip()
         if not must_validate_email:
             user.is_verified = True
             send_multi_format_email('welcome_email',
@@ -70,7 +67,7 @@ class Signup(APIView):
             signup_code.send_signup_email()
 
         content = {'email': email, 'first_name': first_name,
-                   'last_name': last_name}
+                   'last_name': last_name, 'message':'Verification mail has been sent to '+email}
         return Response(content, status=status.HTTP_201_CREATED)
 
     def phoneSignUp(self, serializer, phone_number, first_name, last_name):
@@ -92,8 +89,8 @@ class Signup(APIView):
             user = get_user_model().objects.create_user_by_phone(phone_number=phone_number)
 
         # Set user fields provided
-        user.first_name = first_name
-        user.last_name = last_name
+        user.first_name = first_name.title().strip()
+        user.last_name = last_name.title().strip()
         if not must_validate_phone:
             user.is_verified = True
             # send_multi_format_email('welcome_email',{'email': user.email, },target_email=user.email)
@@ -107,7 +104,7 @@ class Signup(APIView):
             sendOTP(signup_code, phone_number)
 
         content = {'phone_number': phone_number, 'first_name': first_name,
-                   'last_name': last_name}
+                   'last_name': last_name, 'message':'OTP Sent to '+phone_number}
         return Response(content, status=status.HTTP_201_CREATED)
 
     def post(self, request, mail, phone, format=None):
@@ -159,7 +156,7 @@ class Login(APIView):
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid():
-            email = serializer.data['email']
+            email = serializer.data['email'].lower().strip()
             password = serializer.data['password']
             user = authenticate(email=email, password=password)
 
@@ -234,7 +231,7 @@ class PasswordReset(APIView):
                     password_reset_code = \
                         PasswordResetCode.objects.create_password_reset_code(user)
                     password_reset_code.send_password_reset_email()
-                    content = {'email': email}
+                    content = {'email': email, 'message':'Password reset link sent to '+email}
                     return Response(content, status=status.HTTP_201_CREATED)
 
             except get_user_model().DoesNotExist:
@@ -331,7 +328,7 @@ class EmailChange(APIView):
 
                 email_change_code.send_email_change_emails()
 
-                content = {'email': email_new}
+                content = {'email': email_new, 'message':'Verification link sent to '+email_new}
                 return Response(content, status=status.HTTP_201_CREATED)
 
         else:
@@ -395,10 +392,16 @@ class PasswordChange(APIView):
 
         if serializer.is_valid():
             user = request.user
-
-            password = serializer.data['password']
-            user.set_password(password)
-            user.save()
+            email = user.email
+            old_password = serializer.data['old_password']
+            new_password = serializer.data['new_password']
+            user = authenticate(email=email, password=old_password)
+            if user:
+                user.set_password(new_password)
+                user.save()
+            else:
+                content = {"message":"Password Incorrect"}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
             content = {'success': _('Password changed.')}
             return Response(content, status=status.HTTP_200_OK)

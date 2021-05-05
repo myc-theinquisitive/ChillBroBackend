@@ -8,3 +8,7 @@ class IdsListSerializer(serializers.Serializer):
     ids = serializers.ListField(
         child=serializers.IntegerField()
     )
+
+class NetPriceSerializer(serializers.Serializer):
+    selling_price = serializers.IntegerField()
+    discount = serializers.IntegerField(max_value=100)

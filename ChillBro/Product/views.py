@@ -3,12 +3,16 @@ from .BaseProduct.views import *
 from .Hotel.views import *
 from .Seller.views import *
 from .product_interface import ProductInterface
-from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer
+from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer, NetPriceSerializer, ProductQuantitySerializer
 from .Hotel.views import HotelView
 from collections import defaultdict
 from .wrapper import key_value_content_type_model, key_value_tag_model
 from .models import SellerProduct
-
+from rest_framework import status
+from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
+from .BaseProduct.models import Product
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, IsEmployeeBusinessClient
+from UserApp.models import BusinessClient
 
 class ProductView(ProductInterface):
 
@@ -358,8 +362,8 @@ class ProductDetail(APIView):
     permission_classes = (IsAuthenticated,)
     product_view = ProductView()
 
-    def put(self, request, slug):
-        request.data["slug"] = slug
+    def put(self, request, id):
+        request.data["id"] = id
 
         is_valid, errors = self.product_view.validate_update_data(request.data)
         if not is_valid:
@@ -368,13 +372,22 @@ class ProductDetail(APIView):
         response_data = self.product_view.update(request.data)
         return Response(data=response_data, status=201)
 
-    def get(self, request, slug, format=None, *args):
+    def get(self, request, id, format=None, *args):
         try:
-            response_data = self.product_view.get(slug)
+            response_data = self.product_view.get(id)
         except ObjectDoesNotExist:
             return Response({"errors": "Product does not Exist!!!"}, 400)
 
         return Response(data=response_data, status=200)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            product = Product.objects.get(id=int(self.kwargs['pk']))
+        except:
+            return Response({"errors": "Product does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+        product.status = ProductStatus.DELETED.value
+        product.save()
+        return Response({"success": "Deleted Successfully"}, status=status.HTTP_200_OK)
 
 
 class GetProductsByCategory(generics.ListAPIView):
@@ -417,3 +430,66 @@ class SearchProducts(generics.ListAPIView):
 
         response_data["results"] = self.product_view.get_by_ids(product_ids)
         return response
+
+
+class ProductNetPrice(APIView):
+    serializer_class = NetPriceSerializer
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
+
+    def get(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            selling_price = serializer.data['selling_price']
+            discount = serializer.data['discount']
+            final_selling_price = selling_price - (selling_price * discount) / 100
+            commission_fee = final_selling_price * COMMISION_FEE_PERCENT / 100
+            transaction_fee = final_selling_price * TRANSACTION_FEE_PERCENT / 100
+            fixed_fee = final_selling_price * FIXED_FEE_PERCENT / 100
+            gst = final_selling_price * GST_PERCENT / 100
+            net_price = final_selling_price - (commission_fee + transaction_fee + fixed_fee + gst)
+            content = {
+                "net_price": net_price,
+                "details": {
+                    "final_selling_price": final_selling_price,
+                    "commission_fee": commission_fee,
+                    "transaction_fee": transaction_fee,
+                    "fixed_fee": fixed_fee,
+                    "gst": gst
+                }
+            }
+            return Response(content, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductSellerStatus(generics.ListAPIView):
+    queryset = SellerProduct.objects.all()
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
+
+
+    def get(self, request, seller_id, status):
+        self.check_object_permissions(request,seller_id)
+        seller_products = SellerProduct.objects.filter(seller_id=seller_id).values_list('product',flat=True)
+        product_ids=Product.objects.filter(id__in=seller_products,status=status).values_list('id',flat=True)
+        product_view = ProductView()
+        return Response(product_view.get_by_ids(product_ids))
+
+
+class ProductQuantity(APIView):
+    serializer_class = ProductQuantitySerializer
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
+
+    def put(self, request, product_id):
+        try:
+            product = Product.objects.get(id=product_id)
+        except:
+            return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+        self.check_object_permissions(request,product_id)
+        serializer = self.serializer_class(product, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Updated Successfully"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+

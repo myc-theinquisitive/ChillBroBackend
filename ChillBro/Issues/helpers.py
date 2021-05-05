@@ -1,11 +1,13 @@
-from django.utils.text import slugify
 import uuid
-from django.shortcuts import get_object_or_404
+from django.conf import settings
 
 
 def image_upload_to_issue(instance, filename):
-    name = instance.issue.name
-    slug = slugify(name)
+    issue_id = instance.issue.id
     basename, file_extension = filename.split(".")
-    new_filename = "%s-%s.%s" % (slug, str(uuid.uuid4()), file_extension)
-    return "static/images/issue/%s/%s" % (slug, new_filename)
+    new_filename = "%s-%s.%s" % (issue_id, str(uuid.uuid4()), file_extension)
+    return "static/images/issue/%s/%s" % (issue_id, new_filename)
+
+
+def get_user_model():
+    return settings.AUTH_USER_MODEL

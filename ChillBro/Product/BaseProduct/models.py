@@ -4,11 +4,16 @@ from django.db.models import Q
 from django.urls import reverse
 from django.db.models.signals import pre_save
 from django.utils.text import slugify
-from .constants import ProductTypes
+from .constants import ProductTypes, ProductStatus
 import string
 import random
 from django.core.exceptions import ValidationError
 from ..wrapper import get_taggable_manager, get_key_value_store
+import uuid
+
+
+def getId():
+    return str(uuid.uuid4())
 
 
 def validate_product_type(value):
@@ -24,6 +29,7 @@ def get_random_string(length=10):
 
 
 class TimeStampModel(models.Model):
+    id = models.CharField(max_length=36, primary_key=True, default= getId)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -58,8 +64,8 @@ class ProductManager(models.Manager):
 
 
 class Product(TimeStampModel):
-    name = models.CharField(max_length=120, unique=True)
-    slug = models.SlugField(blank=True, unique=True)
+    name = models.CharField(max_length=120)
+    slug= models.SlugField(blank=True)
     description = models.TextField()
     type = models.CharField(max_length=30, default=ProductTypes.Rental.value,
                             choices=[(product_type.value, product_type.value) for product_type in ProductTypes],
@@ -70,7 +76,8 @@ class Product(TimeStampModel):
     featured = models.BooleanField(default=False)
     active = models.BooleanField(default=True)
     tags = get_taggable_manager()
-
+    status = models.CharField(max_length=20,choices=[(product_status.value, product_status.value) for product_status in ProductStatus], default=ProductStatus.PENDING.value)
+    quantity = models.IntegerField(default=0)
     objects = ProductManager()
 
     def get_absolute_url(self):
