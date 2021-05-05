@@ -1,6 +1,6 @@
 import json
 import requests
-
+from Wallet.models import Wallet
 from django.core.serializers.json import DjangoJSONEncoder
 
 
@@ -188,3 +188,7 @@ class Authemail(API):
 
 def sendOTP(otp_code, phone_number):
     pass
+
+def create_wallet(user):
+    wallet = Wallet(created_by=user)
+    wallet.save()

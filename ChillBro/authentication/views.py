@@ -22,9 +22,9 @@ from .serializers import EmailChangeSerializer
 from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 import jwt
-from Wallet.models import Wallet
 
 from .wrapper import sendOTP
+from .wrapper import create_wallet
 
 
 class Signup(APIView):
@@ -61,8 +61,7 @@ class Signup(APIView):
                                     target_email=user.email)
         user.save()
 
-        wallet = Wallet(user=user)
-        wallet.save()
+        create_wallet(user)
 
         if must_validate_email:
             # Create and associate signup code
@@ -101,8 +100,7 @@ class Signup(APIView):
 
         user.save()
 
-        wallet = Wallet(user=user)
-        wallet.save()
+        create_wallet(user)
 
         if must_validate_phone:
             # Create and associate signup code

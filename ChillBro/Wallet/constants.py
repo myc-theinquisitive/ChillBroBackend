@@ -1,6 +1,6 @@
 import enum
 
 
-class Types(enum.Enum):
+class TransactionType(enum.Enum):
     DEBIT = "DEBIT"
     CREDIT = "CREDIT"
