@@ -21,7 +21,7 @@ def get_user_model():
 
 
 def image_upload_to_user_id_proof(instance, filename):
-    id = instance.booking.booking_id
+    id = instance.booking.id
     basename, file_extension = filename.split(".")
     new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
     return "static/images/users_id_proof/%s/%s" % (id, new_filename)
@@ -48,6 +48,8 @@ def get_date_format():
 def get_entity_types_filter(entity_filter):
     entities = [entity_type.value for entity_type in EntityType]
     if len(entity_filter) != 0:
+        return entity_filter
+    if len(entity_filter) == 1 and entity_filter[0] == "ALL":
         return entity_filter
     return entities
 

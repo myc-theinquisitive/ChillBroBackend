@@ -75,13 +75,13 @@ class EntityList(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         if 'city' not in request.data or 'pincode' not in request.data:
             return Response({"message": "City and Pincode are required"}, status=status.HTTP_400_BAD_REQUEST)
-        address_id = post_create_address(request.data['city'], request.data['pincode'])
+        address_details = post_create_address(request.data['city'], request.data['pincode'])
 
-        if not address_id:
-            return Response({"message": "City or Pincode is invalid"}, status=status.HTTP_400_BAD_REQUEST)
+        if not address_details['is_valid']:
+            return Response({"message": "City or Pincode is invalid", "errors":address_details['errors']}, status=status.HTTP_400_BAD_REQUEST)
 
         request.data._mutable = True
-        request.data['address_id'] = address_id
+        request.data['address_id'] = address_details['address_id']
 
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():

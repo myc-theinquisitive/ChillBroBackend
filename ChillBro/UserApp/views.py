@@ -23,7 +23,6 @@ class BusinessClientAdd(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            request.data._mutable = True
             request.data['is_verified'] = True
             user_serializer = MyUserList.serializer_class(data=request.data)
             if user_serializer.is_valid():
