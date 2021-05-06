@@ -2,11 +2,11 @@ import enum
 
 
 class EntityType(enum.Enum):
-    hotels = "HOTELS"
+    hotels = "HOTEL"
     transport = "TRANSPORT"
-    rentals = "RENTALS"
-    resorts = "RESORTS"
-    events = "EVENTS"
+    rentals = "RENTAL"
+    resorts = "RESORT"
+    events = "EVENT"
 
 
 class BookingStatus(enum.Enum):
@@ -16,9 +16,21 @@ class BookingStatus(enum.Enum):
     done = "DONE"
 
 
-class PayStatus(enum.Enum):
+class PaymentStatus(enum.Enum):
     pending = "PENDING"
+    failed = "FAILED"
     done = "DONE"
+    not_required = "NOT_REQUIRED"
+
+
+class PaymentMode(enum.Enum):
+    cod = "COD"
+    online = "ONLINE"
+
+
+class ProductBookingStatus(enum.Enum):
+    booked = "BOOKED"
+    cancelled = "CANCELLED"
 
 
 class DateFilters(enum.Enum):
@@ -34,4 +46,7 @@ class IdProofType(enum.Enum):
     voter_id = "VOTER_ID"
 
 
-
+class PaymentUser(enum.Enum):
+    entity = "ENTITY"
+    myc = "MYC"
+    customer = "CUSTOMER"

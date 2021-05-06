@@ -14,6 +14,7 @@ from .BaseProduct.models import Product
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, IsEmployeeBusinessClient
 from UserApp.models import BusinessClient
 
+
 class ProductView(ProductInterface):
 
     # define all required instance variables
@@ -32,7 +33,7 @@ class ProductView(ProductInterface):
 
     @staticmethod
     def get_view_and_key_by_type(product_type):
-        if product_type == "Hotel":
+        if product_type == "HOTEL":
             return HotelView(), "hotel_room"
         return None, None
 

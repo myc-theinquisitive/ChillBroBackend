@@ -1,9 +1,4 @@
 from django.db import models
-import uuid
-
-
-def getId():
-    return str(uuid.uuid4())
 
 
 class SellerProduct(models.Model):

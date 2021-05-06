@@ -6,9 +6,10 @@ from ..Seller.serializers import SellerProductSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import date, timedelta
-from ..wrapper import get_booked_count_of_product_id
+from ..wrapper import get_booked_count_of_product_id, check_entity_id_is_exist
 from ..constants import *
 from ChillBro.permissions import IsBusinessClient, IsSellerProduct
+
 
 class BaseProductList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
@@ -16,12 +17,16 @@ class BaseProductList(generics.ListCreateAPIView):
     serializer_class = ProductSerializer
 
     def post(self, request, *args, **kwargs):
+        entity_id = request.data.pop('entity_id', None)
+        check_entity_id = check_entity_id_is_exist(entity_id)
+        if not check_entity_id['is_valid']:
+            return Response({"message" : "Can't add the product", "errors": check_entity_id['errors']},400)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             instance = serializer.save()
             product_id = serializer.data['id']
             request.data['product'] = product_id
-            request.data['seller_id'] = request.user.id
+            request.data['seller_id'] = entity_id
             seller_product_serializer = SellerProductSerializer(data=request.data)
             if seller_product_serializer.is_valid():
                 seller_product_serializer.save()

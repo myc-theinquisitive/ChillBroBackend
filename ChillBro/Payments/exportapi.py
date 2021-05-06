@@ -1,16 +1,16 @@
-from .models import *
 from .serializers import *
 
 
+# TODO: should update based on current changes
 def transaction_details_by_booking_id(booking_id):
     try:
-        transactions = TransactionDetails.objects.get(booking_id=booking_id)
-        return TransactionSerializer(transactions).data
+        transactions = BookingTransaction.objects.get(booking_id=booking_id)
+        return BookingTransactionDetailsSerializer(transactions).data
     except:
         return {}
 
 
-def new_transaction(trasaction_data):
-    serializer = TransactionDetailsSerializer()
-    serializer.create(trasaction_data)
+def new_transaction(transaction_data):
+    serializer = BookingTransactionDetailsSerializer()
+    serializer.create(transaction_data)
     return True

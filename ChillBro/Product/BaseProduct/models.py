@@ -65,7 +65,7 @@ class ProductManager(models.Manager):
 
 class Product(TimeStampModel):
     name = models.CharField(max_length=120)
-    slug= models.SlugField(blank=True)
+    slug = models.SlugField(blank=True)
     description = models.TextField()
     type = models.CharField(max_length=30, default=ProductTypes.Rental.value,
                             choices=[(product_type.value, product_type.value) for product_type in ProductTypes],
@@ -76,7 +76,7 @@ class Product(TimeStampModel):
     featured = models.BooleanField(default=False)
     active = models.BooleanField(default=True)
     tags = get_taggable_manager()
-    status = models.CharField(max_length=20,choices=[(product_status.value, product_status.value) for product_status in ProductStatus], default=ProductStatus.PENDING.value)
+    status = models.CharField(max_length=20, choices=[(product_status.value, product_status.value) for product_status in ProductStatus], default=ProductStatus.PENDING.value)
     quantity = models.IntegerField(default=0)
     objects = ProductManager()
 

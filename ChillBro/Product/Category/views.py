@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsGet
 
+
 class CategoryList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet, )
     queryset = Category.objects.all()
@@ -22,21 +23,18 @@ class CategoryDetail(generics.RetrieveUpdateDestroyAPIView):
 
 class CategoryImageCreate(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee, )
-    permission_classes = (IsAuthenticated,)
     queryset = CategoryImage.objects.all()
     serializer_class = CategoryImageSerializer
 
 
 class CategoryImageDelete(generics.DestroyAPIView):
     permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee, )
-    permission_classes = (IsAuthenticated,)
     queryset = CategoryImage.objects.all()
     serializer_class = CategoryImageSerializer
 
 
 class CategoryTopLevelList(generics.ListAPIView):
     permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee | IsGet, )
-    permission_classes = (IsAuthenticated,)
     queryset = Category.objects.filter(parent_category=None)
     serializer_class = CategorySerializer
 
@@ -50,8 +48,6 @@ def convert_category_to_dict(category):
         "sub_categories": [],
         "images": []
     }
-
-
 
 
 def recursive_category_grouping(group_categories_by_parent_id, group_images_by_category_id,
@@ -91,6 +87,7 @@ def get_category_details(parent_id):
 
 
 class GetCategoriesLevelWise(APIView):
+    permission_classes = (IsAuthenticated, )
 
     def get(self, request, format=None):
         response_data, group_images_by_category_id = get_category_details(None)
@@ -98,6 +95,7 @@ class GetCategoriesLevelWise(APIView):
 
 
 class GetSpecificCategoriesLevelWise(APIView):
+    permission_classes = (IsAuthenticated, )
 
     def get(self, request, *args, **kwargs):
         try:

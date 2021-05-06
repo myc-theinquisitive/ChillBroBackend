@@ -1,12 +1,11 @@
 from django.urls import path
-from .models import *
 from .views import *
 
 urlpatterns = [
-
-    path('create/', CreateBookingTransaction.as_view()),
-    path('<str:entity_id>/', GetPaymentsDetailsOfEachEntityView.as_view()),
+    path('myc/update_paid_bookings/', UpdatePaymentDetailsFromMyc.as_view()),
+    path('update_cod_bookings/', CODBookingTransactionView.as_view()),
+    path('revenue/statistics/details/', GetPaymentsRevenueStatisticsDetailsView.as_view()),
     path('revenue/statistics/', PaymentRevenueStatisticsView.as_view()),
+    path('refunds/', RefundTransactionList.as_view()),
+    path('refunds/<str:pk>/', RefundTransactionDetail.as_view()),
 ]
-
-

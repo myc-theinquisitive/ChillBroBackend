@@ -6,6 +6,7 @@ class BookingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookings
         fields = '__all__'
+        read_only_fields = ('booking_status', 'total_money', 'payment_status')
 
 
 class BookedProductsSerializer(serializers.ModelSerializer):
@@ -80,7 +81,7 @@ class CheckOutImagesSerializer(serializers.ModelSerializer):
         return CheckOutImages.objects.bulk_create(all_images)
 
 
-class ReportCustomerForBooking(serializers.ModelSerializer):
+class ReportCustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessClientReportOnCustomer
         fields = '__all__'
@@ -96,12 +97,8 @@ class ReportCustomerForBooking(serializers.ModelSerializer):
 
 class ReportCustomerResonsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ReportCustomerResons
+        model = ReportCustomerReasons
         fields = '__all__'
-
-
-class CancelBookingSerializer(serializers.Serializer):
-    booking_id = serializers.CharField(min_length=36, max_length=36)
 
 
 class UpdateBookingIdSerializer(serializers.Serializer):
@@ -115,12 +112,12 @@ class BookedProductSerializer(serializers.Serializer):
 
 
 class NewBookingSerializer(serializers.Serializer):
-    coupon = serializers.CharField(required=True, max_length=100)
     products = BookedProductSerializer(many=True)
-    entity_type = serializers.CharField(required=True)
+    entity_type = serializers.CharField(required=True, max_length=30)
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
+    payment_mode = serializers.CharField(required=True, max_length=30)
 
 
 class CustomDatesSerializer(serializers.Serializer):
@@ -128,7 +125,7 @@ class CustomDatesSerializer(serializers.Serializer):
     to_date = serializers.DateTimeField(required=True)
 
 
-class StatisticsSerializer(serializers.Serializer):
+class BookingStatisticsSerializer(serializers.Serializer):
     date_filter = serializers.CharField(required=True)
     entity_filter = serializers.ListField(
         child=serializers.CharField()
@@ -139,18 +136,8 @@ class StatisticsSerializer(serializers.Serializer):
     custom_dates = CustomDatesSerializer(required=False)
 
 
-class GetBookingsStatisticsDetailsSerializer(StatisticsSerializer):
+class GetBookingsStatisticsDetailsSerializer(BookingStatisticsSerializer):
     statistics_details_type = serializers.CharField(required=True)
-
-
-class StatisticsDetailsSerializer(serializers.Serializer):
-    created_by = serializers.CharField(required=True)
-    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
-    booking_date = serializers.DateTimeField(required=True)
-    total_money = serializers.DecimalField(decimal_places=2, max_digits=20, required=True)
-    start_time = serializers.DateTimeField(required=True)
-    end_time = serializers.DateTimeField(required=True)
-    coupon = serializers.DateTimeField(required=True)
 
 
 class CancelProductStatusSerializer(serializers.Serializer):
@@ -165,7 +152,7 @@ class UserSerializer(serializers.Serializer):
 
 
 class GetSpecificBookingDetailsSerializer(serializers.Serializer):
-    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    id = serializers.CharField(required=True, min_length=36, max_length=36)
     booking_date = serializers.DateTimeField(required=True)
     total_money = serializers.DecimalField(decimal_places=2, max_digits=20)
     booking_status = serializers.CharField(required=True)
@@ -173,12 +160,14 @@ class GetSpecificBookingDetailsSerializer(serializers.Serializer):
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     products = BookedProductSerializer(many=True)
-    User_Details = UserSerializer()
+    payment_status = serializers.CharField(max_length=30)
+    payment_mode = serializers.CharField(max_length=30)
+    user_details = UserSerializer()
 
 
 class GetBookingDetailsViewSerializer(serializers.Serializer):
     date_filter = serializers.CharField(required=True)
-    category_filter = serializers.ListField(
+    entity_filter = serializers.ListField(
         child=serializers.CharField()
     )
     status_filter = serializers.ListField(
@@ -208,4 +197,16 @@ class BookingEndSerializer(serializers.Serializer):
 
 
 class ProductStatisticsSerializer(serializers.Serializer):
-    date = serializers.DateField(required=True)
+    date_filter = serializers.CharField(required=True)
+    custom_dates = CustomDatesSerializer(required=False)
+
+
+class ProductStatisticsDetailsSerializer(ProductStatisticsSerializer):
+    statistics_details_type = serializers.CharField(required=True)
+
+
+class ProductAvailabilitySerializer(serializers.Serializer):
+    product_id = serializers.CharField(max_length=36)
+    start_time = serializers.DateTimeField()
+    end_time = serializers.DateTimeField()
+    product_quantity = serializers.IntegerField()

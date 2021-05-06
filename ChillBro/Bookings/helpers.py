@@ -21,7 +21,7 @@ def get_user_model():
 
 
 def image_upload_to_user_id_proof(instance, filename):
-    id = instance.booking.booking_id
+    id = instance.booking.id
     basename, file_extension = filename.split(".")
     new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
     return "static/images/users_id_proof/%s/%s" % (id, new_filename)
@@ -45,22 +45,19 @@ def get_date_format():
     return settings.DATE_FORMAT if hasattr(settings, 'DATE_FORMAT') else "%Y-%m-%dT%H:%M:%S"
 
 
-def getEntityType(entity_filter):
+def get_entity_types_filter(entity_filter):
     entities = [entity_type.value for entity_type in EntityType]
     if len(entity_filter) != 0:
+        return entity_filter
+    if len(entity_filter) == 1 and entity_filter[0] == "ALL":
         return entity_filter
     return entities
 
 
-def getCategoryFilter(category_filter):
-    entities = [entity_type.value for entity_type in EntityType]
-    if len(category_filter) == 1 and category_filter[0] == 'ALL':
-        return entities
-    return category_filter
-
-
-def getTimePeriod(date_filter):
-    if date_filter == 'Today':
+def get_time_period(date_filter):
+    if date_filter == 'Total':
+        return None, None
+    elif date_filter == 'Today':
         today = date.today()
         tomorrow = today + timedelta(1)
         return today, tomorrow
@@ -81,7 +78,9 @@ def getTimePeriod(date_filter):
 
 
 def getPreviousTimePeriod(date_filter):
-    if date_filter == 'Today':
+    if date_filter == 'Total':
+        return None, None
+    elif date_filter == 'Today':
         today = date.today()
         yesterday = today - timedelta(1)
         return yesterday, today
@@ -101,3 +100,10 @@ def getPreviousTimePeriod(date_filter):
         month = today - timedelta(getTodayDate())
         previous_month = month - timedelta(days_in_months[today.month] + 1)
         return previous_month, month
+
+
+def get_status_filters(status):
+    if len(status) == 0:
+        return [status.value for status in BookingStatus]
+    return status
+

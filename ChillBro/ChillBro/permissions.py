@@ -3,6 +3,11 @@ from rest_framework import permissions
 from UserApp.models import Employee, BusinessClient
 from Entity.models import BusinessClientEntity
 from Product.models import SellerProduct
+from django.conf import settings
+
+
+def get_myc_id():
+    return settings.MYC_ID if hasattr(settings, 'MYC_ID') else "MYC"
 
 
 class IsSuperAdminOrMYCEmployee(permissions.BasePermission):
@@ -18,7 +23,7 @@ class IsSuperAdminOrMYCEmployee(permissions.BasePermission):
         except ObjectDoesNotExist:
             return False
 
-        if employee.entity_id == "MYC":
+        if employee.entity_id == get_myc_id():
             return True
         return False
 
@@ -131,9 +136,9 @@ class IsBusinessClientEntities(permissions.BasePermission):
 
 class IsEmployeeEntities(permissions.BasePermission):
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, ids):
         user = request.user
-        entity_id = obj
+        entity_id = ids
         if len(entity_id) != 1:
             return False
         employee = Employee.objects.filter(entity_id__in=entity_id, user_id=user.id)

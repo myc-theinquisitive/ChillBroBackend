@@ -1,28 +1,22 @@
+from collections import defaultdict
 from django.db.models import Count
-
 from .BaseProduct.models import Product, ProductImage
 from .BaseProduct.views import productNetPrice
 from .Seller.models import SellerProduct
 
 
-def product_data_prices(product_ids):
+def product_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
-    product_prices = {}
+    product_prices = defaultdict(dict)
     for each_product in products:
         discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
         product_prices[each_product.id] = {'price':each_product.price,\
                                            'net_value': productNetPrice(each_product.price, discount),\
-                                           'quantity': each_product.quantity}
+                                           'quantity': each_product.quantity,
+                                           'name': each_product.name,
+                                           'type': each_product.type }
     return product_prices
 
-
-def product_details(product_ids):
-    products = Product.objects.filter(id__in=product_ids)
-    details_of_product = {}
-    for each_product in products:
-        details_of_product[each_product.id] = {'name':each_product.name,
-                                               'type':each_product.type}
-    return details_of_product
 
 
 def get_entity_id_and_entity_type(product_id):
