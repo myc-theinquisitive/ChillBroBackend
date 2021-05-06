@@ -203,3 +203,10 @@ class ProductStatisticsSerializer(serializers.Serializer):
 
 class ProductStatisticsDetailsSerializer(ProductStatisticsSerializer):
     statistics_details_type = serializers.CharField(required=True)
+
+
+class ProductAvailabilitySerializer(serializers.Serializer):
+    product_id = serializers.CharField(max_length=36)
+    start_time = serializers.DateTimeField()
+    end_time = serializers.DateTimeField()
+    product_quantity = serializers.IntegerField()

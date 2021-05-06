@@ -20,6 +20,11 @@ import xlwt
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsUserOwner, IsOwner, IsGet, \
     IsEmployee, IsBookingBusinessClient, IsBusinessClientEntityById, IsEmployeeEntityById, IsBookingEmployee, \
     IsBusinessClientEntities, IsEmployeeEntities
+import threading
+
+
+# Lock for creating a new booking or updating the booking timings
+_booking_lock = threading.Lock()
 
 
 def render_to_pdf(template_src, context_dict={}):
@@ -32,8 +37,8 @@ def render_to_pdf(template_src, context_dict={}):
     return None
 
 
-def get_total_bookings_count_of_product(product_id, start_time, end_time):
-    bookings_count = BookedProducts.objects.active().select_related('booking') \
+def get_total_bookings_of_product_in_duration(product_id, start_time, end_time):
+    return BookedProducts.objects.active().select_related('booking') \
         .filter(product_id=product_id) \
         .filter(~Q(booking_status=ProductBookingStatus.cancelled.value)) \
         .filter(
@@ -41,7 +46,12 @@ def get_total_bookings_count_of_product(product_id, start_time, end_time):
             Q(Q(booking__start_time__lt=end_time) & Q(booking__end_time__gte=end_time)) |
             Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gte=end_time)) |
             Q(Q(booking__start_time__gte=start_time) & Q(booking__end_time__lte=end_time))
-        ).aggregate(sum=Sum('quantity'))['sum']
+        )
+
+
+def get_total_bookings_count_of_product_in_duration(product_id, start_time, end_time):
+    bookings_count = get_total_bookings_of_product_in_duration(product_id, start_time, end_time)\
+                        .aggregate(sum=Sum('quantity'))['sum']
     if bookings_count is None:
         return 0
     return bookings_count
@@ -72,7 +82,7 @@ def valid_booking(booking_products_list, start_time, end_time):
             is_valid = False
             errors[booking_product['product_id']].append("Quantity should be greater than 0")
 
-        previous_bookings_count = get_total_bookings_count_of_product(
+        previous_bookings_count = get_total_bookings_count_of_product_in_duration(
             booking_product['product_id'], start_time, end_time)
         total_quantity = products_quantity[product['product_id']]['quantity']
         print("total_quantity", total_quantity, previous_bookings_count)
@@ -153,6 +163,74 @@ def get_complete_booking_details_by_ids(booking_ids):
     return complete_bookings_details
 
 
+def are_overlapping_time_spans(start_time1, end_time1, start_time2, end_time2):
+    if start_time1 <= start_time2 < end_time1:
+        return True
+    if start_time1 < end_time2 <= end_time1:
+        return True
+    if start_time1 <= start_time2 and end_time1 >= end_time2:
+        return True
+    if start_time1 >= start_time2 and end_time1 <= end_time2:
+        return True
+    return False
+
+
+def product_availability(product_id, product_quantity, start_time, end_time):
+    bookings = get_total_bookings_of_product_in_duration(product_id, start_time, end_time)
+
+    HOUR = timedelta(hours=1)
+    datetime_format = get_date_format()
+    hours_dic = {}
+
+    # converting to datetime objects
+    start_time = datetime.strptime(start_time, datetime_format)
+    end_time = datetime.strptime(end_time, datetime_format)
+
+    start_hour = datetime(start_time.year, start_time.month, start_time.day, start_time.hour, 0, 0)
+    end_hour = start_hour + HOUR
+    while start_hour < end_time:
+        start_hour_key = start_hour.strftime(datetime_format)
+        end_hour_key = end_hour.strftime(datetime_format)
+        hours_dic[(start_hour_key, end_hour_key)] = product_quantity
+        start_hour = end_hour
+        end_hour += HOUR
+
+    for booking in bookings:
+        booking_start_time = booking.start_time.strftime(datetime_format)
+        booking_end_time = booking.end_time.strftime(datetime_format)
+        for start_hour_key, end_hour_key in hours_dic:
+            if are_overlapping_time_spans(booking_start_time, booking_end_time, start_hour_key, end_hour_key):
+                if hours_dic[(start_hour_key, end_hour_key)]:
+                    hours_dic[(start_hour_key, end_hour_key)] -= 1
+
+    availabilities = []
+    for start_hour_key, end_hour_key in hours_dic:
+        availability = {
+            "start_hour": start_hour_key,
+            "end_hour": end_hour_key,
+            "available_count": hours_dic[(start_hour_key, end_hour_key)]
+        }
+        availabilities.append(availability)
+    return Response({"availabilities": availabilities}, 200)
+
+
+class GetProductAvailability(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        serializer = ProductAvailabilitySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, 400)
+
+        product_id = serializer.data["product_id"]
+        product_quantity = serializer.data["product_quantity"]
+        start_time = serializer.data["start_time"]
+        end_time = serializer.data["end_time"]
+
+        return product_availability(product_id=product_id, product_quantity=product_quantity,
+                                    start_time=start_time, end_time=end_time)
+
+
 class GetDateFilters(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -183,8 +261,11 @@ class CreateBooking(generics.ListCreateAPIView):
 
         # Get product values
         product_values = get_product_data(product_ids)
+        if len(product_values) != len(product_ids):
+            return Response({"message": "Can't create booking", "errors": "Invalid Products"}, 400)
+
         total_money = 0.0
-        for product in product_list:
+        for product in product_values:
             total_money += float(product_values[product['product_id']]['price'] * product['quantity'])
 
         # Validate coupon and get discounted value
@@ -202,18 +283,20 @@ class CreateBooking(generics.ListCreateAPIView):
         payment_mode = request.data['payment_mode']
         if payment_mode == PaymentMode.cod.value:
             request.data['payment_status'] = PaymentStatus.not_required.value
-        bookings_serializer = BookingsSerializer()
-        booking = bookings_serializer.create(request.data)
 
-        # Create booking products
-        total_net_value = 0
-        for product in product_list:
-            product['booking'] = booking
-            product["product_value"] = product_values[product['product_id']]['price']
-            product['net_value'] = product_values[product['product_id']]['net_value']
-            total_net_value += product_values[product['product_id']]['net_value']
-        booked_product_serializer_object = BookedProductsSerializer()
-        booked_product_serializer_object.bulk_create(product_list)
+        with _booking_lock:
+            bookings_serializer = BookingsSerializer()
+            booking = bookings_serializer.create(request.data)
+
+            # Create booking products
+            total_net_value = 0
+            for product in product_list:
+                product['booking'] = booking
+                product["product_value"] = product_values[product['product_id']]['price']
+                product['net_value'] = product_values[product['product_id']]['net_value']
+                total_net_value += product_values[product['product_id']]['net_value']
+            booked_product_serializer_object = BookedProductsSerializer()
+            booked_product_serializer_object.bulk_create(product_list)
 
         # Create transaction for amount to be paid to entity
         if payment_mode == PaymentMode.online.value:

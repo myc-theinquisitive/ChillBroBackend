@@ -11,7 +11,7 @@ def uploadImageToCategoryIcons(instance, filename):
 
 
 def iconUrlImage(instance, filename):
-    name = instance.id
+    name = instance.category.name
     basename, file_extension = filename.split(".")
-    new_filename = "%s-%s.%s" % (name, str(uuid.uuid4()), file_extension)
+    new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
     return "static/images/Category/icons/%s/%s" % (name, new_filename)

@@ -1,6 +1,5 @@
 from django.urls import path
 from .views import *
-from .RentalCalendar.views import*
 
 
 urlpatterns = [
@@ -23,11 +22,5 @@ urlpatterns = [
     path('generate_excel/', GenerateExcel.as_view()),
     path('product/<str:product_id>/', GetBookingDetailsOfProductId.as_view()),
     path('product_statistics/<str:product_id>/', ProductStatistics.as_view()),
-    path('add', CreateUpdateRentalBooking.as_view()),
-    path('get_all/', RentalBookingList.as_view()),
-    path('cancel_booking/', CancelRentalBooking.as_view()),
     path('product_availability/', GetProductAvailability.as_view()),
-    path('product/bookings/', ProductBookingList.as_view()),
-    path('product/cancelled_bookings/', CancelledBookingList.as_view()),
 ]
-
