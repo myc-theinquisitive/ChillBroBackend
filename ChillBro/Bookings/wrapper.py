@@ -5,9 +5,8 @@ from Product.exportapi import *
 from Coupons.exportapi import *
 
 
-def get_discounted_value(coupon_id, product_ids, entity_ids, total_money):
-    return True, total_money
-    # return False, 0
+def get_discounted_value(coupon_id, user, entity_ids, product_ids, total_money):
+    return coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
 
 
 def get_total_quantity_of_product(product_id):

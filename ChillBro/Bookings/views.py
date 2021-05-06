@@ -190,11 +190,11 @@ class CreateBooking(generics.ListCreateAPIView):
         # Validate coupon and get discounted value
         entity_id = request.data['entity_id']
         if request.data['coupon'] != "":
-            is_valid, coupon_reduced_money = get_discounted_value(
-                request.data['coupon'], product_ids, entity_id, total_money)
-            if is_valid is False:
-                return Response({"message": "Coupon is invalid"}, 400)
-            request.data['total_money'] = coupon_reduced_money
+            coupon = get_discounted_value(
+                request.data['coupon'], request.user, product_ids, entity_id, total_money)
+            if not coupon['is_valid']:
+                return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
+            request.data['total_money'] = coupon['discounted_value']
         else:
             request.data['total_money'] = total_money
 
