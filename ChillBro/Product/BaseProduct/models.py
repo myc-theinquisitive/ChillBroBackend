@@ -76,7 +76,7 @@ class Product(TimeStampModel):
     featured = models.BooleanField(default=False)
     active = models.BooleanField(default=True)
     tags = get_taggable_manager()
-    status = models.CharField(max_length=20,choices=[(product_status.value, product_status.value) for product_status in ProductStatus], default=ProductStatus.PENDING.value)
+    status = models.CharField(max_length=20, choices=[(product_status.value, product_status.value) for product_status in ProductStatus], default=ProductStatus.PENDING.value)
     quantity = models.IntegerField(default=0)
     objects = ProductManager()
 
