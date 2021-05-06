@@ -59,7 +59,7 @@ class Bookings(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=get_id, verbose_name="Booking Id")
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
-    coupon = models.CharField(max_length=36, verbose_name="Coupon Id")
+    coupon = models.CharField(max_length=36, null=True, blank=True, verbose_name="Coupon Id")
     booking_date = models.DateTimeField(default=datetime.now)
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     entity_type = models.CharField(

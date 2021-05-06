@@ -60,7 +60,13 @@ def valid_booking(booking_products_list, start_time, end_time):
         is_valid = False
         errors["booking"].append("End time should be less than start time")
 
-    # TODO: should get all for details for all products at once
+    product_ids = []
+    for product in booking_products_list:
+        product_ids.append(product['product_id'])
+    products_quantity = get_product_data(product_ids)
+    print("product details", products_quantity)
+    if products_quantity is None:
+        return "some invalid product is obtained ", ""
     for booking_product in booking_products_list:
         if booking_product['quantity'] <= 0:
             is_valid = False
@@ -68,7 +74,8 @@ def valid_booking(booking_products_list, start_time, end_time):
 
         previous_bookings_count = get_total_bookings_count_of_product(
             booking_product['product_id'], start_time, end_time)
-        total_quantity = get_total_quantity_of_product(booking_product['product_id'])
+        total_quantity = products_quantity[product['product_id']]['quantity']
+        print("total_quantity", total_quantity, previous_bookings_count)
         if total_quantity - previous_bookings_count < booking_product['quantity']:
             is_valid = False
             if total_quantity - previous_bookings_count == 0:
@@ -83,8 +90,8 @@ def cancel_booking(booking):
     # TODO: refund need to be handled
     # TODO: update payment amount to be paid to business client
     booked_products = BookedProducts.objects.select_related('booking').filter(booking=booking)
+    print(booked_products, booking, type(booking), type(booked_products))
     booked_products.update(booking_status=ProductBookingStatus.cancelled.value)
-    booking.update(booking_status=BookingStatus.cancelled.value)
 
 
 def update_booking_status(booking_id, status):
@@ -175,18 +182,21 @@ class CreateBooking(generics.ListCreateAPIView):
             product_ids.append(product['product_id'])
 
         # Get product values
-        product_values = get_product_id_wise_product_details(product_ids)
+        product_values = get_product_data(product_ids)
         total_money = 0.0
         for product in product_list:
-            total_money += product_values[product['product_id']]['price'] * product['quantity']
+            total_money += float(product_values[product['product_id']]['price'] * product['quantity'])
 
         # Validate coupon and get discounted value
         entity_id = request.data['entity_id']
-        is_valid, coupon_reduced_money = get_discounted_value(
-            request.data['coupon'], product_ids, entity_id, total_money)
-        if is_valid is False:
-            return Response({"message": "Coupon is invalid"}, 400)
-        request.data['total_money'] = coupon_reduced_money
+        if request.data['coupon'] != "":
+            coupon = get_discounted_value(
+                request.data['coupon'], request.user, product_ids, entity_id, total_money)
+            if not coupon['is_valid']:
+                return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
+            request.data['total_money'] = coupon['discounted_value']
+        else:
+            request.data['total_money'] = total_money
 
         # Create Booking
         payment_mode = request.data['payment_mode']
@@ -196,9 +206,12 @@ class CreateBooking(generics.ListCreateAPIView):
         booking = bookings_serializer.create(request.data)
 
         # Create booking products
+        total_net_value = 0
         for product in product_list:
             product['booking'] = booking
             product["product_value"] = product_values[product['product_id']]['price']
+            product['net_value'] = product_values[product['product_id']]['net_value']
+            total_net_value += product_values[product['product_id']]['net_value']
         booked_product_serializer_object = BookedProductsSerializer()
         booked_product_serializer_object.bulk_create(product_list)
 
@@ -207,16 +220,16 @@ class CreateBooking(generics.ListCreateAPIView):
             # TODO: should use net value here
             create_transaction(booking.id, request.data['entity_id'], request.data['entity_type'],
                                request.data['total_money'], booking.booking_date, booking.start_time,
-                               PaymentUser.entity.value, PaymentUser.myc.value)
+                               total_net_value, PaymentUser.entity.value, PaymentUser.myc.value)
         else:
             # TODO: should update net values
             create_transaction(booking.id, request.data['entity_id'], request.data['entity_type'],
                                request.data['total_money'], booking.booking_date, booking.start_time,
-                               PaymentUser.entity.value, PaymentUser.customer.value)
+                               total_net_value, PaymentUser.entity.value, PaymentUser.customer.value)
             # TODO: should use commission value here
             create_transaction(booking.id, request.data['entity_id'], request.data['entity_type'],
                                request.data['total_money'], booking.booking_date, booking.start_time,
-                               PaymentUser.myc.value, PaymentUser.entity.value)
+                               total_net_value, PaymentUser.myc.value, PaymentUser.entity.value)
 
         return Response({"message": "Booking created", "booking_id": booking.id}, 200)
 
@@ -237,20 +250,17 @@ class CancelBookingView(generics.ListAPIView):
                           IsBookingBusinessClient | IsBookingEmployee)
     serializer_class = BookingsSerializer
 
-    def put(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         # TODO: Should handle refund and update payment details to be payed to entity
-        input_serializer = CancelBookingSerializer(data=request.data)
-        if not input_serializer.is_valid():
-            return Response(input_serializer.errors, 400)
 
-        try:
-            booking = Bookings.objects.get(id=kwargs['booking_id'])
-        except ObjectDoesNotExist:
-            return Response({"message": "Booking does'nt exist"}, 400)
+        booking = Bookings.objects.filter(id=kwargs['booking_id'])
+        if len(booking) == 0:
+            return Response({"message":"Can't update booking status", "errors": "Booking does'nt exist"}, 400)
 
         cancelled_serializer = CancelledDetailsSerializer()
-        cancelled_serializer.create(booking)
-        cancel_booking(booking)
+        cancelled_serializer.create(booking[0])
+        cancel_booking(kwargs['booking_id'])
+        booking.update(booking_status=BookingStatus.cancelled.value)
         return Response({"message": "Booking cancelled successfully"}, 200)
 
 
@@ -402,7 +412,7 @@ class CancelProductStatusView(generics.ListAPIView):
                  "error": "Invalid Booking id {} or product  {} "
                     .format(request.data['booking_id'], request.data['product_id'])}, 400)
 
-        booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+        booking = Bookings.objects.get(id=request.data['booking_id'])
         self.check_object_permissions(request,booking)
         booking_product.update(booking_status=ProductBookingStatus.cancelled.value)
         return Response({"message": "Booking product cancelled successfully"}, 200)
@@ -435,8 +445,8 @@ class GetSpecificBookingDetails(APIView):
         booking.products = products
 
         serializer = GetSpecificBookingDetailsSerializer(booking).data
-        serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.booking_id)
-        serializer['customer_review'] = get_review_by_booking_id(booking.booking_id)
+        serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.id)
+        serializer['customer_review'] = get_review_by_booking_id(booking.id)
         return Response(serializer, 200)
 
 
@@ -488,7 +498,7 @@ class BookingStart(APIView):
     permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
-        booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+        booking = Bookings.objects.get(id=request.data['booking_id'])
         self.check_object_permissions(request, booking)
         input_serializer = BookingStartSerializer(data=request.data)
         if not input_serializer.is_valid():
@@ -514,7 +524,7 @@ class BookingEnd(APIView):
     permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
-        booking = Bookings.objects.get(booking_id=request.data['booking_id'])
+        booking = Bookings.objects.get(id=request.data['booking_id'])
         self.check_object_permissions(request, booking)
         input_serializer = BookingEndSerializer(data=request.data)
         if not input_serializer.is_valid():
@@ -526,8 +536,8 @@ class BookingEnd(APIView):
         review = data.pop('review', None)
         rating = data.pop('rating', None)
         booking_id = request.data['booking_id']
-        user = request.user
-        business_client_review_on_customer(review, rating, booking_id, user)
+        created_by = request.user
+        business_client_review_on_customer(review, rating, booking_id, created_by)
 
         serializer = CheckOutDetailsSerializer()
         check_out = serializer.create(data)
@@ -547,7 +557,7 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def get(self, request, *args, **kwargs):
-        booking = Bookings.objects.get(booking_id=kwargs['booking_id'])
+        booking = Bookings.objects.get(id=kwargs['booking_id'])
         self.check_object_permissions(request, booking)
         try:
             check_in_object = CheckInDetails.objects.get(booking_id=kwargs['booking_id'])
@@ -599,11 +609,11 @@ class ProductStatistics(APIView):
             from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
         else:
             from_date, to_date = get_time_period(date_filter)
-
+        print(from_date, to_date)
         if date_filter != "Total" and from_date is None and to_date is None:
             return Response({"message": "Invalid Date Filter!!!"}, 400)
 
-        total_products_available = get_total_quantity_of_product(product_id)
+        total_products_available = get_product_details([product_id])[product_id]['quantity']
 
         total_products_booked = BookedProducts.objects.received_bookings_for_product(
             product_id, from_date, to_date).aggregate(count=Sum(F('quantity')))['count']

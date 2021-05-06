@@ -101,10 +101,6 @@ class ReportCustomerResonsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CancelBookingSerializer(serializers.Serializer):
-    booking_id = serializers.CharField(min_length=36, max_length=36)
-
-
 class UpdateBookingIdSerializer(serializers.Serializer):
     booking_id = serializers.CharField(min_length=36, max_length=36)
     booking_status = serializers.CharField(required=True)
@@ -116,7 +112,6 @@ class BookedProductSerializer(serializers.Serializer):
 
 
 class NewBookingSerializer(serializers.Serializer):
-    coupon = serializers.CharField(required=True, max_length=100)
     products = BookedProductSerializer(many=True)
     entity_type = serializers.CharField(required=True, max_length=30)
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)

@@ -2,11 +2,11 @@ import enum
 
 
 class EntityType(enum.Enum):
-    hotels = "HOTELS"
+    hotels = "HOTEL"
     transport = "TRANSPORT"
-    rentals = "RENTALS"
-    resorts = "RESORTS"
-    events = "EVENTS"
+    rentals = "RENTAL"
+    resorts = "RESORT"
+    events = "EVENT"
 
 
 class BookingStatus(enum.Enum):

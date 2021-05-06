@@ -9,11 +9,11 @@ class PayMode(enum.Enum):
 
 
 class EntityType(enum.Enum):
-    hotels = "HOTELS"
+    hotels = "HOTEL"
     transport = "TRANSPORT"
-    rentals = "RENTALS"
-    resorts = "RESORTS"
-    events = "EVENTS"
+    rentals = "RENTAL"
+    resorts = "RESORT"
+    events = "EVENT"
 
 
 class PayStatus(enum.Enum):
