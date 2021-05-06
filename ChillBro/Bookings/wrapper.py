@@ -9,10 +9,6 @@ def get_discounted_value(coupon_id, user, entity_ids, product_ids, total_money):
     return coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
 
 
-def get_total_quantity_of_product(product_id):
-    return 3
-
-
 def get_product_data(product_id_list):
     products = product_details(product_id_list)
     if len(products) == 0:
