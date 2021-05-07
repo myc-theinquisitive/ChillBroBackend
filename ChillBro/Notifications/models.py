@@ -1,0 +1,28 @@
+from django.db import models
+
+# Create your models here.
+from .constants import NotificationType, NotificationStatus
+from .validations import is_json
+import uuid
+
+class Notification(models.Model):
+    id = models.CharField(primary_key=True,default=uuid.uuid4, editable=False, max_length=36)
+    title = models.CharField(max_length=60)
+    redirect_url = models.URLField(max_length=256)
+    type = models.CharField(choices=[(type.name, type.value) for type in NotificationType], max_length=20)
+    status = models.CharField(choices=[(status.name, status.value) for status in NotificationStatus], max_length=20,
+                              default=NotificationStatus.ACTIVE.value)
+    data = models.CharField(max_length=1000, validators=[is_json])
+    all_users = models.BooleanField()
+    all_business_client = models.BooleanField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class NotificationUsers(models.Model):
+    notification = models.ForeignKey('Notification', on_delete=models.CASCADE)
+    user_id = models.CharField(max_length=36)
+    status = models.CharField(choices=[(status.name, status.value) for status in NotificationStatus], max_length=20,
+                              default=NotificationStatus.ACTIVE.value)
+
+    class Meta:
+        unique_together = ('notification', 'user_id')
