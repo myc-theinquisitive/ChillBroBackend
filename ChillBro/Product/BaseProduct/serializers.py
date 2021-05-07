@@ -11,7 +11,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        lookup_field = 'slug'
         fields = '__all__'
 
     def create(self, validated_data):

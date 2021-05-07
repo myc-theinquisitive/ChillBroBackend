@@ -47,11 +47,9 @@ def get_date_format():
 
 def get_entity_types_filter(entity_filter):
     entities = [entity_type.value for entity_type in EntityType]
-    if len(entity_filter) != 0:
-        return entity_filter
-    if len(entity_filter) == 1 and entity_filter[0] == "ALL":
-        return entity_filter
-    return entities
+    if len(entity_filter) == 0:
+        return entities
+    return entity_filter
 
 
 def get_time_period(date_filter):

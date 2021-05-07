@@ -4,6 +4,7 @@ from .models import SellerProduct
 from .serializers import SellerProductSerializer
 from ChillBro.permissions import IsBusinessClient
 
+
 class SellerProductList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsBusinessClient)
     queryset = SellerProduct.objects.all()
@@ -15,13 +16,3 @@ class SellerProductDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = SellerProduct.objects.all()
     serializer_class = SellerProductSerializer
 
-
-class GetSellerProductList(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, )
-    queryset = SellerProduct.objects.all()
-    serializer_class = SellerProductSerializer
-
-    def get(self, request, *args, **kwargs):
-        seller_id = kwargs["seller"]
-        self.queryset = SellerProduct.objects.filter(seller_id=seller_id)
-        return super().get(request, args, kwargs)

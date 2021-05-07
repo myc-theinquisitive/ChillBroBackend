@@ -1,19 +1,11 @@
 from ReviewsRatings.exportapi import *
 from Payments.exportapi import *
-from collections import defaultdict
 from Product.exportapi import *
 from Coupons.exportapi import *
 
 
 def get_discounted_value(coupon_id, user, entity_ids, product_ids, total_money):
     return coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
-
-
-def get_product_data(product_id_list):
-    products = product_details(product_id_list)
-    if len(products) == 0:
-        return None
-    return products
 
 
 def get_coupon_value(coupon_id, user, entity_ids, product_ids, total_money):
@@ -37,14 +29,20 @@ def get_product_details(product_ids):
     return product_details(product_ids)
 
 
-def create_transaction(booking_id, entity_id, entity_type, total_money, booking_date, booking_start, \
-                       total_net_value, paid_to, paid_by):
-    return new_transaction({'booking_id':booking_id, 'entity_id': entity_id, 'entity_type': entity_type, \
-                            'total_money': total_money, 'booking_date':booking_date,\
-                            'booking_start':booking_start, 'total_net_value':total_net_value, \
-                            'paid_to':paid_to, 'paid_by':paid_by})
+def create_booking_transaction(transaction_data):
+    return new_booking_transaction(transaction_data)
+
+
+def update_booking_transaction_in_payment(booking_id, is_complete_cancellation, total_amount_reduced,
+                                          net_amount_reduced, commission_amount_reduced):
+    update_booking_transaction(booking_id, is_complete_cancellation, total_amount_reduced,
+                               net_amount_reduced, commission_amount_reduced)
+
+
+def create_refund_transaction(transaction_data):
+    return new_refund_transaction(transaction_data)
 
 
 def get_product_id_wise_product_details(product_ids):
-    product_id_wise_product_details = get_product_details(product_ids)
+    product_id_wise_product_details = get_product_id_wise_details(product_ids)
     return product_id_wise_product_details

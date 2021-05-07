@@ -2,7 +2,6 @@ from django.db import models
 from .helpers import image_upload_to_product
 from django.db.models import Q
 from django.urls import reverse
-from django.db.models.signals import pre_save
 from django.utils.text import slugify
 from .constants import ProductTypes, ProductStatus
 import string
@@ -76,7 +75,9 @@ class Product(TimeStampModel):
     featured = models.BooleanField(default=False)
     active = models.BooleanField(default=True)
     tags = get_taggable_manager()
-    status = models.CharField(max_length=20, choices=[(product_status.value, product_status.value) for product_status in ProductStatus], default=ProductStatus.PENDING.value)
+    status = models.CharField(max_length=30,
+                              choices=[(product_status.value, product_status.value)
+                                       for product_status in ProductStatus], default=ProductStatus.PENDING.value)
     quantity = models.IntegerField(default=0)
     objects = ProductManager()
 
@@ -92,13 +93,6 @@ class Product(TimeStampModel):
 
 kvstore = get_key_value_store()
 kvstore.register(Product)
-
-
-def product_pre_save_receiver(sender, instance, *args, **kwargs):
-    instance.slug = instance.get_slug()
-
-
-pre_save.connect(product_pre_save_receiver, sender=Product)
 
 
 class ProductImage(models.Model):

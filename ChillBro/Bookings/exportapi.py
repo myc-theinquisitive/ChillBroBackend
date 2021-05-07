@@ -23,6 +23,9 @@ def get_completed_booking_details_for_entity_ids(from_date, to_date, entity_filt
 
 
 def booked_count_of_product_id(product_id, from_date, to_date):
-    return BookedProducts.objects.select_related('booking')\
+    booked_count = BookedProducts.objects.select_related('booking')\
             .filter(Q(booking__booking_date__gte=from_date) & Q(booking__booking_date__lte=to_date)
                     & Q(product_id=product_id)).aggregate(count=Sum(F('quantity')))['count']
+    if not booked_count:
+        return 0
+    return booked_count

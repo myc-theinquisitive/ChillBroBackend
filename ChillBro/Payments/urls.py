@@ -8,4 +8,5 @@ urlpatterns = [
     path('revenue/statistics/', PaymentRevenueStatisticsView.as_view()),
     path('refunds/', RefundTransactionList.as_view()),
     path('refunds/<str:pk>/', RefundTransactionDetail.as_view()),
+    path('booking_transactions/', GetBookingTransactions.as_view()),
 ]

@@ -254,13 +254,13 @@ class HotelView(ProductInterface):
 
         available_amenities = HotelAvailableAmenities.objects.select_related('amenity')\
             .filter(hotel_room=self.hotel_room_object)
-        e
+
         available_amenities_data = []
         for available_amenity in available_amenities:
             available_amenity_data = self.convert_available_amenities_to_dict(available_amenity)
             available_amenities_data.append(available_amenity_data)
 
-        hotel_room_data["available_amnities"] = available_amenities_data
+        hotel_room_data["available_amenities"] = available_amenities_data
         return hotel_room_data
 
     def get_by_ids(self, product_ids):

@@ -176,14 +176,20 @@ class IsEmployeeEntity(permissions.BasePermission):
 class IsSellerProduct(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        user = request.user
         product_id = obj
 
         try:
-            business_client = SellerProduct.objects.get(product_id=product_id, seller_id=user.id)
+            entity_id = SellerProduct.objects.get(product_id=product_id)
         except ObjectDoesNotExist:
             return False
-        return True
+
+        if IsBusinessClientEntity().has_object_permission(request, view, entity_id):
+            return True
+
+        if IsEmployeeEntity().has_object_permission(request, view, entity_id):
+            return True
+
+        return False
 
 
 class IsBookingBusinessClient(permissions.BasePermission):

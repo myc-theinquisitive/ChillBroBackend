@@ -11,6 +11,12 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClientEnti
     IsEmployeeEntities
 
 
+class GetBookingTransactions(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = BookingTransaction.objects.all()
+    serializer_class = BookingTransactionDetailsSerializer
+
+
 class UpdatePaymentDetailsFromMyc(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -25,6 +31,7 @@ class UpdatePaymentDetailsFromMyc(APIView):
             Q(paid_to__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
             booking_id__in=booking_ids, payment_status=PayStatus.pending.value)\
             .values_list("booking_id", flat=True)
+
         invalid_booking_ids = set(booking_ids) - set(pending_booking_ids)
         if len(invalid_booking_ids) > 0:
             return Response({"message": "Unable to update transactions",
