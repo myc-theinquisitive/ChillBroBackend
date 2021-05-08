@@ -1,9 +1,9 @@
 from rest_framework import serializers
-
-from .models import ReviewsRatings
+from .models import ReviewsRatings, FeedbackAndSuggestions
 
 
 class ReviewsRatingsSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = ReviewsRatings
         fields = '__all__'
@@ -38,3 +38,16 @@ class EntityTotalReviewsSerializer(serializers.Serializer):
         child = serializers.CharField()
     )
     custom_dates = CustomDatesSerializer(required=False)
+
+
+class FeedbackAndSuggestionsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FeedbackAndSuggestions
+        fields = '__all__'
+
+
+class GetFeedbackAndSuggestionsSerializer(serializers.Serializer):
+    category_filters = serializers.ListField(
+        child=serializers.CharField()
+    )

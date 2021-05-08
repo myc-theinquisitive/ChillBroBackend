@@ -9,19 +9,19 @@ def image_upload_to_review(instance, filename):
     return "static/images/review/%s/%s" % (id, new_filename)
 
 
-def getTodayDay():
+def get_today_day():
     day = datetime.now().weekday()
     if day == 6:
         return 0
     return day + 1
 
 
-def getTodayDate():
+def get_today_date():
     today = date.today().strftime("%d")
     return int(today) - 1
 
 
-def getTimePeriod(date_filter):
+def get_time_period(date_filter):
     if date_filter == 'Today':
         today = date.today()
         tomorrow = today + timedelta(1)
@@ -32,17 +32,27 @@ def getTimePeriod(date_filter):
         return yesterday, today
     elif date_filter == 'Week':
         today = date.today()
-        week = today - timedelta(getTodayDay())
-        return week, week + timedelta(7 - getTodayDay())
+        week = today - timedelta(get_today_day())
+        return week, week + timedelta(7 - get_today_day())
     elif date_filter == 'Month':
         days_in_months = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
         today = date.today()
-        month = today - timedelta(getTodayDate())
+        month = today - timedelta(get_today_date())
         return month, month + timedelta(days_in_months[today.month + 1])
     return None, None
 
-def getEntityType(entity_filter):
+
+def get_entity_type(entity_filter):
     entities = [entity_type.value for entity_type in EntityType]
     if len(entity_filter) != 0:
         return entity_filter
     return entities
+
+
+def get_categories(category_filters):
+    categories = [category.value for category in FeedbackCategory]
+    if len(category_filters)==0:
+        return categories
+    if category_filters[0] == "ALL":
+        return categories
+    return category_filters
