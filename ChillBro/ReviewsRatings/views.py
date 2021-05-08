@@ -3,7 +3,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer, FeedbackAndSuggestionsSerializer,\
-    GetFeedbackAndSuggestionsSerializer
+    GetFeedbackAndSuggestionsSerializer, EntityReviewStatisticsSerializer
 from .models import ReviewsRatings, FeedbackAndSuggestions
 from .helpers import *
 from .wrapper import *
@@ -63,51 +63,54 @@ class RelatedReviewRatingList(generics.ListAPIView):
         return response
 
 
-# TODO: This should be done for multiple entities given in input
 class EntityReviewStatistics(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        reviews = ReviewsRatings.objects.filter(related_id=kwargs['entity_id'])
-        total_reviews = len(reviews)
-        rating_average =  reviews.aggregate(rating_average = Avg('rating'))['rating_average']
-        return Response({"total_reviews":total_reviews,
-                         "rating_average":rating_average,
-                         "rating_percentage":(rating_average/5)*100},200)
+        input_serializer = EntityReviewStatisticsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            reviews = ReviewsRatings.objects.filter(related_id__in=request['entity_ids'])
+            total_reviews = len(reviews)
+            rating_average =  reviews.aggregate(rating_average = Avg('rating'))['rating_average']
+            return Response({"total_reviews":total_reviews,
+                             "rating_average":rating_average,
+                             "rating_percentage":(rating_average/5)*100},200)
+        else:
+            return Response({"message":"Cant get review statistics detials","errors":input_serializer.errors},400)
 
 
 class EntityTotalReviews(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
-    # TODO: comment required should be used in query to get the reviews
-    # TODO: Get booking ids form booking app based on entity filters and entity ids
-    # TODO: from date and to date represents the review submitted time
     def get(self, request, *args, **kwargs):
         input_serializer = EntityTotalReviewsSerializer(data=request.data)
         if input_serializer.is_valid():
             date_filter = request.data['date_filter']
-            # TODO: change input field to entity filters
-            entity_filters = get_entity_type(request.data['category_filters'])
+            entity_filters = get_entity_type(request.data['entity_filters'])
             rating_filters = request.data['rating_filters']
             comment_required = request.data['comment_required']
             if date_filter == 'Custom':
                 from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
             else:
                 from_date, to_date = get_time_period(date_filter)
-            entity_id = kwargs['entity_id']
-            bookings = get_completed_bookings_by_entity_id(from_date, to_date, entity_filters, entity_id)
+            entity_ids = request.data['entity_ids']
+            bookings = get_completed_bookings_by_entity_id(entity_filters, entity_ids)
             booking_ids = []
             for each_booking in bookings:
                 booking_ids.append(each_booking)
-            reviews = ReviewsRatings.objects.filter(related_id__in=booking_ids, rating__in = rating_filters)
+            if comment_required:
+                reviews = ReviewsRatings.objects.filter(time__lte = from_date, time__gte = to_date, \
+                                                        related_id__in=booking_ids, rating__in = rating_filters)
+            else:
+                reviews = ReviewsRatings.objects.filter(time__lte = from_date, time__gte = to_date, \
+                                                        related_id__in=booking_ids, rating__in = rating_filters,
+                                                        comment = "")
             booking_ratings = []
             for each_review in reviews:
-                review = {'rating': each_review.rating}
-                if comment_required:
-                    review['comment'] = each_review.comment
-                review['booking_id'] = each_review.related_id
-                review['check_out'] = bookings[str(each_review.related_id)]['check_out']
-                review['total_money'] = bookings[str(each_review.related_id)]['total_money']
+                review = {'rating': each_review.rating, 'comment': each_review.comment,
+                          'booking_id': each_review.related_id,
+                          'check_out': each_review.time,
+                          'total_money': bookings[str(each_review.related_id)]['total_money']}
                 booking_ratings.append(review)
             return Response(booking_ratings, 200)
         else:

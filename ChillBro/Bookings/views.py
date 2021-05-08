@@ -441,7 +441,7 @@ class BookingsStatistics(generics.RetrieveAPIView):
 
         return Response(
             {
-                "received": received_bookings,
+               "received": received_bookings,
                 "received_percentage_change": received_percentage_change,
                 "ongoing": ongoing_bookings,
                 "pending": pending_bookings,
@@ -915,3 +915,21 @@ class GenerateExcel(APIView):
 
 # TODO: Add Api for back to online - Should cancel the product in booking and store reason
 #  for cancellation in a separate table along with the user who cancelled and time of cancellation
+class BusinessClientProductCancellationDetails(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        input_serializer = BusinessClientProductCancellationSerializer(data=request.data)
+        if input_serializer.is_valid():
+            booked_product = BookedProducts.objects.filter(booking = request.data['booking_id'],\
+                                                           product_id=request.data['product_id'])
+            if len(booked_product) == 0:
+                return Response({"message": "Can't cancel the product", "errors":"There is no product{}in booking id {}"\
+                                .format(request.data['product_id'],request.data['booking_id'])},400)
+            request.data['cancelled_by'] = request.user.id
+            input_serializer.save()
+            booked_product.update(booking_status= ProductBookingStatus.cancelled.value)
+            return Response({"message": "Successfully cancelled the product"},200)
+
+        else:
+            return Response({"message":"Can't cancel the product","errors":input_serializer.errors},400)

@@ -6,7 +6,7 @@ from .serializers import *
 from .helpers import *
 from rest_framework.response import Response
 from .wrapper import *
-from django.db.models import Q
+from django.db.models import Q, Count
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClientEntities, \
     IsEmployeeEntities
 
@@ -18,6 +18,11 @@ class GetBookingTransactions(generics.ListAPIView):
 
 
 # TODO: Add api to get single transaction details based on ID
+class GetSpecificTransactionDetails(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = BookingTransaction.objects.all()
+    serializer_class = BookingTransactionDetailsSerializer
+
 
 
 class UpdatePaymentDetailsFromMyc(APIView):
@@ -31,6 +36,17 @@ class UpdatePaymentDetailsFromMyc(APIView):
             return Response(input_serializer.errors, 400)
 
         booking_ids = request.data["booking_ids"]
+        pending_paid_by_amount = BookingTransaction.objects.filter(
+            Q(paid_by__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
+            booking_id__in=booking_ids, payment_status=PayStatus.pending.value) \
+            .aggregate(total = Count('total_money'))['total']
+        pending_paid_to_amount = BookingTransaction.objects.filter(
+            Q(paid_to__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
+            booking_id__in=booking_ids, payment_status=PayStatus.pending.value) \
+            .aggregate(total=Count('total_money'))['total']
+        if pending_paid_to_amount - pending_paid_by_amount != request.data['credited_amount']:
+            return Response({"message": "Can't make transaction","errors": "Invalid total amount"},400)
+
         pending_booking_ids = BookingTransaction.objects.filter(
             Q(paid_by__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
             Q(paid_to__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
@@ -42,15 +58,18 @@ class UpdatePaymentDetailsFromMyc(APIView):
             return Response({"message": "Unable to update transactions",
                              "error": "Invalid Booking ids {}".format(invalid_booking_ids)}, 400)
 
-        BookingTransaction.objects.filter(
+        transactions = BookingTransaction.objects.filter(
             Q(paid_by__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
-            Q(paid_to__in=[PaymentUser.myc.value, PaymentUser.entity.value]), booking_id__in=booking_ids)\
-            .update(
+            Q(paid_to__in=[PaymentUser.myc.value, PaymentUser.entity.value]), booking_id__in=booking_ids)
+        transactions.update(
                 transaction_id=request.data["transaction_id"],
                 utr=request.data["utr"],
                 mode=request.data["mode"],
                 transaction_date=request.data["transaction_date"],
-                payment_status=PayStatus.done.value
+                payment_status=PayStatus.done.value,
+                image = request.data['transaction_proof'],
+                credited_amount = request.data['credited_amount'],
+                credited_by = request.user.id
             )
         return Response({"message": "Booking Transactions updated successfully"}, 200)
 
@@ -98,7 +117,7 @@ class PaymentRevenueStatisticsView(APIView):
 
         entity_id = request.data['entity_ids']
         date_filter = request.data['date_filter']
-        entity_filter = getEntityType(request.data['entity_filters'])
+        entity_filter = get_entity_type(request.data['entity_filters'])
 
         self.check_object_permissions(request, entity_id)
 
@@ -160,7 +179,7 @@ class GetPaymentsRevenueStatisticsDetailsView(APIView):
             return Response(input_serializer.errors, 400)
 
         date_filter = request.data['date_filter']
-        entity_filter = getEntityType(request.data['entity_filters'])
+        entity_filter = get_entity_type(request.data['entity_filters'])
         entity_id = request.data['entity_ids']
         statistics_details_type = request.data['statistics_details_type']
 
@@ -191,6 +210,21 @@ class GetPaymentsRevenueStatisticsDetailsView(APIView):
 
 
 # TODO: Create get api based on entity filters, entity ids, date filters - updated_at and payment status
+class GetTrasactionDetails(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        input_serializer = GetTrasactionDetailsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            from_date, to_date = get_time_period(request.data['date_filters'])
+            entity_filters = get_entity_type(request.data['entity_filters'])
+            transactions = BookingTransaction.objects.filter(updated_at__gte = from_date, updated_at__lte = to_date, \
+                                                             entity_id__in = request.data['entity_id'], \
+                                                             entity_type__in = request.data['entity_type'])
+            serializer = BookingTransactionDetailsSerializer(transactions, many = True)
+            return Response(serializer.data, 200)
+        else:
+            return Response({"message": "Can't get transaction details","errors":input_serializer.errors},400)
 
 
 class RefundTransactionList(generics.ListCreateAPIView):

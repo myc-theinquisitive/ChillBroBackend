@@ -2,7 +2,7 @@ from django.db import models
 import uuid
 from django.db.models import Q, Sum, F, FloatField
 from .constants import PayMode, PayStatus, EntityType, PaymentUser
-from .helpers import get_user_model
+from .helpers import get_user_model, image_upload_to_transaction_proof
 
 
 def get_id():
@@ -122,6 +122,10 @@ class BookingTransaction(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    image = models.ImageField(upload_to=image_upload_to_transaction_proof, blank=True, null=True)
+    credited_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    user_model = get_user_model()
+    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, blank=True, null=True)
 
     objects = BookingTransactionsManager()
 

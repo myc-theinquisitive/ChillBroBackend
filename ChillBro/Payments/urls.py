@@ -9,4 +9,6 @@ urlpatterns = [
     path('refunds/', RefundTransactionList.as_view()),
     path('refunds/<str:pk>/', RefundTransactionDetail.as_view()),
     path('booking_transactions/', GetBookingTransactions.as_view()),
+    path('get_specific_transaction/<str:pk>', GetSpecificTransactionDetails.as_view()),
+    path('get_transaction_details/',GetTrasactionDetails.as_view()),
 ]
