@@ -21,7 +21,7 @@ class Cart(models.Model):
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
 
     def __str__(self):
-        return (self.id)
+        return self.id
 
 
 class CartProducts(models.Model):
@@ -30,4 +30,4 @@ class CartProducts(models.Model):
     quantity = models.IntegerField()
 
     def __str__(self):
-        return ("cart id is {} and product id is {}".format(self.cart, self.product_id))
+        return "cart - {} and product - {}".format(self.cart, self.product_id)

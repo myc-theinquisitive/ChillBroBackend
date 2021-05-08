@@ -7,6 +7,10 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = '__all__'
 
+    def create(self, validated_data):
+        print(validated_data)
+        return super().create(validated_data)
+
 
 class CategoryImageSerializer(serializers.ModelSerializer):
 
@@ -14,12 +18,9 @@ class CategoryImageSerializer(serializers.ModelSerializer):
         model = CategoryImage
         fields = '__all__'
 
-
+        
 class CategoryPricesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CategoryPrices
         fields = '__all__'
-
-
-

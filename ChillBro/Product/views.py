@@ -6,13 +6,16 @@ from .product_interface import ProductInterface
 from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer, NetPriceSerializer, ProductQuantitySerializer
 from .Hotel.views import HotelView
 from collections import defaultdict
-from .wrapper import key_value_content_type_model, key_value_tag_model
+from .wrapper import key_value_content_type_model, key_value_tag_model, check_entity_id_is_exist, \
+    get_booked_count_of_product_id
 from .models import SellerProduct
 from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
 from .BaseProduct.models import Product
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, IsEmployeeBusinessClient
-from UserApp.models import BusinessClient
+from .BaseProduct.constants import ProductStatus
+from datetime import date, timedelta
+
 
 class ProductView(ProductInterface):
 
@@ -32,7 +35,7 @@ class ProductView(ProductInterface):
 
     @staticmethod
     def get_view_and_key_by_type(product_type):
-        if product_type == "Hotel":
+        if product_type == "HOTEL":
             return HotelView(), "hotel_room"
         return None, None
 
@@ -82,6 +85,17 @@ class ProductView(ProductInterface):
             is_valid = False
             errors.update(self.product_serializer.errors)
 
+        # Entity details validation
+        if "entity_id" not in product_data:
+            is_valid = False
+            errors["entity_id"].append("This field is required")
+        else:
+            entity_id = product_data["entity_id"]
+            check_entity_id = check_entity_id_is_exist(entity_id)
+            if not check_entity_id['is_valid']:
+                is_valid = False
+                errors["entity_id"].append("Invalid Entity Id")
+
         # Validating product specific data
         if not self.product_specific_view:
             is_valid = False
@@ -124,6 +138,14 @@ class ProductView(ProductInterface):
         base_product = self.product_serializer.create(product_data)
         self.product_specific_data["product"] = base_product.id
 
+        # Link seller to product
+        seller_product_data = {
+            "product_id": base_product.id,
+            "seller_id": product_data["entity_id"]
+        }
+        seller_product_serializer = SellerProductSerializer()
+        seller_product_serializer.create(seller_product_data)
+
         self.product_specific_view.create(self.product_specific_data)
 
         return {
@@ -137,7 +159,7 @@ class ProductView(ProductInterface):
         # Get the instance of product to be updated
         try:
             self.product_object \
-                = Product.objects.get(slug=product_data["slug"])
+                = Product.objects.get(id=product_data["id"])
         except ObjectDoesNotExist:
             return False, {"errors": "Product does not Exist!!!"}
 
@@ -225,9 +247,6 @@ class ProductView(ProductInterface):
         response.pop("created_at", None)
         response.pop("updated_at", None)
 
-        slug = response.pop("slug", None)
-        response["url"] = "product/" + slug
-
         return response
 
     @staticmethod
@@ -268,15 +287,13 @@ class ProductView(ProductInterface):
         for product_seller in product_sellers:
             product_id_wise_sellers_dict[product_seller.product_id].append(
                 {
-                    "seller_id": product_seller.seller_id,
-                    "price": product_seller.selling_price
+                    "seller_id": product_seller.seller_id
                 }
             )
         return product_id_wise_sellers_dict
 
-    def get(self, product_slug):
-
-        self.product_object = Product.objects.get(slug=product_slug)
+    def get(self, product_id):
+        self.product_object = Product.objects.get(id=product_id)
         self.initialize_product_class(None)
 
         product_data = self.product_serializer.data
@@ -306,12 +323,14 @@ class ProductView(ProductInterface):
 
         product_id_wise_images_dict = self.get_product_id_wise_images(product_ids)
         product_id_wise_features_dict = self.get_product_id_wise_features(product_ids)
+        product_id_wise_sellers_dict = self.get_product_id_wise_sellers(product_ids)
 
         group_products_by_type = defaultdict(list)
         for product_data in products_data:
             product_data = self.update_product_response(product_data)
             product_data["features"] = product_id_wise_features_dict[product_data["id"]]
             product_data["images"] = product_id_wise_images_dict[product_data["id"]]
+            product_data["sellers"] = product_id_wise_sellers_dict[product_data["id"]]
             group_products_by_type[product_data["type"]].append(product_data)
 
         response = []
@@ -335,6 +354,75 @@ class ProductView(ProductInterface):
                 response.append(product_dict)
 
         return products_data
+
+    @staticmethod
+    def get_business_client_product_details(product_ids):
+        products = Product.objects.filter(id__in=product_ids)
+        product_id_wise_images = ProductView().get_product_id_wise_images(product_ids)
+
+        today_date = date.today()
+        tomorrow_date = today_date + timedelta(1)
+
+        products_data = []
+        for product in products:
+            images = product_id_wise_images[product.id]
+
+            total_booked = get_booked_count_of_product_id(product.id, today_date, tomorrow_date)
+            discount = ((product.price - product.discounted_price) / product.price) * 100
+            net_price_data = calculate_product_net_price(product.price, discount)
+
+            product_details = {
+                'product_id': product.id,
+                'name': product.name,
+                'description': product.description,
+                'images': images,
+                'bookings': {
+                    'total': product.quantity,
+                    'booked': total_booked,
+                    'left': product.quantity - total_booked
+                },
+                'pricing': {
+                    "actual_price": product.price,
+                    "discount": discount,
+                    "discounted_price": product.discounted_price,
+                    "net_price": net_price_data["net_price"]
+                }
+            }
+            products_data.append(product_details)
+        return products_data
+
+
+def calculate_product_net_price(selling_price, discount):
+    final_selling_price = selling_price - (selling_price * discount) / 100
+    commission_fee = final_selling_price * COMMISION_FEE_PERCENT / 100
+    transaction_fee = final_selling_price * TRANSACTION_FEE_PERCENT / 100
+    fixed_fee = final_selling_price * FIXED_FEE_PERCENT / 100
+    gst = final_selling_price * GST_PERCENT / 100
+    net_price = final_selling_price - (commission_fee + transaction_fee + fixed_fee + gst)
+
+    return {
+        "net_price": net_price,
+        "details": {
+            "final_selling_price": final_selling_price,
+            "commission_fee": commission_fee,
+            "transaction_fee": transaction_fee,
+            "fixed_fee": fixed_fee,
+            "gst": gst
+        }
+    }
+
+
+class BusinessClientProductDetails(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        product_id = kwargs['product_id']
+        products_data = ProductView().get_business_client_product_details([product_id])
+
+        if len(products_data) != 1:
+            return Response({"message": "invalid product id"}, 400)
+
+        return Response(products_data[0], 200)
 
 
 class ProductList(APIView):
@@ -382,8 +470,8 @@ class ProductDetail(APIView):
 
     def delete(self, request, *args, **kwargs):
         try:
-            product = Product.objects.get(id=int(self.kwargs['pk']))
-        except:
+            product = Product.objects.get(id=self.kwargs['pk'])
+        except ObjectDoesNotExist:
             return Response({"errors": "Product does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
         product.status = ProductStatus.DELETED.value
         product.save()
@@ -441,55 +529,67 @@ class ProductNetPrice(APIView):
         if serializer.is_valid():
             selling_price = serializer.data['selling_price']
             discount = serializer.data['discount']
-            final_selling_price = selling_price - (selling_price * discount) / 100
-            commission_fee = final_selling_price * COMMISION_FEE_PERCENT / 100
-            transaction_fee = final_selling_price * TRANSACTION_FEE_PERCENT / 100
-            fixed_fee = final_selling_price * FIXED_FEE_PERCENT / 100
-            gst = final_selling_price * GST_PERCENT / 100
-            net_price = final_selling_price - (commission_fee + transaction_fee + fixed_fee + gst)
-            content = {
-                "net_price": net_price,
-                "details": {
-                    "final_selling_price": final_selling_price,
-                    "commission_fee": commission_fee,
-                    "transaction_fee": transaction_fee,
-                    "fixed_fee": fixed_fee,
-                    "gst": gst
-                }
-            }
-            return Response(content, status=status.HTTP_200_OK)
+            net_price_data = calculate_product_net_price(selling_price, discount)
+            return Response(net_price_data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductSellerStatus(generics.ListAPIView):
     queryset = SellerProduct.objects.all()
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |
+                          IsSellerProduct | IsEmployeeBusinessClient)
+    serializer_class = SellerProductSerializer
+
+    def get(self, request, *args, **kwargs):
+        seller_id = kwargs["seller_id"]
+        status = kwargs['status']
+        self.check_object_permissions(request, seller_id)
+
+        self.queryset = SellerProduct.objects.select_related('product')\
+            .filter(seller_id=seller_id, product__status=status)
+        response = super().get(request, args, kwargs)
+        product_ids = []
+        for seller_product in response.data["results"]:
+            product_ids.append(seller_product["product"])
+        response.data["results"] = ProductView().get_business_client_product_details(product_ids)
+
+        return response
 
 
-    def get(self, request, seller_id, status):
-        self.check_object_permissions(request,seller_id)
-        seller_products = SellerProduct.objects.filter(seller_id=seller_id).values_list('product',flat=True)
-        product_ids=Product.objects.filter(id__in=seller_products,status=status).values_list('id',flat=True)
-        product_view = ProductView()
-        return Response(product_view.get_by_ids(product_ids))
+class GetSellerProductList(generics.ListAPIView):
+    permission_classes = (IsAuthenticated, )
+    queryset = SellerProduct.objects.all()
+    serializer_class = SellerProductSerializer
+
+    def get(self, request, *args, **kwargs):
+        seller_id = kwargs["seller_id"]
+        self.check_object_permissions(request, seller_id)
+
+        self.queryset = SellerProduct.objects.filter(seller_id=seller_id)
+        response = super().get(request, args, kwargs)
+        product_ids = []
+        for seller_product in response.data["results"]:
+            product_ids.append(seller_product["product"])
+        response.data["results"] = ProductView().get_business_client_product_details(product_ids)
+
+        return response
 
 
 class ProductQuantity(APIView):
     serializer_class = ProductQuantitySerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsSellerProduct | IsEmployeeBusinessClient)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |
+                          IsSellerProduct | IsEmployeeBusinessClient)
 
     def put(self, request, product_id):
-        try:
-            product = Product.objects.get(id=product_id)
-        except:
-            return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-        self.check_object_permissions(request,product_id)
-        serializer = self.serializer_class(product, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Updated Successfully"}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        products = Product.objects.filter(id=product_id)
+        if len(products) != 1:
+            return Response({"message": "Invalid Product id"}, status=status.HTTP_404_NOT_FOUND)
+        self.check_object_permissions(request, product_id)
 
+        if request.data["quantity"] <= 0:
+            return Response({"message": "Can't update product quantity",
+                             "error": "Quantity should be greater than zero"}, status=status.HTTP_400_BAD_REQUEST)
 
-
+        products.update(quantity=request.data["quantity"])
+        return Response({"message": "Updated Successfully"}, status=status.HTTP_200_OK)

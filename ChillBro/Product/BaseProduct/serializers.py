@@ -11,7 +11,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        lookup_field = 'slug'
         fields = '__all__'
 
     def create(self, validated_data):
@@ -19,12 +18,14 @@ class ProductSerializer(serializers.ModelSerializer):
             validated_data["featured"] = False
         if "active" not in validated_data:
             validated_data["active"] = True
+        if "quantity" not in validated_data:
+            validated_data["quantity"] = 0
 
         product = Product.objects.create(
             name=validated_data["name"], description=validated_data["description"],
-            type=validated_data["type"], category=validated_data["category"], price=validated_data["price"],
+            type=validated_data["type"], category_id=validated_data["category"], price=validated_data["price"],
             discounted_price=validated_data["discounted_price"], featured=validated_data["featured"],
-            active=validated_data["active"], quantity= validated_data["quantity"])
+            active=validated_data["active"], quantity=validated_data["quantity"])
 
         if "tags" in validated_data:
             product.tags.add(*validated_data["tags"])
@@ -37,6 +38,8 @@ class ProductSerializer(serializers.ModelSerializer):
             validated_data["featured"] = False
         if "active" not in validated_data:
             validated_data["active"] = True
+        if "quantity" not in validated_data:
+            validated_data["quantity"] = 0
 
         instance.name = validated_data["name"]
         instance.description = validated_data["description"]

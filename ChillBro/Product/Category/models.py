@@ -1,5 +1,5 @@
 from django.db import models
-from .helpers import uploadImageToCategoryIcons, iconUrlImage
+from .helpers import upload_image_to_category, update_image_to_category_icon
 import uuid
 
 
@@ -12,8 +12,8 @@ class Category(models.Model):
     name = models.CharField(max_length=20, unique=True)
     description = models.TextField()
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE,
-                                        blank=True, null=True, verbose_name="Parent Category")
-    icon_url = models.ImageField(upload_to=iconUrlImage)
+                                        null=True, verbose_name="Parent Category")
+    icon_url = models.ImageField(upload_to=update_image_to_category_icon)
 
     def __str__(self):
         return "Category - Nº{0}".format(self.name)
@@ -21,7 +21,7 @@ class Category(models.Model):
 
 class CategoryImage(models.Model):
     category = models.ForeignKey("Category", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=uploadImageToCategoryIcons)
+    image = models.ImageField(upload_to=upload_image_to_category)
     order = models.IntegerField()
 
     class Meta:
