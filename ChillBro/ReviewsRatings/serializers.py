@@ -46,3 +46,8 @@ class FeedbackAndSuggestionsSerializer(serializers.ModelSerializer):
         model = FeedbackAndSuggestions
         fields = '__all__'
 
+
+class GetFeedbackAndSuggestionsSerializer(serializers.Serializer):
+    category_filters = serializers.ListField(
+        child=serializers.CharField()
+    )

@@ -1,8 +1,14 @@
 from django.db import models
 from .helpers import uploadImageToCategoryIcons, iconUrlImage
+import uuid
+
+
+def get_id():
+    return str(uuid.uuid4())
 
 
 class Category(models.Model):
+    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     name = models.CharField(max_length=20, unique=True)
     description = models.TextField()
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE,

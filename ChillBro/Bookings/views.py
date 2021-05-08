@@ -114,7 +114,6 @@ class CreateBooking(generics.ListCreateAPIView):
     serializer_class = BookingsSerializer
 
     def post(self, request, *args, **kwargs):
-        print(type(request.data))
         request.data._mutable = True
         request.data['user'] = request.user
         new_booking_serializer = NewBookingSerializer(data=request.data)

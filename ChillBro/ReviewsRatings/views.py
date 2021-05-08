@@ -3,8 +3,8 @@ from django.http import HttpResponse
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer, FeedbackAndSuggestionsSerializer
+from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer, FeedbackAndSuggestionsSerializer,\
+    GetFeedbackAndSuggestionsSerializer
 from .models import ReviewsRatings, FeedbackAndSuggestions
 from .helpers import *
 from .wrapper import *
@@ -83,13 +83,13 @@ class EntityTotalReviews(generics.ListAPIView):
         input_serializer = EntityTotalReviewsSerializer(data=request.data)
         if input_serializer.is_valid():
             date_filter = request.data['date_filter']
-            entity_filters = getEntityType(request.data['category_filters'])
+            entity_filters = get_entity_type(request.data['category_filters'])
             rating_filters = request.data['rating_filters']
             comment_required = request.data['comment_required']
             if date_filter == 'Custom':
                 from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
             else:
-                from_date, to_date = getTimePeriod(date_filter)
+                from_date, to_date = get_time_period(date_filter)
             entity_id = kwargs['entity_id']
             bookings = get_completed_bookings_by_entity_id(from_date, to_date, entity_filters, entity_id)
             booking_ids = []
@@ -125,5 +125,13 @@ class CreateFeedbackAndSuggestion(generics.CreateAPIView):
 
 class GetFeedbackAndSuggestions(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
-    queryset = FeedbackAndSuggestions.objects.all()
-    serializer_class = FeedbackAndSuggestionsSerializer
+
+    def get(self, request, *args, **kwargs):
+        input_serializer = GetFeedbackAndSuggestionsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            categories = get_categories(request.data['category_filters'])
+            feedback = FeedbackAndSuggestions.objects.filter(category__in = categories)
+            serializer = FeedbackAndSuggestionsSerializer(feedback, many=True)
+            return Response(serializer.data, 200)
+        else:
+            return Response({"message": "Can't get the feedback details","errors":input_serializer.errors},400)

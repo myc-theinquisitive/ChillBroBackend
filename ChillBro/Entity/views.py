@@ -130,25 +130,17 @@ def get_entity_ids_for_business_client(business_client_id):
     return entity_ids
 
 
-class CountOfEntities(generics.RetrieveAPIView):
+class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated, )
 
     def get(self, request, *args, **kwargs):
-        business_client_entities_count = BusinessClientEntity.objects.filter(business_client_id=request.user)\
-                                    .aggregate(count = Count('business_client_id'))['count']
-        return Response({'message':"Total number of outlets are {}".format(business_client_entities_count)},200)
+        business_client_entities = BusinessClientEntity.objects.filter(business_client_id=request.user) \
+                                    .values_list('entity_id', flat=True)
+        business_client_entities_count = business_client_entities.aggregate(count=Count('entity_id'))['count']
+        total_products_in_entities = get_total_products_count_in_entities(business_client_entities)
+        return Response({'entities_count':business_client_entities_count,\
+                         'products_count': total_products_in_entities},200)
 
-
-class CountOfProducts(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request, *args, **kwargs):
-        business_client_entities = BusinessClientEntity.objects.filter(business_client_id=request.user)
-        entity_ids = []
-        for each_entity in business_client_entities:
-            entity_ids.append(each_entity.entity_id.id)
-        total_products_in_entities = get_total_products_count_in_entities(entity_ids)
-        return Response({'message':"Total number of products are {}".format(total_products_in_entities)},200)
 
 
 
