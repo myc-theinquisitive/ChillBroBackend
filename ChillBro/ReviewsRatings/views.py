@@ -63,6 +63,7 @@ class RelatedReviewRatingList(generics.ListAPIView):
         return response
 
 
+# TODO: This should be done for multiple entities given in input
 class EntityReviewStatistics(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
@@ -78,10 +79,14 @@ class EntityReviewStatistics(generics.RetrieveAPIView):
 class EntityTotalReviews(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
+    # TODO: comment required should be used in query to get the reviews
+    # TODO: Get booking ids form booking app based on entity filters and entity ids
+    # TODO: from date and to date represents the review submitted time
     def get(self, request, *args, **kwargs):
         input_serializer = EntityTotalReviewsSerializer(data=request.data)
         if input_serializer.is_valid():
             date_filter = request.data['date_filter']
+            # TODO: change input field to entity filters
             entity_filters = getEntityType(request.data['category_filters'])
             rating_filters = request.data['rating_filters']
             comment_required = request.data['comment_required']

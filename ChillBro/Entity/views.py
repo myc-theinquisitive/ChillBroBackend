@@ -247,6 +247,7 @@ class BusinessClientEntities(generics.ListAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsOwnerById)
 
     def get(self, request, *args, **kwargs):
+        # TODO: use request user id for business client id instead of taking in URL
         self.check_object_permissions(request, kwargs['bc_id'])
         entity_ids = entity_ids_for_business_client(kwargs['bc_id'])
         entities = MyEntity.objects.filter(id__in=entity_ids)

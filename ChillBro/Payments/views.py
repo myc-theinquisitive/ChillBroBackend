@@ -17,9 +17,14 @@ class GetBookingTransactions(generics.ListAPIView):
     serializer_class = BookingTransactionDetailsSerializer
 
 
+# TODO: Add api to get single transaction details based on ID
+
+
 class UpdatePaymentDetailsFromMyc(APIView):
     permission_classes = (IsAuthenticated,)
 
+    # TODO: Add Image and amount for payment details and store the user who updated this
+    #  Verify the total amount of bookings values is equal or not
     def put(self, request, *args, **kwargs):
         input_serializer = UpdateBookingTransactionSerializer(data=request.data)
         if not input_serializer.is_valid():
@@ -183,6 +188,9 @@ class GetPaymentsRevenueStatisticsDetailsView(APIView):
 
         transaction_serializer = BookingTransactionDetailsSerializer(transactions, many=True)
         return Response(transaction_serializer.data, 200)
+
+
+# TODO: Create get api based on entity filters, entity ids, date filters - updated_at and payment status
 
 
 class RefundTransactionList(generics.ListCreateAPIView):

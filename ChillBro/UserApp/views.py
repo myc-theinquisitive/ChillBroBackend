@@ -120,12 +120,13 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
         return super().get(request, *args, **kwargs)
 
 
-
 class EntityBusinessClientEmployee(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsEmployeeBusinessClient, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |
+                          IsEmployeeBusinessClient, )
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
+    # TODO: Use user id here
     def get(self, request, *args, **kwargs):
         self.check_object_permissions(request, self.kwargs['bc_id'])
         entity_ids = get_entity_ids_for_business_client(self.kwargs['bc_id'])

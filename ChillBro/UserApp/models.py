@@ -26,6 +26,7 @@ class BusinessClient(models.Model):
     user_id = models.OneToOneField('MyUser', on_delete=models.CASCADE)
 
 
+# TODO: Images should be multiple for employee
 class Employee(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     entity_id = models.CharField(max_length=36)

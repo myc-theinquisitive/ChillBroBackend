@@ -435,6 +435,10 @@ class BookingsStatistics(generics.RetrieveAPIView):
             received_percentage_change = (received_bookings - previous_receiving_bookings) / 100
             cancelled_percentage_change = (cancelled_bookings - previous_cancelled_bookings) / 100
 
+        # TODO: Handle cases for hiding details in Frontend for different date filters
+        if date_filter == "Yesterday":
+            ongoing_bookings = pending_bookings = -1
+
         return Response(
             {
                 "received": received_bookings,
@@ -907,3 +911,7 @@ class GenerateExcel(APIView):
 
         wb.save(response)
         return response
+
+
+# TODO: Add Api for back to online - Should cancel the product in booking and store reason
+#  for cancellation in a separate table along with the user who cancelled and time of cancellation
