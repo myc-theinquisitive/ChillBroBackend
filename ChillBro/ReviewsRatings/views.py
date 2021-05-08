@@ -1,14 +1,14 @@
 from django.db.models import Avg
-from django.http import HttpResponse
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer
-from .models import ReviewsRatings
+from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer, FeedbackAndSuggestionsSerializer,\
+    GetFeedbackAndSuggestionsSerializer
+from .models import ReviewsRatings, FeedbackAndSuggestions
 from .helpers import *
 from .wrapper import *
 from ChillBro.permissions import IsOwner
+
 
 class ReviewRatingList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, )
@@ -24,7 +24,7 @@ class MYCReviewRatingList(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        data = {'related_id': kwargs['entity_id'], 'comment':"", 'rating':request.data['rating'], 'reviewed_by': request.user}
+        data = {'related_id': kwargs['entity_id'], 'comment':"", 'rating':request.data['rating'], 'created_by': request.user}
         serializer = ReviewsRatingsSerializer()
         serializer.create(data)
         return Response({"message":"suceess"},200)
@@ -87,13 +87,13 @@ class EntityTotalReviews(generics.ListAPIView):
         if input_serializer.is_valid():
             date_filter = request.data['date_filter']
             # TODO: change input field to entity filters
-            entity_filters = getEntityType(request.data['category_filters'])
+            entity_filters = get_entity_type(request.data['category_filters'])
             rating_filters = request.data['rating_filters']
             comment_required = request.data['comment_required']
             if date_filter == 'Custom':
                 from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
             else:
-                from_date, to_date = getTimePeriod(date_filter)
+                from_date, to_date = get_time_period(date_filter)
             entity_id = kwargs['entity_id']
             bookings = get_completed_bookings_by_entity_id(from_date, to_date, entity_filters, entity_id)
             booking_ids = []
@@ -112,3 +112,30 @@ class EntityTotalReviews(generics.ListAPIView):
             return Response(booking_ratings, 200)
         else:
             return Response(input_serializer.errors, 400)
+
+
+class CreateFeedbackAndSuggestion(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        request.data["created_by"] = request.user.id
+        input_serializer = FeedbackAndSuggestionsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            input_serializer.save()
+            return Response({"message":"Succesfully given feedback"},200)
+        else:
+            return Response({"message":"Feedback is not submitted","errors":input_serializer.errors}, 400)
+
+
+class GetFeedbackAndSuggestions(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        input_serializer = GetFeedbackAndSuggestionsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            categories = get_categories(request.data['category_filters'])
+            feedback = FeedbackAndSuggestions.objects.filter(category__in = categories)
+            serializer = FeedbackAndSuggestionsSerializer(feedback, many=True)
+            return Response(serializer.data, 200)
+        else:
+            return Response({"message": "Can't get the feedback details","errors":input_serializer.errors},400)

@@ -1,3 +1,5 @@
+from django.db.models import Count
+from django.shortcuts import render
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
 
@@ -9,7 +11,8 @@ from rest_framework import generics
 from .models import MyEntity, BusinessClientEntity, EntityVerification
 from rest_framework.response import Response
 from rest_framework import status
-from .wrappers import post_create_address, get_address_details_for_address_ids
+from django.http import HttpResponse
+from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities
 from datetime import datetime
 from .helpers import get_date_format
 from collections import defaultdict
@@ -75,8 +78,8 @@ class EntityList(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         if 'city' not in request.data or 'pincode' not in request.data:
             return Response({"message": "City and Pincode are required"}, status=status.HTTP_400_BAD_REQUEST)
+    
         address_details = post_create_address(request.data['city'], request.data['pincode'])
-
         if not address_details['is_valid']:
             return Response({"message": "City or Pincode is invalid", "errors":address_details['errors']}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -259,3 +262,19 @@ def entity_ids_for_business_client(business_client_id):
     entity_ids = BusinessClientEntity.objects.filter(
         business_client_id=business_client_id).values_list('entity_id', flat=True)
     return entity_ids
+
+
+class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated, )
+
+    def get(self, request, *args, **kwargs):
+        business_client_entities = BusinessClientEntity.objects.filter(business_client_id=request.user) \
+                                    .values_list('entity_id', flat=True)
+        business_client_entities_count = business_client_entities.aggregate(count=Count('entity_id'))['count']
+        total_products_in_entities = get_total_products_count_in_entities(business_client_entities)
+        return Response({'entities_count':business_client_entities_count,\
+                         'products_count': total_products_in_entities},200)
+
+
+
+

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from authentication.admin import EmailUserAdmin
+from .models import BusinessClient
 
 
 class MyUserAdmin(EmailUserAdmin):
@@ -16,4 +17,5 @@ class MyUserAdmin(EmailUserAdmin):
 
 admin.site.unregister(get_user_model())
 admin.site.register(get_user_model(), MyUserAdmin)
+admin.site.register(BusinessClient)
 

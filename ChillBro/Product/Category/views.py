@@ -1,9 +1,9 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from .models import Category, CategoryImage
+from .models import Category, CategoryImage, CategoryPrices
 from rest_framework.response import Response
-from .serializers import CategorySerializer, CategoryImageSerializer
+from .serializers import CategorySerializer, CategoryImageSerializer, CategoryPricesSerializer
 from rest_framework.views import APIView
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsGet
@@ -112,3 +112,43 @@ class GetSpecificCategoriesLevelWise(APIView):
             "images": group_images_by_category_id[category.id]
         }
         return Response(response_data, 200)
+
+
+class CreateCategoryPrices(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee)
+    queryset = CategoryPrices.objects.all()
+    serializer_class = CategoryPricesSerializer
+
+
+class GetCategoryPrices(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = CategoryPrices.objects.all()
+    serializer_class = CategoryPricesSerializer
+
+    def get(self, request, *args, **kwargs):
+        try:
+            prices = CategoryPrices.objects.get(category=kwargs['category'])
+        except:
+            return Response({"min_price":-1,"max_price":-1, "min_discount":-1, "max_discount":-1},400)
+        serializer = self.serializer_class(prices)
+        return Response(serializer.data,200)
+
+    def put(self, request, *args, **kwargs):
+        prices = CategoryPrices.objects.filter(category=kwargs['category'])
+        if len(prices) == 0:
+            return Response({"message":"Can't edit the category","errors":"Category-{} Prices doesn't exit " \
+                            .format(kwargs['category'])},400)
+        prices.update(min_price = request.data['min_price'],max_price = request.data['max_price'], \
+                      min_discount = request.data['min_discount'], max_discount = request.data['max_discount'])
+        return Response({"message":"Successfully edited the category-{} prices".format(kwargs['category'])\
+                        ,"errors":None},200)
+
+    def delete(self, request, *args, **kwargs):
+        prices = CategoryPrices.objects.filter(category=kwargs['category'])
+        if len(prices) == 0:
+            return Response({"message":"Can't delete the category","errors":"Category-{} Prices doesn't exit " \
+                            .format(kwargs['category'])},400)
+        prices.delete()
+        return Response({"message":"Successfully deleted the category{} prices".format(kwargs['category']) \
+                        ,"errors":None},200)
+
