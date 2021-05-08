@@ -4,11 +4,12 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer
-from .models import ReviewsRatings
+from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer, FeedbackAndSuggestionsSerializer
+from .models import ReviewsRatings, FeedbackAndSuggestions
 from .helpers import *
 from .wrapper import *
 from ChillBro.permissions import IsOwner
+
 
 class ReviewRatingList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, )
@@ -24,7 +25,7 @@ class MYCReviewRatingList(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        data = {'related_id': kwargs['entity_id'], 'comment':"", 'rating':request.data['rating'], 'reviewed_by': request.user}
+        data = {'related_id': kwargs['entity_id'], 'comment':"", 'rating':request.data['rating'], 'created_by': request.user}
         serializer = ReviewsRatingsSerializer()
         serializer.create(data)
         return Response({"message":"suceess"},200)
@@ -107,3 +108,22 @@ class EntityTotalReviews(generics.ListAPIView):
             return Response(booking_ratings, 200)
         else:
             return Response(input_serializer.errors, 400)
+
+
+class CreateFeedbackAndSuggestion(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        request.data["created_by"] = request.user.id
+        input_serializer = FeedbackAndSuggestionsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            input_serializer.save()
+            return Response({"message":"Succesfully given feedback"},200)
+        else:
+            return Response({"message":"Feedback is not submitted","errors":input_serializer.errors}, 400)
+
+
+class GetFeedbackAndSuggestions(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = FeedbackAndSuggestions.objects.all()
+    serializer_class = FeedbackAndSuggestionsSerializer

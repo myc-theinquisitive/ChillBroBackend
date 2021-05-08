@@ -24,3 +24,11 @@ class CategoryImage(models.Model):
     def __str__(self):
         return "Category Image - Nº{0}".format(self.id)
 
+
+class CategoryPrices(models.Model):
+    category = models.OneToOneField("Category", on_delete=models.CASCADE)
+    min_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    max_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    min_discount = models.IntegerField(default=0)
+    max_discount = models.IntegerField(default=0)
+

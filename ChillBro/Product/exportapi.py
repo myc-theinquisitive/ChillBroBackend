@@ -41,3 +41,7 @@ def product_details_with_image(product_ids):
                                                'image_url':each_product.image.url}
     return details_of_product
 
+
+def total_products_count_in_entities(entity_ids):
+    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids).aggregate(count = Count('product'))['count']
+    return products_count

@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django.shortcuts import render
 from rest_framework.permissions import IsAuthenticated
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, AddressSerializer
@@ -6,7 +7,7 @@ from .models import MyEntity, BusinessClientEntity
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
-from .wrappers import post_create_address
+from .wrappers import post_create_address, get_total_products_count_in_entities
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, IsEmployee, IsGet, IsEmployeeEntity
 
 
@@ -20,6 +21,7 @@ class EntityList(generics.CreateAPIView):
             return Response({"message": "City and Pincode are required"}, status=status.HTTP_400_BAD_REQUEST)
         response_from_address = post_create_address(request.data['city'], request.data['pincode'])
         if response_from_address['is_valid']:
+            request.data._mutable = True
             request.data['address_id'] = response_from_address["address_id"]
             serializer = self.serializer_class(data=request.data)
             if serializer.is_valid():
@@ -126,3 +128,27 @@ def get_entity_ids_for_business_client(business_client_id):
     entity_ids = BusinessClientEntity.objects.filter(business_client_id=business_client_id).values_list('entity_id',
                                                                                                         flat=True)
     return entity_ids
+
+
+class CountOfEntities(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated, )
+
+    def get(self, request, *args, **kwargs):
+        business_client_entities_count = BusinessClientEntity.objects.filter(business_client_id=request.user)\
+                                    .aggregate(count = Count('business_client_id'))['count']
+        return Response({'message':"Total number of outlets are {}".format(business_client_entities_count)},200)
+
+
+class CountOfProducts(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        business_client_entities = BusinessClientEntity.objects.filter(business_client_id=request.user)
+        entity_ids = []
+        for each_entity in business_client_entities:
+            entity_ids.append(each_entity.entity_id.id)
+        total_products_in_entities = get_total_products_count_in_entities(entity_ids)
+        return Response({'message':"Total number of products are {}".format(total_products_in_entities)},200)
+
+
+
