@@ -1,5 +1,4 @@
-from Address.exportapi import *
-from Product.exportapi import total_products_count_in_entities
+from Address.exportapi import create_address
 
 
 def post_create_address(city,pincode):
@@ -7,6 +6,7 @@ def post_create_address(city,pincode):
 
 
 def get_total_products_count_in_entities(entity_ids):
+    from Product.exportapi import total_products_count_in_entities
     return total_products_count_in_entities(entity_ids)
 
   

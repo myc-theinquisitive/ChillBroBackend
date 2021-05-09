@@ -43,3 +43,11 @@ def product_details_with_image(product_ids):
 def total_products_count_in_entities(entity_ids):
     products_count = SellerProduct.objects.filter(seller_id__in=entity_ids).aggregate(count = Count('product'))['count']
     return products_count
+
+
+def check_product_is_valid(product_id):
+    try:
+        product = Product.objects.get(id=product_id)
+        return True
+    except:
+        return False

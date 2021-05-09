@@ -95,6 +95,12 @@ class ReportCustomerSerializer(serializers.ModelSerializer):
         return object.save()
 
 
+class BusinessClientProductCancellationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BusinessClientProductCancellation
+        fields = '__all__'
+
+
 class ReportCustomerResonsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReportCustomerReasons

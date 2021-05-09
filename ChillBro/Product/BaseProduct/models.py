@@ -7,7 +7,7 @@ from .constants import ProductTypes, ProductStatus
 import string
 import random
 from django.core.exceptions import ValidationError
-from ..wrapper import get_taggable_manager, get_key_value_store
+from ..taggable_wrapper import get_taggable_manager, get_key_value_store
 import uuid
 
 
