@@ -31,6 +31,9 @@ class Employee(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     entity_id = models.CharField(max_length=36)
     role = models.CharField(choices=[(role.name, role.value) for role in Roles], max_length=30)
-    image = models.ImageField(upload_to=upload_employee_image)
     is_active = models.BooleanField(default=True)
     user_id = models.OneToOneField('MyUser', on_delete=models.CASCADE)
+
+class EmployeeImage(models.Model):
+    employee = models.ForeignKey('Employee',on_delete=models.CASCADE)
+    image = models.ImageField(upload_to=upload_employee_image)
