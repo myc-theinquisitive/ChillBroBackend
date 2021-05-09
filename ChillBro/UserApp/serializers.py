@@ -34,9 +34,8 @@ class NewEmployeeSerializer(UserSerializer):
     role = serializers.ChoiceField(choices=[(role.name, role.value) for role in Roles])
     is_active = serializers.BooleanField()
     images = serializers.ListField(
-        child = serializers.ImageField()
+        child=serializers.ImageField()
     )
-
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -65,4 +64,4 @@ class EmployeeImageSerializer(serializers.ModelSerializer):
                 image=image['image']
             )
             all_images.append(each_image)
-        return EmployeeImage.objects.bulk_create(all_images)
+        EmployeeImage.objects.bulk_create(all_images)

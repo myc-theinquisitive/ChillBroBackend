@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from rest_framework import generics
@@ -57,14 +58,11 @@ class BusinessClientDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BusinessClientSerializer
 
     def get(self, request, *args, **kwargs):
-        try:
-            self.check_object_permissions(request,kwargs['pk'])
-            business_client = BusinessClient.objects.filter(id=self.kwargs['pk']). \
-                values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'business_name',
-                       'secondary_contact')[0]
-            return Response(business_client)
-        except:
-            return Response({"message": "Detail not found"})
+        self.check_object_permissions(request, kwargs['pk'])
+        business_client = BusinessClient.objects.filter(id=self.kwargs['pk']). \
+            values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'business_name',
+                   'secondary_contact')[0]
+        return Response(business_client)
 
 
 class EmployeeAdd(APIView):
@@ -83,17 +81,20 @@ class EmployeeAdd(APIView):
                 user_instance.save()
                 user_id = user_serializer.data['id']
                 request.data['user_id'] = user_id
+
                 employee_serializer = EmployeeSerializer(data=request.data)
                 if employee_serializer.is_valid():
                     employee_instance = employee_serializer.save()
+
                     employee_image_dicts = []
-                    images = request.data['images']
+                    images = request.data.pop('images', None)
                     for image in images:
                         employee_image_dict = {
                             "employee": employee_instance,
                             "image": image
                         }
                         employee_image_dicts.append(employee_image_dict)
+
                     EmployeeImageSerializer.bulk_create(employee_image_dicts)
                     return Response({'message': 'Success'}, status=status.HTTP_200_OK)
                 else:
@@ -106,7 +107,8 @@ class EmployeeAdd(APIView):
 
 
 class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsEmployeeBusinessClient | (IsEmployee & IsOwnerById))
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsEmployeeBusinessClient |
+                          (IsEmployee & IsOwnerById))
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
 
@@ -118,15 +120,15 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response(business_client)
 
     def put(self, request, *args, **kwargs):
-        id=request.user.id
+        id = request.user.id
         employee = None
         try:
             employee = Employee.objects.get(user_id=id)
-        except:
+        except ObjectDoesNotExist:
             pass
         if employee:
-            request.data['is_active']=employee.is_active
-        return super().get(request, *args, **kwargs)
+            request.data['is_active'] = employee.is_active
+        return super().put(request, *args, **kwargs)
 
 
 class EntityBusinessClientEmployee(generics.ListAPIView):
@@ -148,10 +150,10 @@ class EmployeeActive(generics.RetrieveUpdateAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeActiveSerializer
 
-    def get(self,request, *args, **kwargs):
-        self.check_object_permissions(request,kwargs['pk'])
+    def get(self, request, *args, **kwargs):
+        self.check_object_permissions(request, kwargs['pk'])
         super().get(request, *args, **kwargs)
 
-    def post(self,request, *args, **kwargs):
-        self.check_object_permissions(request,kwargs['pk'])
+    def post(self, request, *args, **kwargs):
+        self.check_object_permissions(request, kwargs['pk'])
         super().post(request, *args, **kwargs)
