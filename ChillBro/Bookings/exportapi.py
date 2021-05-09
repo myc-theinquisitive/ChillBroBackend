@@ -28,3 +28,11 @@ def booked_count_of_product_id(product_id, from_date, to_date):
     if not booked_count:
         return 0
     return booked_count
+
+
+def check_order_is_valid(booking_id):
+    try:
+        booking = Bookings.objects.get(id=booking_id)
+        return  True
+    except:
+        return False
