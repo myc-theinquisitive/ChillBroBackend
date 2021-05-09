@@ -2,9 +2,10 @@ import enum
 
 
 class ProductTypes(enum.Enum):
-    Hotel = "Hotel"
-    Transport = "Transport"
-    Rental = "Rental"
+    Hotel = "HOTEL"
+    Transport = "TRANSPORT"
+    Rental = "RENTAL"
+
 
 class ProductStatus(enum.Enum):
     ACTIVE = "ACTIVE"

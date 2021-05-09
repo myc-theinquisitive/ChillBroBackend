@@ -1,6 +1,7 @@
 from datetime import datetime, date, timedelta
 from .constants import *
-
+from django.conf import settings
+import uuid
 
 def getTodayDay():
     day = datetime.now().weekday()
@@ -14,20 +15,20 @@ def getTodayDate():
     return int(today) - 1
 
 
-def getEntityType(entity_filter):
+def get_entity_type(entity_filter):
     entities = [entity_type.value for entity_type in EntityType]
-    if len(entity_filter) != 0:
-        return entity_filter
-    return entities
+    if len(entity_filter) == 0:
+        return entities
+    return entity_filter
 
 
 def getStatus(status):
     if len(status) == 0:
-        return [status.value for status in BookingStatus]
+        return [status.value for status in PayStatus]
     return status
 
 
-def getTimePeriod(date_filter):
+def get_time_period(date_filter):
     if date_filter == 'Today':
         today = date.today()
         tomorrow = today + timedelta(1)
@@ -45,3 +46,15 @@ def getTimePeriod(date_filter):
         month = today - timedelta(getTodayDate())
         return month, today + timedelta(1)
     return None, None
+
+
+def get_user_model():
+    return settings.AUTH_USER_MODEL
+
+
+def image_upload_to_transaction_proof(instance, filename):
+    id = instance.id
+    basename, file_extension = filename.split(".")
+    new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
+    return "static/images/transaction_proof/%s/%s" % (id, new_filename)
+

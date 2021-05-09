@@ -23,7 +23,6 @@ class BusinessClientAdd(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            request.data._mutable = True
             request.data['is_verified'] = True
             request.data['email']=request.data['email'].lower().strip()
             user_serializer = MyUserList.serializer_class(data=request.data)
@@ -123,12 +122,13 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
         return super().get(request, *args, **kwargs)
 
 
-
 class EntityBusinessClientEmployee(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) | IsEmployeeBusinessClient, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |
+                          IsEmployeeBusinessClient, )
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
+    # TODO: Use user id here
     def get(self, request, *args, **kwargs):
         self.check_object_permissions(request, self.kwargs['bc_id'])
         entity_ids = get_entity_ids_for_business_client(self.kwargs['bc_id'])

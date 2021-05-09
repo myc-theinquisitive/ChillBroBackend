@@ -5,7 +5,7 @@ def create_address(address_details):
     valid_serializer = AddressSerializer(data=address_details)
     if valid_serializer.is_valid():
         serializer = valid_serializer.save()
-        return {"is_valid": True,"address_id":valid_serializer.data['id'],"errors":None}
+        return {"is_valid": True, "address_id": serializer.id, "errors": None}
     else:
-        return {"is_valid": False,"address_id":None, "errors":valid_serializer.errors}
+        return {"is_valid": False, "address_id": None, "errors": valid_serializer.errors}
 

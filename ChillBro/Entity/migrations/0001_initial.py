@@ -58,6 +58,19 @@ class Migration(migrations.Migration):
                 ('aadhar_image', models.ImageField(upload_to=Entity.helpers.upload_aadhar_image_for_entity)),
                 ('account', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='Entity.EntityAccount')),
                 ('upi', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='Entity.EntityUPI')),
+                ('is_verified', models.BooleanField(default=False)),
+                ('active_from', models.DateTimeField(blank=True, null=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='EntityVerification',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('verified_status', models.CharField(choices=[('VERIFIED', 'VERIFIED'), ('REJECTED', 'REJECTED'), ('YET_TO_VERIFY', 'YET_TO_VERIFY')], default='YET_TO_VERIFY', max_length=30)),
+                ('comments', models.TextField(blank=True, null=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('entity', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='Entity.MyEntity', verbose_name='Entity')),
+                ('verified_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(

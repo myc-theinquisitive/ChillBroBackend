@@ -1,6 +1,5 @@
 from django.db import models
 
-# Create your models here.
 from .constants import NotificationType, NotificationStatus
 from .validations import is_json
 import uuid
