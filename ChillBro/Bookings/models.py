@@ -273,3 +273,15 @@ class ReportCustomerReasons(models.Model):
 
     def __str__(self):
         return "Reason - {0}".format(self.id)
+
+
+class BusinessClientProductCancellation(models.Model):
+    booking = models.ForeignKey('Bookings', on_delete=models.CASCADE)
+    product_id = models.CharField(max_length=36)
+    reason = models.CharField(max_length=1000)
+    user_model = get_user_model()
+    cancelled_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
+    time = models.DateTimeField(default=datetime.now)
+
+    def __str__(self):
+        return "Booking Id {} Product Id- {}".format(self.booking, self.product_id)

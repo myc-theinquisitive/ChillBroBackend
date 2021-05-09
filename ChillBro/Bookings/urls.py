@@ -3,7 +3,7 @@ from .views import ReportCustomerReasonsList, ReportCustomerReasonsDetail, Creat
     CancelBookingView, BookingsStatistics, GetBookingsStatisticsDetails, CancelProductStatusView, GetDateFilters, \
     GetSpecificBookingDetails, GetBookingDetailsView, BookingStart, BookingEnd, GetBookingEndDetailsView, \
     ReportCustomerForBooking, GeneratePDF, GenerateExcel, GetBookingDetailsOfProductId, ProductStatistics, \
-    GetProductAvailability
+    GetProductAvailability, BusinessClientProductCancellationDetails
 
 
 urlpatterns = [
@@ -27,4 +27,5 @@ urlpatterns = [
     path('product/<str:product_id>/', GetBookingDetailsOfProductId.as_view()),
     path('product_statistics/<str:product_id>/', ProductStatistics.as_view()),
     path('product_availability/', GetProductAvailability.as_view()),
+    path('back_to_online/add/', BusinessClientProductCancellationDetails.as_view()),
 ]

@@ -30,7 +30,7 @@ class CustomDatesSerializer(serializers.Serializer):
 
 class EntityTotalReviewsSerializer(serializers.Serializer):
     date_filter = serializers.CharField(required=True)
-    category_filters = serializers.ListField(
+    entity_filters = serializers.ListField(
         child = serializers.CharField()
     )
     comment_required = serializers.BooleanField(required=True)
@@ -38,6 +38,9 @@ class EntityTotalReviewsSerializer(serializers.Serializer):
         child = serializers.CharField()
     )
     custom_dates = CustomDatesSerializer(required=False)
+    entity_ids = serializers.ListField(
+        child = serializers.CharField()
+    )
 
 
 class FeedbackAndSuggestionsSerializer(serializers.ModelSerializer):
@@ -49,5 +52,11 @@ class FeedbackAndSuggestionsSerializer(serializers.ModelSerializer):
 
 class GetFeedbackAndSuggestionsSerializer(serializers.Serializer):
     category_filters = serializers.ListField(
+        child=serializers.CharField()
+    )
+
+
+class EntityReviewStatisticsSerializer(serializers.Serializer):
+    entity_ids = serializers.ListField(
         child=serializers.CharField()
     )
