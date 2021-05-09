@@ -1,5 +1,4 @@
 from django.db.models import Count
-from django.shortcuts import render
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
 
@@ -11,13 +10,23 @@ from rest_framework import generics
 from .models import MyEntity, BusinessClientEntity, EntityVerification
 from rest_framework.response import Response
 from rest_framework import status
-from django.http import HttpResponse
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities
 from datetime import datetime
 from .helpers import get_date_format
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsGet, IsEmployeeEntity
+
+
+def entity_ids_for_business_client(business_client_id):
+    entity_ids = BusinessClientEntity.objects.filter(
+        business_client_id=business_client_id).values_list('entity_id', flat=True)
+    return entity_ids
+
+
+def get_entity_details(entity_ids):
+    entities = MyEntity.objects.filter(id__in=entity_ids)
+    return EntitySerializer(entities, many=True).data
 
 
 def add_verification_details_to_entities(entity_details_list):
@@ -258,12 +267,6 @@ class BusinessClientEntities(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-def entity_ids_for_business_client(business_client_id):
-    entity_ids = BusinessClientEntity.objects.filter(
-        business_client_id=business_client_id).values_list('entity_id', flat=True)
-    return entity_ids
-
-
 class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated, )
 
@@ -274,7 +277,3 @@ class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
         total_products_in_entities = get_total_products_count_in_entities(business_client_entities)
         return Response({'entities_count':business_client_entities_count,\
                          'products_count': total_products_in_entities},200)
-
-
-
-

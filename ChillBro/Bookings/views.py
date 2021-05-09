@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import *
-from .wrapper import *
 from .helpers import *
 from .constants import BookingStatus, DateFilters, ProductBookingStatus, PaymentUser
 from collections import defaultdict
@@ -24,6 +23,9 @@ import threading
 
 
 # Lock for creating a new booking or updating the booking timings
+from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
+    update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value
+
 _booking_lock = threading.Lock()
 
 
@@ -911,7 +913,3 @@ class GenerateExcel(APIView):
 
         wb.save(response)
         return response
-
-
-# TODO: Add Api for back to online - Should cancel the product in booking and store reason
-#  for cancellation in a separate table along with the user who cancelled and time of cancellation

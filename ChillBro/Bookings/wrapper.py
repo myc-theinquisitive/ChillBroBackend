@@ -1,7 +1,7 @@
-from ReviewsRatings.exportapi import *
-from Payments.exportapi import *
-from Product.exportapi import *
-from Coupons.exportapi import *
+from ReviewsRatings.exportapi import insert_rating, review_by_booking_id
+from Payments.exportapi import transaction_details_by_booking_id, new_booking_transaction, \
+    update_booking_transaction, new_refund_transaction
+from Coupons.exportapi import coupon_value
 
 
 def get_discounted_value(coupon_id, user, entity_ids, product_ids, total_money):
@@ -26,6 +26,7 @@ def get_review_by_booking_id(booking_id):
 
 
 def get_product_details(product_ids):
+    from Product.exportapi import product_details
     return product_details(product_ids)
 
 
@@ -44,5 +45,6 @@ def create_refund_transaction(transaction_data):
 
 
 def get_product_id_wise_product_details(product_ids):
+    from Product.exportapi import get_product_id_wise_details
     product_id_wise_product_details = get_product_id_wise_details(product_ids)
     return product_id_wise_product_details

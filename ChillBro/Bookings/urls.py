@@ -1,5 +1,9 @@
 from django.urls import path
-from .views import *
+from .views import ReportCustomerReasonsList, ReportCustomerReasonsDetail, CreateBooking, UserBookingsList, \
+    CancelBookingView, BookingsStatistics, GetBookingsStatisticsDetails, CancelProductStatusView, GetDateFilters, \
+    GetSpecificBookingDetails, GetBookingDetailsView, BookingStart, BookingEnd, GetBookingEndDetailsView, \
+    ReportCustomerForBooking, GeneratePDF, GenerateExcel, GetBookingDetailsOfProductId, ProductStatistics, \
+    GetProductAvailability
 
 
 urlpatterns = [

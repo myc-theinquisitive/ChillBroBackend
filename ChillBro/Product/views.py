@@ -6,8 +6,8 @@ from .product_interface import ProductInterface
 from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer, NetPriceSerializer, ProductQuantitySerializer
 from .Hotel.views import HotelView
 from collections import defaultdict
-from .wrapper import key_value_content_type_model, key_value_tag_model, check_entity_id_is_exist, \
-    get_booked_count_of_product_id
+from .taggable_wrapper import key_value_content_type_model, key_value_tag_model
+from .wrapper import check_entity_id_is_exist, get_booked_count_of_product_id, get_seller_id_wise_seller_details
 from .models import SellerProduct
 from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
@@ -283,11 +283,18 @@ class ProductView(ProductInterface):
     def get_product_id_wise_sellers(product_ids):
         product_sellers = SellerProduct.objects.filter(product_id__in=product_ids)
 
+        seller_ids = []
+        for product_seller in product_sellers:
+            seller_ids.append(product_seller.seller_id)
+        seller_id_wise_seller_names = get_seller_id_wise_seller_details(seller_ids)
+
         product_id_wise_sellers_dict = defaultdict(list)
         for product_seller in product_sellers:
+            seller_id = product_seller.seller_id
             product_id_wise_sellers_dict[product_seller.product_id].append(
                 {
-                    "seller_id": product_seller.seller_id
+                    "seller_id": seller_id,
+                    "outlet_name": seller_id_wise_seller_names[seller_id]['name']
                 }
             )
         return product_id_wise_sellers_dict
@@ -355,10 +362,10 @@ class ProductView(ProductInterface):
 
         return products_data
 
-    @staticmethod
-    def get_business_client_product_details(product_ids):
+    def get_business_client_product_details(self, product_ids):
         products = Product.objects.filter(id__in=product_ids)
-        product_id_wise_images = ProductView().get_product_id_wise_images(product_ids)
+        product_id_wise_images = self.get_product_id_wise_images(product_ids)
+        product_id_wise_sellers_dict = self.get_product_id_wise_sellers(product_ids)
 
         today_date = date.today()
         tomorrow_date = today_date + timedelta(1)
@@ -366,6 +373,7 @@ class ProductView(ProductInterface):
         products_data = []
         for product in products:
             images = product_id_wise_images[product.id]
+            sellers = product_id_wise_sellers_dict[product.id]
 
             total_booked = get_booked_count_of_product_id(product.id, today_date, tomorrow_date)
             discount = ((product.price - product.discounted_price) / product.price) * 100
@@ -376,6 +384,7 @@ class ProductView(ProductInterface):
                 'name': product.name,
                 'description': product.description,
                 'images': images,
+                'sellers': sellers,
                 'bookings': {
                     'total': product.quantity,
                     'booked': total_booked,

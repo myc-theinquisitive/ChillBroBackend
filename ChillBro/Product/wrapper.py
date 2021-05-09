@@ -1,29 +1,7 @@
-from taggit.managers import TaggableManager
-import kvstore
-from kvstore.model_admin import TagInline
-from kvstore.models import ContentType, Tag
+from collections import defaultdict
+
 from Bookings.exportapi import booked_count_of_product_id
-# from Entity.export_apis import is_entity_id_exist
-
-
-def get_taggable_manager():
-    return TaggableManager()
-
-
-def get_key_value_store():
-    return kvstore
-
-
-def get_key_value_taggable_inline():
-    return TagInline
-
-
-def key_value_content_type_model():
-    return ContentType
-
-
-def key_value_tag_model():
-    return Tag
+from Entity.export_apis import get_entity_details_for_entity_ids
 
 
 def get_booked_count_of_product_id(product_id, from_date, to_date):
@@ -33,3 +11,11 @@ def get_booked_count_of_product_id(product_id, from_date, to_date):
 def check_entity_id_is_exist(entity_id):
     return {"is_valid": True, "errors": "Invalid Entity ID"}
     # return is_entity_id_exist(entity_id)
+
+
+def get_seller_id_wise_seller_details(seller_ids):
+    sellers_details = get_entity_details_for_entity_ids(seller_ids)
+    seller_id_wise_seller_details = defaultdict(dict)
+    for seller_details in sellers_details:
+        seller_id_wise_seller_details[seller_details["id"]] = seller_details
+    return seller_id_wise_seller_details

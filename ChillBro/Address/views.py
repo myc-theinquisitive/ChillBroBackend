@@ -33,8 +33,7 @@ class SpecificAddressList(APIView):
     def get(request, format=None):
         serializer = AddressIdListSerializer(data=request.data)
         if serializer.is_valid():
-            address_details_for_address_ids(serializer.data["ids"])
-            return Response()
+            address_details = address_details_for_address_ids(serializer.data["ids"])
+            return Response(address_details, 200)
         else:
             return Response(serializer.errors, 400)
-
