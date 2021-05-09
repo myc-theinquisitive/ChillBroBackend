@@ -19,8 +19,6 @@ def get_entity_type(entity_filter):
     entities = [entity_type.value for entity_type in EntityType]
     if len(entity_filter) == 0:
         return entities
-    if entity_filter[0] == "ALL":
-        return entities
     return entity_filter
 
 
@@ -58,5 +56,5 @@ def image_upload_to_transaction_proof(instance, filename):
     id = instance.id
     basename, file_extension = filename.split(".")
     new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
-    return "static/images/check_in/%s/%s" % (id, new_filename)
+    return "static/images/transaction_proof/%s/%s" % (id, new_filename)
 

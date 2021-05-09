@@ -24,7 +24,6 @@ class GetSpecificTransactionDetails(generics.RetrieveAPIView):
     serializer_class = BookingTransactionDetailsSerializer
 
 
-
 class UpdatePaymentDetailsFromMyc(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -37,11 +36,11 @@ class UpdatePaymentDetailsFromMyc(APIView):
 
         booking_ids = request.data["booking_ids"]
         pending_paid_by_amount = BookingTransaction.objects.filter(
-            Q(paid_by__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
+            paid_by=PaymentUser.myc.value,paid_to=PaymentUser.entity.value,
             booking_id__in=booking_ids, payment_status=PayStatus.pending.value) \
             .aggregate(total = Count('total_money'))['total']
         pending_paid_to_amount = BookingTransaction.objects.filter(
-            Q(paid_to__in=[PaymentUser.myc.value, PaymentUser.entity.value]),
+            paid_by=PaymentUser.entity.value,paid_to=PaymentUser.myc.value,
             booking_id__in=booking_ids, payment_status=PayStatus.pending.value) \
             .aggregate(total=Count('total_money'))['total']
         if pending_paid_to_amount - pending_paid_by_amount != request.data['credited_amount']:
@@ -67,7 +66,7 @@ class UpdatePaymentDetailsFromMyc(APIView):
                 mode=request.data["mode"],
                 transaction_date=request.data["transaction_date"],
                 payment_status=PayStatus.done.value,
-                image = request.data['transaction_proof'],
+                transaction_proof = request.data['transaction_proof'],
                 credited_amount = request.data['credited_amount'],
                 credited_by = request.user.id
             )
@@ -220,7 +219,8 @@ class GetTrasactionDetails(generics.ListAPIView):
             entity_filters = get_entity_type(request.data['entity_filters'])
             transactions = BookingTransaction.objects.filter(updated_at__gte = from_date, updated_at__lte = to_date, \
                                                              entity_id__in = request.data['entity_id'], \
-                                                             entity_type__in = request.data['entity_type'])
+                                                             entity_type__in = entity_filters,
+                                                             payment_status = request.data['payment_status'])
             serializer = BookingTransactionDetailsSerializer(transactions, many = True)
             return Response(serializer.data, 200)
         else:

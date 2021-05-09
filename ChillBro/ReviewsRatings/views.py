@@ -1,4 +1,4 @@
-from django.db.models import Avg
+from django.db.models import Avg, Q
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -99,12 +99,14 @@ class EntityTotalReviews(generics.ListAPIView):
             for each_booking in bookings:
                 booking_ids.append(each_booking)
             if comment_required:
-                reviews = ReviewsRatings.objects.filter(time__lte = from_date, time__gte = to_date, \
-                                                        related_id__in=booking_ids, rating__in = rating_filters)
+                reviews = ReviewsRatings.objects \
+                    .filter(Q(reviewed_time__lte = from_date) & Q(reviewed_time__gte = to_date) & \
+                    Q(related_id__in=booking_ids) & Q(rating__in = rating_filters))
             else:
-                reviews = ReviewsRatings.objects.filter(time__lte = from_date, time__gte = to_date, \
-                                                        related_id__in=booking_ids, rating__in = rating_filters,
-                                                        comment = "")
+                reviews = ReviewsRatings.objects \
+                    .filter(Q(reviewed_time__lte = from_date) & Q(reviewed_time__gte = to_date) & \
+                    Q(related_id__in=booking_ids) & Q(rating__in = rating_filters)&\
+                    Q(Q(comment = "") | Q(comment = None)))
             booking_ratings = []
             for each_review in reviews:
                 review = {'rating': each_review.rating, 'comment': each_review.comment,

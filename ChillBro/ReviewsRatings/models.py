@@ -11,7 +11,7 @@ class ReviewsRatings(models.Model):
     rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="Reviewed By")
-    time = models.DateTimeField(default=datetime.now)
+    reviewed_time = models.DateTimeField(default=datetime.now)
 
     def __str__(self):
         return "Related Id - {0} Rating - {1}".format(self.related_id, self.rating)
