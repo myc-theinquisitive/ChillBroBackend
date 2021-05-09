@@ -33,7 +33,10 @@ class NewEmployeeSerializer(UserSerializer):
     entity_id = serializers.CharField(max_length=100)
     role = serializers.ChoiceField(choices=[(role.name, role.value) for role in Roles])
     is_active = serializers.BooleanField()
-    image = serializers.ImageField()
+    images = serializers.ListField(
+        child = serializers.ImageField()
+    )
+
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -46,3 +49,20 @@ class EmployeeActiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['id', 'is_active']
+
+
+class EmployeeImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployeeImage
+        fields = '__all__'
+
+    @staticmethod
+    def bulk_create(employee_images):
+        all_images = []
+        for image in employee_images:
+            each_image = EmployeeImage(
+                employee=image['employee'],
+                image=image['image']
+            )
+            all_images.append(each_image)
+        return EmployeeImage.objects.bulk_create(all_images)

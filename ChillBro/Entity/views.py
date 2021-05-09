@@ -247,12 +247,11 @@ class BusinessClientEntityList(generics.CreateAPIView):
 class BusinessClientEntities(generics.ListAPIView):
     serializer_class = EntitySerializer
     queryset = BusinessClientEntity.objects.all()
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsOwnerById)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
 
     def get(self, request, *args, **kwargs):
         # TODO: use request user id for business client id instead of taking in URL
-        self.check_object_permissions(request, kwargs['bc_id'])
-        entity_ids = entity_ids_for_business_client(kwargs['bc_id'])
+        entity_ids = entity_ids_for_business_client(request.user.id)
         entities = MyEntity.objects.filter(id__in=entity_ids)
         serializer = self.serializer_class(entities, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

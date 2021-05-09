@@ -85,7 +85,16 @@ class EmployeeAdd(APIView):
                 request.data['user_id'] = user_id
                 employee_serializer = EmployeeSerializer(data=request.data)
                 if employee_serializer.is_valid():
-                    employee_serializer.save()
+                    employee_instance = employee_serializer.save()
+                    employee_image_dicts = []
+                    images = request.data['images']
+                    for image in images:
+                        employee_image_dict = {
+                            "employee": employee_instance,
+                            "image": image
+                        }
+                        employee_image_dicts.append(employee_image_dict)
+                    EmployeeImageSerializer.bulk_create(employee_image_dicts)
                     return Response({'message': 'Success'}, status=status.HTTP_200_OK)
                 else:
                     user_instance.delete()
@@ -121,15 +130,14 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class EntityBusinessClientEmployee(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient  |
                           IsEmployeeBusinessClient, )
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
     # TODO: Use user id here
     def get(self, request, *args, **kwargs):
-        self.check_object_permissions(request, self.kwargs['bc_id'])
-        entity_ids = get_entity_ids_for_business_client(self.kwargs['bc_id'])
+        entity_ids = get_entity_ids_for_business_client(request.user.id)
         employees = Employee.objects.filter(entity_id__in=entity_ids)
         serializer = EmployeeSerializer(employees, many=True)
         return Response(serializer.data, 200)
