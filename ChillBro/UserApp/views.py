@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import F
 from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from rest_framework import generics
@@ -60,8 +61,8 @@ class BusinessClientDetail(generics.RetrieveUpdateDestroyAPIView):
     def get(self, request, *args, **kwargs):
         self.check_object_permissions(request, kwargs['pk'])
         business_client = BusinessClient.objects.filter(id=self.kwargs['pk']). \
-            values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'business_name',
-                   'secondary_contact')[0]
+            values('business_name', 'secondary_contact', first_name=F('user_id__first_name'),
+                   email=F('user_id__email'), phone_number=F('user_id__phone_number'))[0]
         return Response(business_client)
 
 
@@ -106,6 +107,16 @@ class EmployeeAdd(APIView):
             return Response(serializer.errors)
 
 
+def get_employee_details(employee_ids):
+    employees = Employee.objects.filter(id__in=employee_ids). \
+        values('id', 'entity_id', 'role', 'is_active', first_name=F('user_id__first_name'),
+               email=F('user_id__email'), phone_number=F('user_id__phone_number'))
+    for employee in employees:
+        employee_images = EmployeeImage.objects.filter(employee=employee['id']).values_list('image', flat=True)
+        employee['images'] = employee_images
+    return employees
+
+
 class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsEmployeeBusinessClient |
                           (IsEmployee & IsOwnerById))
@@ -113,11 +124,9 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = EmployeeSerializer
 
     def get(self, request, *args, **kwargs):
-        self.check_object_permissions(request,kwargs['pk'])
-        business_client = Employee.objects.filter(id=self.kwargs['pk']). \
-            values('user_id__first_name', 'user_id__email', 'user_id__phone_number', 'entity_id', 'role', 'is_active',
-                   'image')[0]
-        return Response(business_client)
+        self.check_object_permissions(request, kwargs['pk'])
+        employee = get_employee_details([kwargs['pk']])[0]
+        return Response(employee)
 
     def put(self, request, *args, **kwargs):
         id = request.user.id
@@ -132,17 +141,17 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class EntityBusinessClientEmployee(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient  |
-                          IsEmployeeBusinessClient, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient |
+                          IsEmployeeBusinessClient,)
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
     # TODO: Use user id here
     def get(self, request, *args, **kwargs):
         entity_ids = get_entity_ids_for_business_client(request.user.id)
-        employees = Employee.objects.filter(entity_id__in=entity_ids)
-        serializer = EmployeeSerializer(employees, many=True)
-        return Response(serializer.data, 200)
+        employee_ids = Employee.objects.filter(entity_id__in=entity_ids).values_list('id')
+        employees = get_employee_details(employee_ids)
+        return Response(employees, 200)
 
 
 class EmployeeActive(generics.RetrieveUpdateAPIView):
