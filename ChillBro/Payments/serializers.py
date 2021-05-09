@@ -50,3 +50,16 @@ class PaymentRevenueStatisticsViewSerializer(serializers.Serializer):
 
 class PaymentStatasticsDetailsInputSerializer(PaymentRevenueStatisticsViewSerializer):
     statistics_details_type = serializers.CharField(max_length=50)
+
+
+class GetTrasactionDetailsSerializer(serializers.Serializer):
+    entity_ids = serializers.ListField(
+        child=serializers.CharField()
+    )
+    entity_filters = serializers.ListField(
+        child=serializers.CharField()
+    )
+    date_filters = serializers.CharField(required=True)
+    payment_status = serializers.ListField(
+        child=serializers.CharField()
+    )

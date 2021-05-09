@@ -10,10 +10,9 @@ def get_booking_details_for_payments(entity_id, from_date, to_date, entity_filte
     return serializer.data
 
 
-def get_completed_booking_details_for_entity_ids(from_date, to_date, entity_filter, entity_id):
+def get_completed_booking_details_for_entity_ids(entity_filter, entity_id):
     bookings = CheckOutDetails.objects.select_related('booking')\
-                .filter(Q(booking__booking_date__gte=from_date) & Q(booking__booking_date__lte=to_date)
-                        & Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id=entity_id))
+                .filter(Q(booking__entity_type__in=entity_filter) & Q(booking__entity_id=entity_id))
     all_bookings = {}
     for each_booking in bookings:
         booking = {'booking_id': each_booking.booking_id, 'check_out': each_booking.check_out,

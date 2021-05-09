@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-
+from datetime import datetime
 from .helpers import image_upload_to_review, FeedbackCategory
 
 
@@ -11,8 +11,7 @@ class ReviewsRatings(models.Model):
     rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="Reviewed By")
-
-    # TODO: add crated time
+    reviewed_time = models.DateTimeField(default=datetime.now)
 
     def __str__(self):
         return "Related Id - {0} Rating - {1}".format(self.related_id, self.rating)

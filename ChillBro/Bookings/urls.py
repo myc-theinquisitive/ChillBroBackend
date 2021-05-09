@@ -23,4 +23,5 @@ urlpatterns = [
     path('product/<str:product_id>/', GetBookingDetailsOfProductId.as_view()),
     path('product_statistics/<str:product_id>/', ProductStatistics.as_view()),
     path('product_availability/', GetProductAvailability.as_view()),
+    path('back_to_online/add/',BusinessClientProductCancellationDetails.as_view()),
 ]
