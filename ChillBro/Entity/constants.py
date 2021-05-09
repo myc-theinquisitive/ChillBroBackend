@@ -12,6 +12,16 @@ class EntityTypes(enum.Enum):
     RENTAL = "RENTAL"
 
 
+class Cities(enum.Enum):
+    VSKP = "VISAKHAPATNAM"
+
+
+class BankAccountTypes(enum.Enum):
+    SAVINGS = "SAVINGS"
+    CURRENT = "CURRENT"
+    SALARY = "SALARY"
+    FIXED_DEPOSIT = "FIXED_DEPOSIT"
+
 class VerifiedStatus(enum.Enum):
     VERIFIED = "VERIFIED"
     REJECTED = "REJECTED"
