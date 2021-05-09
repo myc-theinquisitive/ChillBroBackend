@@ -9,3 +9,10 @@ class NotificationType(enum.Enum):
 class NotificationStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     DELETED = "DELETED"
+
+setting = {
+    "all": True,
+    "bookings": True,
+    "payments": True,
+    "general": True
+}

@@ -37,3 +37,7 @@ class BusinessClientEntitySerializer(serializers.ModelSerializer):
 class AddressSerializer(serializers.Serializer):
     city = serializers.CharField(max_length=100)
     pincode = serializers.CharField(max_length=6, validators=[MinLengthValidator(6)])
+
+class EntityDetailsSerialiser(EntitySerializer):
+    bank_details = EntityAccountSerializer()
+    upi_details = EntityUPISerializer()

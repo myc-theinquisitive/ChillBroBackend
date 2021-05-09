@@ -11,9 +11,6 @@ from rest_framework.views import APIView
 
 
 def add_amount(request):
-    # wallet = Wallet.objects.get(created_by=request.user)
-    # wallet.amount = F('amount') + request.data['amount']
-    # wallet.save()
     wallet = Wallet.objects.filter(created_by=request.user)
     wallet.update(amount=F('amount') + request.data['amount'])
 

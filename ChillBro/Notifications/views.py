@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .FCMManager import sendPush
-from .constants import NotificationStatus
+from .constants import NotificationStatus, setting
 from .models import Notification, NotificationUsers, NotificationSetting
 from .serializers import NotificationSerializer, NotificationUsersSerializer, NotificationDeleteSerializer, \
     NotificationSettingSerializer
@@ -28,7 +28,6 @@ class NotificationCreate(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         request.data['data'] = "{}"
-        request.data['status'] = NotificationStatus.ACTIVE.value
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             dic = request.data.copy()
@@ -44,7 +43,7 @@ class NotificationCreate(generics.CreateAPIView):
                 notification_instance = serializer.save()
                 notification_id = notification_instance.id
                 if (request.data['all_users'] or request.data['all_business_client']) and (
-                        'user_ids' not in request.data):
+                        'user_ids' not in request.data or len(request.data['user_ids'])==0):
                     return Response({"message": "created"}, 201)
                 request.data['notification_id'] = notification_id
                 notification_users_serializer = NotificationUsersSerializer(data=request.data)
@@ -66,7 +65,7 @@ class BusinessClientNotification(generics.ListAPIView):
         self.queryset = Notification.objects.filter(all_business_client=True)
         notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
                                                             status=NotificationStatus.ACTIVE.value).values_list(
-            'notification')
+            'notification', flat=True)
         self.queryset |= Notification.objects.filter(id__in=notification_ids)
         return super().get(request, *args, **kwargs)
 
@@ -79,7 +78,7 @@ class BusinessClientTypeNotification(generics.ListAPIView):
         self.queryset = Notification.objects.filter(all_business_client=True, type=self.kwargs['type'])
         notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
                                                             status=NotificationStatus.ACTIVE.value).values_list(
-            'notification')
+            'notification', flat=True)
         self.queryset |= Notification.objects.filter(id__in=notification_ids, type=self.kwargs['type'])
         return super().get(request, *args, **kwargs)
 
@@ -92,7 +91,7 @@ class UserNotification(generics.ListAPIView):
         self.queryset = Notification.objects.filter(all_users=True)
         notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
                                                             status=NotificationStatus.ACTIVE.value).values_list(
-            'notification')
+            'notification', flat=True)
         self.queryset |= Notification.objects.filter(id__in=notification_ids)
         return super().get(request, *args, **kwargs)
 
@@ -105,7 +104,7 @@ class UserTypeNotification(generics.ListAPIView):
         self.queryset = Notification.objects.filter(all_users=True, type=self.kwargs['type'])
         notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
                                                             status=NotificationStatus.ACTIVE.value).values_list(
-            'notification')
+            'notification', flat=True)
         self.queryset |= Notification.objects.filter(id__in=notification_ids, type=self.kwargs['type'])
         return super().get(request, *args, **kwargs)
 
@@ -135,14 +134,8 @@ class ChangeSetting(APIView):
         try:
             setting = NotificationSetting.objects.get(created_by=request.user)
         except:
-            setting = {
-                "created_by": request.user,
-                "all": True,
-                "bookings": True,
-                "payments": True,
-                "general": True
-            }
-        serializer = self.serializer_class(setting)
+            setting["created_by"] = request.user
+            serializer = self.serializer_class(setting)
         return Response(serializer.data, 200)
 
     def put(self, request, *args, **kwargs):

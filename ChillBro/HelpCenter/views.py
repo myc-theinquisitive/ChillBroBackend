@@ -75,5 +75,8 @@ class HowToUseEntityList(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         entity_type = self.kwargs['type']
-        self.queryset = HowToUse.objects.filter(entity_type=entity_type)
+        if entity_type.lower() == "all":
+            self.queryset = HowToUse.objects.all()
+        else:
+            self.queryset = HowToUse.objects.filter(entity_type=entity_type)
         return super().get(request, *args, **kwargs)

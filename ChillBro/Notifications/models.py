@@ -14,7 +14,7 @@ class Notification(models.Model):
     type = models.CharField(choices=[(type.name, type.value) for type in NotificationType], max_length=20)
     status = models.CharField(choices=[(status.name, status.value) for status in NotificationStatus], max_length=20,
                               default=NotificationStatus.ACTIVE.value)
-    data = models.CharField(max_length=1000, validators=[is_json])
+    data = models.TextField(validators=[is_json])
     all_users = models.BooleanField()
     all_business_client = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)

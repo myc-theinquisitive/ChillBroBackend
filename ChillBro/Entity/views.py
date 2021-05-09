@@ -2,7 +2,7 @@ from django.db.models import F
 from django.shortcuts import render
 from rest_framework.permissions import IsAuthenticated
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, AddressSerializer, \
-    EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer
+    EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, EntityDetailsSerialiser
 from rest_framework import generics
 from .models import MyEntity, BusinessClientEntity, EntityUPI, EntityAccount
 from rest_framework.response import Response
@@ -72,13 +72,13 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         self.check_entity_permission(request)
-        entity = MyEntity.objects.filter(id=self.kwargs['pk']) \
-            .values('id', 'name', 'type', 'status', 'address_id', 'active_from', 'pan_no', 'registration_no',
-                    'gst_in', 'aadhar_no', 'pan_image', 'registration_image', 'gst_image','aadhar_image',
-                    bank_name=F('account__bank_name'), account_no=F('account__account_no'), ifsc_code=F('account__ifsc_code'),
-                    account_type=F('account__account_type'), account_holder_name=F('account__account_holder_name'),
-                    pay_tm=F('upi__pay_tm'), phone_pe=F('upi__phone_pe'), g_pay=F('upi__g_pay'),upiid=F('upi__upi_id')).get()
-        return Response(entity)
+        entity = MyEntity.objects.get(id=self.kwargs['pk'])
+        entity_account = EntityAccount.objects.get(id=entity.account.id)
+        entity_upi = EntityUPI.objects.get(id=entity.upi.id)
+        entity.bank_details=entity_account
+        entity.upi_details = entity_upi
+        serializer=EntityDetailsSerialiser(entity)
+        return Response(serializer.data,200)
 
     def put(self, request, *args, **kwargs):
         self.check_entity_permission(request)
