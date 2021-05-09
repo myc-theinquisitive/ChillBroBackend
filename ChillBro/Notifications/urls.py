@@ -9,5 +9,6 @@ urlpatterns = [
     path('users/', UserNotification.as_view()),
     path('users/<str:type>/', UserTypeNotification.as_view()),
     path('delete/',DeleteNotification.as_view()),
+    path('change-setting/',ChangeSetting.as_view()),
 ]
 

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Notification, NotificationUsers
+from .models import Notification, NotificationUsers, NotificationSetting
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -16,4 +16,9 @@ class NotificationUsersSerializer(serializers.Serializer):
 class NotificationDeleteSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotificationUsers
+        fields = '__all__'
+
+class NotificationSettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationSetting
         fields = '__all__'

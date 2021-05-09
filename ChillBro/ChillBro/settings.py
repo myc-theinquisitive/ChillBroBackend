@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     'Cart',
     'WishList',
     'Wallet',
+    'Notifications',
+    'HelpCenter',
 ]
 
 

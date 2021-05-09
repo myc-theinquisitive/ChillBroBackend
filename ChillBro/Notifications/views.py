@@ -1,11 +1,13 @@
 from django.http import HttpResponse
 from rest_framework import generics
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .FCMManager import sendPush
 from .constants import NotificationStatus
-from .models import Notification, NotificationUsers
-from .serializers import NotificationSerializer, NotificationUsersSerializer, NotificationDeleteSerializer
+from .models import Notification, NotificationUsers, NotificationSetting
+from .serializers import NotificationSerializer, NotificationUsersSerializer, NotificationDeleteSerializer, \
+    NotificationSettingSerializer
 import json
 
 
@@ -62,7 +64,9 @@ class BusinessClientNotification(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         self.queryset = Notification.objects.filter(all_business_client=True)
-        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,status=NotificationStatus.ACTIVE.value).values_list('notification')
+        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
+                                                            status=NotificationStatus.ACTIVE.value).values_list(
+            'notification')
         self.queryset |= Notification.objects.filter(id__in=notification_ids)
         return super().get(request, *args, **kwargs)
 
@@ -73,7 +77,9 @@ class BusinessClientTypeNotification(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         self.queryset = Notification.objects.filter(all_business_client=True, type=self.kwargs['type'])
-        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,status=NotificationStatus.ACTIVE.value).values_list('notification')
+        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
+                                                            status=NotificationStatus.ACTIVE.value).values_list(
+            'notification')
         self.queryset |= Notification.objects.filter(id__in=notification_ids, type=self.kwargs['type'])
         return super().get(request, *args, **kwargs)
 
@@ -84,7 +90,9 @@ class UserNotification(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         self.queryset = Notification.objects.filter(all_users=True)
-        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,status=NotificationStatus.ACTIVE.value).values_list('notification')
+        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
+                                                            status=NotificationStatus.ACTIVE.value).values_list(
+            'notification')
         self.queryset |= Notification.objects.filter(id__in=notification_ids)
         return super().get(request, *args, **kwargs)
 
@@ -95,7 +103,9 @@ class UserTypeNotification(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         self.queryset = Notification.objects.filter(all_users=True, type=self.kwargs['type'])
-        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,status=NotificationStatus.ACTIVE.value).values_list('notification')
+        notification_ids = NotificationUsers.objects.filter(user_id=request.user.id,
+                                                            status=NotificationStatus.ACTIVE.value).values_list(
+            'notification')
         self.queryset |= Notification.objects.filter(id__in=notification_ids, type=self.kwargs['type'])
         return super().get(request, *args, **kwargs)
 
@@ -108,10 +118,41 @@ class DeleteNotification(generics.UpdateAPIView):
         request.data['user_id'] = request.user.id
         request.data['status'] = NotificationStatus.DELETED.value
         if 'notification' not in request.data:
-            return Response({'message':"notification id required"}, 400)
+            return Response({'message': "notification id required"}, 400)
         try:
             NotificationUsers.objects.filter(notification=request.data['notification'],
-                user_id=request.data['user_id']).update(status=request.data['status'])
+                                             user_id=request.data['user_id']).update(status=request.data['status'])
             return Response({"message": "Deleted"})
         except:
             return Response({"message": "Detail Not Found"}, 400)
+
+
+class ChangeSetting(APIView):
+    serializer_class = NotificationSettingSerializer
+    queryset = NotificationSetting.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            setting = NotificationSetting.objects.get(created_by=request.user)
+        except:
+            setting = {
+                "created_by": request.user,
+                "all": True,
+                "bookings": True,
+                "payments": True,
+                "general": True
+            }
+        serializer = self.serializer_class(setting)
+        return Response(serializer.data, 200)
+
+    def put(self, request, *args, **kwargs):
+        request.data['created_by'] = request.user.id
+        try:
+            setting = NotificationSetting.objects.get(created_by=request.user)
+            serializer = self.serializer_class(setting, data=request.data)
+        except Exception as e:
+            serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Success"}, 201)
+        return Response(serializer.errors, 400)

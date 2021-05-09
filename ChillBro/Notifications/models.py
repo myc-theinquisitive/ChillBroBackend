@@ -4,9 +4,11 @@ from django.db import models
 from .constants import NotificationType, NotificationStatus
 from .validations import is_json
 import uuid
+from .helpers import get_user_model
+
 
 class Notification(models.Model):
-    id = models.CharField(primary_key=True,default=uuid.uuid4, editable=False, max_length=36)
+    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     title = models.CharField(max_length=60)
     redirect_url = models.URLField(max_length=256)
     type = models.CharField(choices=[(type.name, type.value) for type in NotificationType], max_length=20)
@@ -26,3 +28,12 @@ class NotificationUsers(models.Model):
 
     class Meta:
         unique_together = ('notification', 'user_id')
+
+
+class NotificationSetting(models.Model):
+    user_model = get_user_model()
+    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE,unique=True)
+    all = models.BooleanField(default=True)
+    bookings = models.BooleanField(default=True)
+    payments = models.BooleanField(default=True)
+    general = models.BooleanField(default=True)
