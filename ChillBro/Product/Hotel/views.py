@@ -200,7 +200,6 @@ class HotelView(ProductInterface):
     def update(self, hotel_room_data):
         """
         hotel_room: {
-            "hotel_room_id": string,
             "amenities": {
                 "add": [
                     {

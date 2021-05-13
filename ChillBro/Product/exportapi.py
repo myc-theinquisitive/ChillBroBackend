@@ -1,4 +1,8 @@
 from collections import defaultdict
+
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count
+
 from .BaseProduct.models import Product, ProductImage
 from .views import calculate_product_net_price
 from .Seller.models import SellerProduct
@@ -26,28 +30,30 @@ def get_product_id_wise_details(product_ids):
 def get_entity_id_and_entity_type(product_id):
     try:
         seller = SellerProduct.objects.select_related('product').get(product=product_id)
-    except:
+    except ObjectDoesNotExist:
         return None, None
     return seller.seller_id, seller.product.type
 
 
 def product_details_with_image(product_ids):
-    products = ProductImage.objects.select_related('product').filter(product_id__in=product_ids, order = 0)
+    products = ProductImage.objects.select_related('product').filter(product_id__in=product_ids, order=0)
     details_of_product = {}
     for each_product in products:
-        details_of_product[each_product.product.id] = {'name':each_product.product.name,
-                                               'image_url':each_product.image.url}
+        details_of_product[each_product.product.id] = {
+            'name': each_product.product.name,
+            'image_url': each_product.image.url
+        }
     return details_of_product
 
 
 def total_products_count_in_entities(entity_ids):
-    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids).aggregate(count = Count('product'))['count']
+    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids).aggregate(count=Count('product'))['count']
     return products_count
 
 
 def check_product_is_valid(product_id):
     try:
-        product = Product.objects.get(id=product_id)
+        Product.objects.get(id=product_id)
         return True
-    except:
+    except ObjectDoesNotExist:
         return False

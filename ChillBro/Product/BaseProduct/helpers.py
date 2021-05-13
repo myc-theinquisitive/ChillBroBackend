@@ -1,5 +1,10 @@
 from django.utils.text import slugify
 import uuid
+from django.conf import settings
+
+
+def get_user_model():
+    return settings.AUTH_USER_MODEL
 
 
 def image_upload_to_product(instance, filename):

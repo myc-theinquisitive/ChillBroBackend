@@ -22,7 +22,9 @@ class BankAccountTypes(enum.Enum):
     SALARY = "SALARY"
     FIXED_DEPOSIT = "FIXED_DEPOSIT"
 
-class VerifiedStatus(enum.Enum):
-    VERIFIED = "VERIFIED"
+
+class ActivationStatus(enum.Enum):
+    ACTIVE = "ACTIVE"
     REJECTED = "REJECTED"
     YET_TO_VERIFY = "YET_TO_VERIFY"
+    DELETED = "DELETED"

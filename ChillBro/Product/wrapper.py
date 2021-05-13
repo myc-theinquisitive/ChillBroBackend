@@ -8,7 +8,7 @@ def get_booked_count_of_product_id(product_id, from_date, to_date):
     return booked_count_of_product_id(product_id, from_date, to_date)
 
 
-def check_entity_id_is_exist(entity_id):
+def is_entity_id_valid(entity_id):
     return is_entity_id_exist(entity_id)
 
 

@@ -6,7 +6,7 @@ class EntitySerializer(serializers.ModelSerializer):
     class Meta:
         model = MyEntity
         fields = '__all__'
-        read_only_fields = ('is_verified', 'active_from')
+        read_only_fields = ('activation_status', 'active_from')
 
 
 class EntityVerificationSerializer(serializers.ModelSerializer):
@@ -15,10 +15,19 @@ class EntityVerificationSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class EntityVerificationUpdateInputSerializer(serializers.ModelSerializer):
+    comments = serializers.CharField()
+
+    class Meta:
+        model = MyEntity
+        fields = ('activation_status', 'comments', )
+
+
 class EntityEditSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyEntity
-        exclude = ('address_id', 'account', 'upi')
+        exclude = ('address_id', 'account', 'upi', )
+
 
 class EntityAccountSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,11 +50,7 @@ class BusinessClientEntitySerializer(serializers.ModelSerializer):
         model = BusinessClientEntity
         fields = '__all__'
 
-        
-class AddressSerializer(serializers.Serializer):
-    city = serializers.CharField(max_length=100)
-    pincode = serializers.CharField(max_length=6, validators=[MinLengthValidator(6)])
 
-class EntityDetailsSerialiser(EntitySerializer):
-    bank_details = EntityAccountSerializer()
-    upi_details = EntityUPISerializer()
+class EntityDetailsSerializer(EntitySerializer):
+    account = EntityAccountSerializer()
+    upi = EntityUPISerializer()

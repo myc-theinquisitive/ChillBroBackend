@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, ProductImage
+from .models import Product, ProductImage, ProductVerification
 from ..taggable_wrapper import get_key_value_taggable_inline
 
 
@@ -11,4 +11,9 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(ProductImage)
 class ProductImageAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(ProductVerification)
+class ProductVerificationAdmin(admin.ModelAdmin):
     pass

@@ -1,20 +1,23 @@
+from .BaseProduct.serializers import ProductVerificationSerializer, ProductVerificationUpdateInputSerializer
 from .Category.views import *
 from .BaseProduct.views import *
 from .Hotel.views import *
+from .Rental.views import RentalView
 from .Seller.views import *
 from .product_interface import ProductInterface
-from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer, NetPriceSerializer, ProductQuantitySerializer
+from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer, NetPriceSerializer
 from .Hotel.views import HotelView
 from collections import defaultdict
 from .taggable_wrapper import key_value_content_type_model, key_value_tag_model
-from .wrapper import check_entity_id_is_exist, get_booked_count_of_product_id, get_seller_id_wise_seller_details
+from .wrapper import is_entity_id_valid, get_booked_count_of_product_id, get_seller_id_wise_seller_details
 from .models import SellerProduct
 from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
-from .BaseProduct.models import Product
+from .BaseProduct.models import Product, ProductVerification
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, IsEmployeeBusinessClient
-from .BaseProduct.constants import ProductStatus
-from datetime import date, timedelta
+from .BaseProduct.constants import ActivationStatus
+from datetime import date, timedelta, datetime
+from .helpers import get_date_format
 
 
 class ProductView(ProductInterface):
@@ -29,6 +32,7 @@ class ProductView(ProductInterface):
         self.product_specific_data = None
 
         self.product_object = None
+        self.product_images = []
 
         self.key_value_content_type_model = key_value_content_type_model()
         self.key_value_tag_model = key_value_tag_model()
@@ -37,6 +41,8 @@ class ProductView(ProductInterface):
     def get_view_and_key_by_type(product_type):
         if product_type == "HOTEL":
             return HotelView(), "hotel_room"
+        elif product_type == "RENTAL":
+            return RentalView(), "rental_product"
         return None, None
 
     # initialize the instance variables before accessing
@@ -51,6 +57,7 @@ class ProductView(ProductInterface):
         # for create
         elif product_data_defined and "type" in product_data:
             product_type = product_data["type"]
+            self.product_images = product_data.pop("images", [])
         else:
             product_type = None
 
@@ -91,10 +98,16 @@ class ProductView(ProductInterface):
             errors["entity_id"].append("This field is required")
         else:
             entity_id = product_data["entity_id"]
-            check_entity_id = check_entity_id_is_exist(entity_id)
-            if not check_entity_id['is_valid']:
+            is_entity_valid = is_entity_id_valid(entity_id)
+            if not is_entity_valid:
                 is_valid = False
                 errors["entity_id"].append("Invalid Entity Id")
+
+        # Validating images
+        product_image_serializer = ProductImageSerializer(data=self.product_images, many=True)
+        if not product_image_serializer.is_valid():
+            is_valid = False
+            errors["images"] = product_image_serializer.errors
 
         # Validating product specific data
         if not self.product_specific_view:
@@ -118,8 +131,8 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
-            'active': boolean,
             'tags': ['hotel', 'stay'],
+            'images': [],
             'features': {
                 'feature1': 'feature value',
                 'feature2': 'feature 2 value'
@@ -131,6 +144,8 @@ class ProductView(ProductInterface):
                         'is_available': boolean
                     }
                 ]
+            }
+            'rental_product': {
             }
         }
         """
@@ -145,6 +160,23 @@ class ProductView(ProductInterface):
         }
         seller_product_serializer = SellerProductSerializer()
         seller_product_serializer.create(seller_product_data)
+
+        # Product verification creation
+        product_verification_data = {
+            'product': base_product
+        }
+        product_verification_serializer = ProductVerificationSerializer()
+        product_verification_serializer.create(product_verification_data)
+
+        # Add Images to Product
+        product_image_dicts = []
+        for image in self.product_images:
+            product_image_dict = {
+                "product": base_product.id,
+                "image": image
+            }
+            product_image_dicts.append(product_image_dict)
+        ProductImageSerializer.bulk_create(product_image_dicts)
 
         self.product_specific_view.create(self.product_specific_data)
 
@@ -196,7 +228,6 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
-            'active': boolean,
             'tags': ['hotel', 'stay', 'Single Room'],
             'features': {
                 'add': {
@@ -231,6 +262,8 @@ class ProductView(ProductInterface):
                         }
                     ]
                 }
+            }
+            'rental_product': {
             }
         }
         """
@@ -421,6 +454,34 @@ def calculate_product_net_price(selling_price, discount):
     }
 
 
+def add_verification_details_to_product(products_list):
+    product_ids = []
+    for product in products_list:
+        product_ids.append(product["id"])
+
+    product_verifications = ProductVerification.objects.filter(product_id__in=product_ids)
+    product_verification_per_product_id_dict = {}
+    for product_verification in product_verifications:
+        product_verification_per_product_id_dict[product_verification.product_id] = product_verification
+
+    for product in products_list:
+        product_verification = product_verification_per_product_id_dict[product["id"]]
+
+        employee_name = None
+        employee_email = None
+        if product_verification.verified_by:
+            employee_name = product_verification.verified_by.first_name
+            employee_email = product_verification.verified_by.email
+        product["verification"] = {
+            "comments": product_verification.comments,
+            "verified_by": {
+                'name': employee_name,
+                'email': employee_email
+            },
+            "updated_at": product_verification.updated_at.strftime(get_date_format())
+        }
+
+
 class BusinessClientProductDetails(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
@@ -482,7 +543,7 @@ class ProductDetail(APIView):
             product = Product.objects.get(id=self.kwargs['pk'])
         except ObjectDoesNotExist:
             return Response({"errors": "Product does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
-        product.status = ProductStatus.DELETED.value
+        product.status = ActivationStatus.DELETED.value
         product.save()
         return Response({"success": "Deleted Successfully"}, status=status.HTTP_200_OK)
 
@@ -585,20 +646,56 @@ class GetSellerProductList(generics.ListAPIView):
         return response
 
 
-class ProductQuantity(APIView):
-    serializer_class = ProductQuantitySerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |
-                          IsSellerProduct | IsEmployeeBusinessClient)
+class ProductListBasedOnVerificationStatus(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = (IsAuthenticated & IsSuperAdminOrMYCEmployee, )
 
-    def put(self, request, product_id):
-        products = Product.objects.filter(id=product_id)
-        if len(products) != 1:
-            return Response({"message": "Invalid Product id"}, status=status.HTTP_404_NOT_FOUND)
-        self.check_object_permissions(request, product_id)
+    def get(self, request, *args, **kwargs):
+        activation_status = self.kwargs['status']
+        if activation_status not in [v_status.value for v_status in ActivationStatus]:
+            return Response({"message": "Can't get product list",
+                             "errors": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if request.data["quantity"] <= 0:
-            return Response({"message": "Can't update product quantity",
-                             "error": "Quantity should be greater than zero"}, status=status.HTTP_400_BAD_REQUEST)
+        self.queryset = Product.objects.filter(activation_status=activation_status).order_by("name")
+        response = super().get(request, args, kwargs)
+        add_verification_details_to_product(response.data["results"])
+        return response
 
-        products.update(quantity=request.data["quantity"])
-        return Response({"message": "Updated Successfully"}, status=status.HTTP_200_OK)
+
+class ProductVerificationDetail(APIView):
+    permission_classes = (IsAuthenticated & IsSuperAdminOrMYCEmployee, )
+
+    def put(self, request, *args, **kwargs):
+        try:
+            product = Product.objects.get(id=self.kwargs['product_id'])
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't update Product verification", "error": "Invalid Product Id"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if product.activation_status == ActivationStatus.ACTIVE.value:
+            return Response({"message": "Can't update Product verification",
+                             "errors": "Product is already verified & active"}, status=status.HTTP_400_BAD_REQUEST)
+        elif product.activation_status == ActivationStatus.DELETED.value:
+            return Response({"message": "Can't update Product verification",
+                             "errors": "Product is deleted"}, status=status.HTTP_400_BAD_REQUEST)
+
+        input_serializer = ProductVerificationUpdateInputSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't update Product verification",
+                             "errors": input_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        product_verification = ProductVerification.objects.get(product_id=self.kwargs['product_id'])
+        request.data['product'] = product
+        request.data['verified_by'] = request.user
+        ProductVerificationSerializer().update(product_verification, request.data)
+
+        activation_status = request.data['activation_status']
+        if activation_status == ActivationStatus.ACTIVE.value:
+            # updating verification details for product
+            product.is_verified = True
+            product.active_from = datetime.now()
+        product.activation_status = activation_status
+        product.save()
+
+        return Response({"message": "Product verified successfully"}, status=status.HTTP_200_OK)

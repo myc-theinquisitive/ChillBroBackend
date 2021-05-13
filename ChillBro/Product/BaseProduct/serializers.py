@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, ProductImage
+from .models import Product, ProductImage, ProductVerification
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -12,12 +12,11 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+        read_only_fields = ('active_from', 'activation_status', )
 
     def create(self, validated_data):
         if "featured" not in validated_data:
             validated_data["featured"] = False
-        if "active" not in validated_data:
-            validated_data["active"] = True
         if "quantity" not in validated_data:
             validated_data["quantity"] = 0
 
@@ -25,7 +24,7 @@ class ProductSerializer(serializers.ModelSerializer):
             name=validated_data["name"], description=validated_data["description"],
             type=validated_data["type"], category_id=validated_data["category"], price=validated_data["price"],
             discounted_price=validated_data["discounted_price"], featured=validated_data["featured"],
-            active=validated_data["active"], quantity=validated_data["quantity"])
+            quantity=validated_data["quantity"])
 
         if "tags" in validated_data:
             product.tags.add(*validated_data["tags"])
@@ -36,8 +35,6 @@ class ProductSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         if "featured" not in validated_data:
             validated_data["featured"] = False
-        if "active" not in validated_data:
-            validated_data["active"] = True
         if "quantity" not in validated_data:
             validated_data["quantity"] = 0
 
@@ -66,8 +63,33 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = ProductImage
         fields = '__all__'
 
+    @staticmethod
+    def bulk_create(product_images):
+        all_images = []
+        for image in product_images:
+            each_image = ProductImage(
+                product=image['product'],
+                image=image['image']
+            )
+            all_images.append(each_image)
+        ProductImage.objects.bulk_create(all_images)
+
 
 class ProductQuantitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['quantity']
+
+
+class ProductVerificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductVerification
+        fields = '__all__'
+
+
+class ProductVerificationUpdateInputSerializer(serializers.ModelSerializer):
+    comments = serializers.CharField()
+
+    class Meta:
+        model = Product
+        fields = ('activation_status', 'comments', )

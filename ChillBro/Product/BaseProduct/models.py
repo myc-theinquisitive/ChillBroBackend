@@ -1,41 +1,20 @@
 from django.db import models
-from .helpers import image_upload_to_product
+from .helpers import image_upload_to_product, get_user_model
 from django.db.models import Q
 from django.urls import reverse
 from django.utils.text import slugify
-from .constants import ProductTypes, ProductStatus
-import string
-import random
-from django.core.exceptions import ValidationError
+from .constants import ProductTypes, ActivationStatus
 from ..taggable_wrapper import get_taggable_manager, get_key_value_store
 import uuid
 
 
-def getId():
+def get_id():
     return str(uuid.uuid4())
-
-
-def validate_product_type(value):
-    product_values = [product_type.value for product_type in ProductTypes]
-    if value in product_values:
-        return value
-    else:
-        raise ValidationError("Invalid Product Type!")
-
-
-def get_random_string(length=10):
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k = length))
-
-
-class TimeStampModel(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, default= getId)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
 
 class ProductQuerySet(models.query.QuerySet):
     def active(self):
-        return self.filter(active=True)
+        return self.filter(activation_status=ActivationStatus.ACTIVE.value)
 
     def featured(self):
         return self.filter(featured=True, active=True)
@@ -62,23 +41,30 @@ class ProductManager(models.Manager):
         return self.get_queryset().active().search(query)
 
 
-class Product(TimeStampModel):
+class Product(models.Model):
+    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     name = models.CharField(max_length=120)
     slug = models.SlugField(blank=True)
     description = models.TextField()
     type = models.CharField(max_length=30, default=ProductTypes.Rental.value,
                             choices=[(product_type.value, product_type.value) for product_type in ProductTypes],
-                            verbose_name="Product Type", validators=[validate_product_type])
+                            verbose_name="Product Type")
     category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
     price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     discounted_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     featured = models.BooleanField(default=False)
-    active = models.BooleanField(default=True)
     tags = get_taggable_manager()
-    status = models.CharField(max_length=30,
-                              choices=[(product_status.value, product_status.value)
-                                       for product_status in ProductStatus], default=ProductStatus.PENDING.value)
     quantity = models.IntegerField(default=0)
+
+    # For MYC verification
+    active_from = models.DateTimeField(null=True, blank=True)
+    activation_status = models.CharField(
+        max_length=30, choices=[(status.name, status.value) for status in ActivationStatus],
+        default=ActivationStatus.YET_TO_VERIFY.value)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     objects = ProductManager()
 
     def get_absolute_url(self):
@@ -89,6 +75,14 @@ class Product(TimeStampModel):
 
     def __str__(self):
         return self.name
+
+
+class ProductVerification(models.Model):
+    product = models.OneToOneField('Product', on_delete=models.CASCADE, verbose_name="Entity")
+    comments = models.TextField(null=True, blank=True)
+    user_model = get_user_model()
+    verified_by = models.ForeignKey(user_model, on_delete=models.CASCADE, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 kvstore = get_key_value_store()
@@ -105,4 +99,3 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return "Product Image - {0}".format(self.id)
-

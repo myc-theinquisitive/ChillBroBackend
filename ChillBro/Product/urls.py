@@ -2,9 +2,9 @@ from django.urls import path, re_path
 from .views import CategoryList, CategoryDetail, CategoryImageCreate, GetCategoriesLevelWise, \
     BaseProductImageCreate, AmenitiesList, ProductList, ProductDetail, \
     GetProductsByCategory, GetSpecificCategoriesLevelWise, CategoryImageDelete, BaseProductImageDelete, \
-    SearchProducts, SellerProductList, SellerProductDetail, GetSellerProductList, CategoryTopLevelList, \
+    SearchProducts, GetSellerProductList, CategoryTopLevelList, \
     ProductNetPrice, ProductSellerStatus, ProductQuantity, BusinessClientProductDetails, CreateCategoryPrices, \
-    GetCategoryPrices
+    GetCategoryPrices, ProductVerificationDetail, ProductListBasedOnVerificationStatus
 
 
 urlpatterns = [
@@ -22,6 +22,10 @@ urlpatterns = [
 
     # urls for all products
     path('product/', ProductList.as_view()),
+
+    # urls for verification
+    path('product/verification/<str:product_id>/', ProductVerificationDetail.as_view()),
+    path('product/verification_status/<str:status>/', ProductListBasedOnVerificationStatus.as_view()),
 
     # url of net prices
     path('product/net_price/', ProductNetPrice.as_view()),
