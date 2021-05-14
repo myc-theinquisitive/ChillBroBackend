@@ -110,9 +110,19 @@ class EmployeeAdd(APIView):
 
 
 def get_employee_details(employee_ids):
-    employees = Employee.objects.filter(id__in=employee_ids). \
+    return Employee.objects.filter(id__in=employee_ids). \
         values('id', 'entity_id', 'role', 'is_active', first_name=F('user_id__first_name'),
                email=F('user_id__email'), phone_number=F('user_id__phone_number'))
+
+
+def get_employee_details_for_entity_ids(entity_ids):
+    return Employee.objects.filter(entity_id__in=entity_ids). \
+        values('id', 'entity_id', 'role', 'is_active', first_name=F('user_id__first_name'),
+               email=F('user_id__email'), phone_number=F('user_id__phone_number'))
+
+
+def get_employee_details_with_images(employee_ids):
+    employees = get_employee_details(employee_ids)
     for employee in employees:
         employee_images = EmployeeImage.objects.filter(employee=employee['id']).values_list('image', flat=True)
         employee['images'] = employee_images
@@ -127,7 +137,7 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         self.check_object_permissions(request, kwargs['pk'])
-        employee = get_employee_details([kwargs['pk']])[0]
+        employee = get_employee_details_with_images([kwargs['pk']])[0]
         return Response(employee)
 
     def put(self, request, *args, **kwargs):
@@ -152,7 +162,7 @@ class EntityBusinessClientEmployee(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         entity_ids = get_entity_ids_for_business_client(request.user.id)
         employee_ids = Employee.objects.filter(entity_id__in=entity_ids).values_list('id')
-        employees = get_employee_details(employee_ids)
+        employees = get_employee_details_with_images(employee_ids)
         return Response(employees, 200)
 
 

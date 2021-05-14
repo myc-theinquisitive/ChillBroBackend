@@ -7,8 +7,8 @@ class ProductTypes(enum.Enum):
     Rental = "RENTAL"
 
 
-class ProductStatus(enum.Enum):
+class ActivationStatus(enum.Enum):
     ACTIVE = "ACTIVE"
-    PENDING = "PENDING"
+    YET_TO_VERIFY = "YET_TO_VERIFY"
     REJECTED = "REJECTED"
     DELETED = "DELETED"

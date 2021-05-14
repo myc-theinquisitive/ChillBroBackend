@@ -14,16 +14,22 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
 from django.db.models import Count
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
-
 from .constants import VerifiedStatus, EntityTypes
+import json
+from django.db.models import Count
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.views import APIView
+from .constants import ActivationStatus
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, \
-    EntityVerificationSerializer
+    EntityVerificationSerializer, EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, \
+    EntityDetailsSerializer, EntityVerificationUpdateInputSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
-from .models import MyEntity, BusinessClientEntity, EntityVerification
+from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUPI, EntityAccount
 from rest_framework.response import Response
 from rest_framework import status
-from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities
+from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
+    update_address_for_address_id, get_entity_id_wise_employees
 from datetime import datetime
 from .helpers import get_date_format
 from collections import defaultdict
@@ -61,7 +67,6 @@ def add_verification_details_to_entities(entity_details_list):
             employee_name = entity_verification.verified_by.first_name
             employee_email = entity_verification.verified_by.email
         entity["verification"] = {
-            "verified_status": entity_verification.verified_status,
             "comments": entity_verification.comments,
             "verified_by": {
                 'name': employee_name,
@@ -98,13 +103,14 @@ class EntityList(generics.ListCreateAPIView):
         return response
 
     def post(self, request, *args, **kwargs):
-        serializer = AddressSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-        address_details = post_create_address(request.data['city'], request.data['pincode'])
+        request_data = request.data.dict()
+        address_data = request_data.pop('address', {})
+        address_data = json.loads(address_data)
+
+        address_details = post_create_address(address_data)
         if not address_details['is_valid']:
-            return Response({"message": "City or Pincode is invalid", "errors":address_details['errors']}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't create outlet", "errors": address_details['errors']},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         request.data._mutable = True
         request.data['address_id'] = address_details['address_id']
@@ -112,9 +118,12 @@ class EntityList(generics.ListCreateAPIView):
         entity_upi_serializer = EntityUPISerializer(data=request.data)
         entity_account_serializer = EntityAccountSerializer(data=request.data)
         if not entity_account_serializer.is_valid():
-            return Response(entity_account_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't create outlet", "errors": entity_account_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
         if not entity_upi_serializer.is_valid():
-            return Response(entity_upi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't create outlet", "errors": entity_upi_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         upi_instance = entity_upi_serializer.save()
         account_instance = entity_account_serializer.save()
         request.data['account'] = account_instance.id
@@ -122,7 +131,8 @@ class EntityList(generics.ListCreateAPIView):
         
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't create outlet", "errors": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
         entity = serializer.save()
 
         # Linking entity to business clients
@@ -135,7 +145,8 @@ class EntityList(generics.ListCreateAPIView):
             business_client_entity_serializer.save()
         else:
             entity.delete()
-            return Response(business_client_entity_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't create outlet", "errors": business_client_entity_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # Entity verification creation
         entity_verification_data = {
@@ -146,9 +157,11 @@ class EntityList(generics.ListCreateAPIView):
             entity_verification_serializer.save()
         else:
             entity.delete()
-            return Response(entity_verification_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't create outlet", "errors": entity_verification_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"message": "success", "entity_id": entity.id}, status=status.HTTP_200_OK)
+        return Response({"message": "Outlet created successfully", "entity_id": entity.id},
+                        status=status.HTTP_201_CREATED)
 
 
 class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -166,44 +179,58 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         self.check_entity_permission(request)
-        entity = MyEntity.objects.get(id=self.kwargs['pk'])
-        entity_account = EntityAccount.objects.get(id=entity.account.id)
-        entity_upi = EntityUPI.objects.get(id=entity.upi.id)
-        entity.bank_details=entity_account
-        entity.upi_details = entity_upi
-        serializer=EntityDetailsSerialiser(entity)
+        entity = MyEntity.objects.select_related('account', 'upi').get(id=self.kwargs['pk'])
+        serializer = EntityDetailsSerializer(entity)
         
         response_data = serializer.data
         add_verification_details_to_entities([response_data])
         add_address_details_to_entities([response_data])
-        
-        return Response(response_data,200)
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
         self.check_entity_permission(request)
         entity = MyEntity.objects.get(id=self.kwargs['pk'])
+        if entity.activation_status == ActivationStatus.DELETED.value:
+            return Response({"message": "Can't update outlet details",
+                             "errors": "Entity is already deleted"}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = EntityEditSerializer(entity, data=request.data)
-        account_id = entity.account_id
-        upi_id = entity.upi_id
-        account = EntityAccount.objects.get(id=account_id)
-        upi = EntityUPI.objects.get(id=upi_id)
+
+        address_data = request.data.dict().pop("address", {})
+        address_data = json.loads(address_data)
+        address_id = entity.address_id
+        address_details = update_address_for_address_id(address_id, address_data)
+        if not address_details['is_valid']:
+            return Response({"message": "Can't update outlet details", "errors": address_details['errors']},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        account = EntityAccount.objects.get(id=entity.account_id)
+        upi = EntityUPI.objects.get(id=entity.upi_id)
+
         account_serializer = EntityAccountSerializer(account, data=request.data)
         upi_serializer = EntityUPISerializer(upi, data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't update outlet details",
+                             "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         if not account_serializer.is_valid():
-            return Response(account_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't update outlet details",
+                             "errors": account_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         if not upi_serializer.is_valid():
-            return Response(upi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Can't update outlet details",
+                             "errors": upi_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer.save()
         account_serializer.save()
         upi_serializer.save()
-        return Response({"message": "Updated"})
+        return Response({"message": "Outlet details updated successfully"}, status=status.HTTP_200_OK)
 
     def delete(self, request, *args, **kwargs):
         self.check_entity_permission(request)
-        # TODO: should only change status of entity here
-        super().delete(request, *args, **kwargs)
+        entity = self.get_object()
+        entity.activation_status = ActivationStatus.DELETED.value
+        entity.save()
+        return Response({"message": "Outlet deleted successfully"}, status=status.HTTP_200_OK)
 
 
 class EntityListBasedOnVerificationStatus(generics.ListAPIView):
@@ -212,15 +239,12 @@ class EntityListBasedOnVerificationStatus(generics.ListAPIView):
     permission_classes = (IsAuthenticated & IsSuperAdminOrMYCEmployee, )
 
     def get(self, request, *args, **kwargs):
-        verified_status = self.kwargs['status']
-        if verified_status not in [v_status.value for v_status in VerifiedStatus]:
-            return Response({"message": "Can't get entity list",
-                             "error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+        activation_status = self.kwargs['status']
+        if activation_status not in [v_status.value for v_status in ActivationStatus]:
+            return Response({"message": "Can't get outlet list",
+                             "errors": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
 
-        entity_ids = EntityVerification.objects.filter(verified_status=verified_status)\
-            .values_list('entity_id', flat=True)
-
-        self.queryset = MyEntity.objects.filter(id__in=entity_ids).order_by("name")
+        self.queryset = MyEntity.objects.filter(activation_status=activation_status).order_by("name")
         response = super().get(request, args, kwargs)
         add_verification_details_to_entities(response.data["results"])
         add_address_details_to_entities(response.data["results"])
@@ -239,24 +263,34 @@ class EntityVerificationDetail(generics.UpdateAPIView):
         try:
             entity = MyEntity.objects.get(id=self.kwargs['entity_id'])
         except ObjectDoesNotExist:
-            return Response({"message": "Can't update Entity verification", "error": "Invalid Entity Id"},
+            return Response({"message": "Can't update Outlet verification", "error": "Invalid Outlet Id"},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if entity.is_verified:
-            return Response({"message": "Can't update Entity verification",
-                             "error": "Entity is already verified & active"}, status=status.HTTP_400_BAD_REQUEST)
+        if entity.activation_status == ActivationStatus.ACTIVE.value:
+            return Response({"message": "Can't update Outlet verification",
+                             "errors": "Outlet is already verified & active"}, status=status.HTTP_400_BAD_REQUEST)
+        elif entity.activation_status == ActivationStatus.DELETED.value:
+            return Response({"message": "Can't update Outlet verification",
+                             "errors": "Outlet is deleted"}, status=status.HTTP_400_BAD_REQUEST)
+
+        input_serializer = EntityVerificationUpdateInputSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't update Outlet verification",
+                             "errors": input_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         request.data['entity'] = entity.id
         request.data['verified_by'] = request.user.id
-        response = super().put(request, args, kwargs)
+        super().put(request, args, kwargs)
 
-        if request.data['verified_status'] == VerifiedStatus.VERIFIED.value:
+        activation_status = request.data['activation_status']
+        if activation_status == ActivationStatus.ACTIVE.value:
             # updating verification details for entity
             entity.is_verified = True
             entity.active_from = datetime.now()
-            entity.save()
+        entity.activation_status = activation_status
+        entity.save()
 
-        return response
+        return Response({"message": "Outlet verified successfully"}, status=status.HTTP_200_OK)
 
 
 class EntityStatusAll(generics.GenericAPIView):
@@ -265,13 +299,15 @@ class EntityStatusAll(generics.GenericAPIView):
 
     def put(self, request):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            entity_ids = BusinessClientEntity.objects.filter(business_client_id=request.user.id).values_list(
-                'entity_id', flat=True)
-            queryset = MyEntity.objects.filter(id__in=entity_ids)
-            queryset.update(status=serializer.data['status'])
-            return Response({"message": "success"}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
+            return Response({"message": "Can't update Outlet status",
+                             "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        entity_ids = BusinessClientEntity.objects.filter(business_client_id=request.user.id).values_list(
+            'entity_id', flat=True)
+        entities = MyEntity.objects.active().filter(id__in=entity_ids)
+        entities.update(status=serializer.data['status'])
+        return Response({"message": "Outlet status updated successfully"}, status=status.HTTP_200_OK)
 
 
 class EntityStatus(APIView):
@@ -281,22 +317,25 @@ class EntityStatus(APIView):
 
     def put(self, request, pk):
         input_serializer = self.serializer_class(data=request.data)
-        if input_serializer.is_valid():
-            try:
-                queryset = MyEntity.objects.get(id=pk)
-            except ObjectDoesNotExist:
-                return Response({"message": "Detail not found"}, status=status.HTTP_400_BAD_REQUEST)
-            self.check_object_permissions(request, queryset)
-            queryset.status = input_serializer.data['status']
-            queryset.save()
-            return Response({"message": "success"}, status=status.HTTP_200_OK)
-        return Response(input_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't update Outlet status",
+                             "errors": input_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            entity = MyEntity.objects.get(id=pk)
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't update Outlet status",
+                             "errors": "Invalid Outlet Id"}, status=status.HTTP_400_BAD_REQUEST)
 
-class BusinessClientEntityList(generics.CreateAPIView):
-    queryset = BusinessClientEntity.objects.all()
-    serializer_class = BusinessClientEntitySerializer
-    permission_classes = (IsAuthenticated, IsBusinessClient,)
+        self.check_object_permissions(request, entity)
+
+        if entity.activation_status != ActivationStatus.ACTIVE.value:
+            return Response({"message": "Can't update Outlet status",
+                             "errors": "Outlet is not active"}, status=status.HTTP_400_BAD_REQUEST)
+
+        entity.status = input_serializer.data['status']
+        entity.save()
+        return Response({"message": "Outlet status updated successfully"}, status=status.HTTP_200_OK)
 
 
 class BusinessClientEntities(generics.ListAPIView):
@@ -305,10 +344,15 @@ class BusinessClientEntities(generics.ListAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
 
     def get(self, request, *args, **kwargs):
-        # TODO: use request user id for business client id instead of taking in URL
         entity_ids = entity_ids_for_business_client(request.user.id)
-        entities = MyEntity.objects.filter(id__in=entity_ids)
+        entities = MyEntity.objects.active().filter(id__in=entity_ids)
         serializer = self.serializer_class(entities, many=True)
+
+        # Adding Employees for entity
+        entity_id_wise_employees = get_entity_id_wise_employees(entity_ids)
+        for entity in serializer.data:
+            entity["employees"] = entity_id_wise_employees[entity["id"]]
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -316,9 +360,11 @@ class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated, )
 
     def get(self, request, *args, **kwargs):
-        business_client_entities = BusinessClientEntity.objects.filter(business_client_id=request.user) \
-                                    .values_list('entity_id', flat=True)
+        business_client_entities = BusinessClientEntity.objects.select_related('entity').filter(
+            business_client_id=request.user, entity__activation_status=ActivationStatus.ACTIVE.value)\
+            .values_list('entity_id', flat=True)
         business_client_entities_count = business_client_entities.aggregate(count=Count('entity_id'))['count']
+
         total_products_in_entities = get_total_products_count_in_entities(business_client_entities)
         return Response({'entities_count':business_client_entities_count,\
                          'products_count': total_products_in_entities},200)
@@ -346,4 +392,3 @@ class BusinessClientEntitiesByType(generics.RetrieveAPIView):
         data['RESORT'] = resort_ids
         # serializer = self.serializer_class(data, many=True)
         return Response(data, status=status.HTTP_200_OK)
-

@@ -61,7 +61,12 @@ class Bookings(models.Model):
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
     coupon = models.CharField(max_length=36, null=True, blank=True, verbose_name="Coupon Id")
     booking_date = models.DateTimeField(default=datetime.now)
+
+    # Amount details
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    total_net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    total_coupon_discount = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+
     entity_type = models.CharField(
         max_length=30, choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in EntityType],
         default=EntityType.hotels.value)
@@ -126,8 +131,11 @@ class BookedProducts(models.Model):
     booking = models.ForeignKey('Bookings', on_delete=models.CASCADE, verbose_name="Booking")
     product_id = models.CharField(max_length=36, verbose_name="Product Id")
     quantity = models.IntegerField()
+
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    coupon_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+
     booking_status = models.CharField(
         max_length=30, choices=[(booking_status.value, booking_status.value)
                                 for booking_status in ProductBookingStatus],
