@@ -402,7 +402,6 @@ class BookingsStatistics(generics.RetrieveAPIView):
         input_serializer = BookingStatisticsSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
-        print("came")
         date_filter = request.data['date_filter']
         entity_filter = get_entity_types_filter(request.data['entity_filter'])
         entity_id = request.data['entity_id']

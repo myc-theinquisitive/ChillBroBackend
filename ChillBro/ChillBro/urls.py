@@ -36,7 +36,3 @@ urlpatterns = [
     path('helpcenter/',include('HelpCenter.urls')),
     path('', include('Product.urls')),
 ]
-
-
-# urlpatterns += static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
-

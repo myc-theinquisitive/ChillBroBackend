@@ -117,7 +117,6 @@ class PaymentRevenueStatisticsView(APIView):
         entity_id = request.data['entity_id']
         date_filter = request.data['date_filter']
         entity_filter = get_entity_type(request.data['entity_filter'])
-        print(request.data)
         self.check_object_permissions(request, entity_id)
 
         if date_filter == 'Custom':
@@ -224,9 +223,6 @@ class GetTrasactionDetails(generics.ListAPIView):
                                                              entity_type__in = entity_filters,
                                                              payment_status__in = payment_filters)
             serializer = BookingTransactionDetailsSerializer(transactions, many = True)
-            # print(type(serializer.data.dict()),dict(serializer.data)
-            # final_transactions = {}
-            # final_transactions["results"] = dict(serializer.data)
             return Response({"results":serializer.data}, 200)
         else:
             return Response({"message": "Can't get transaction details","errors":input_serializer.errors},400)
