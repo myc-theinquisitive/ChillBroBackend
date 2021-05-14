@@ -24,7 +24,9 @@ import threading
 
 # Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
-    update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value
+    update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value, \
+    get_transaction_details_by_booking_id, get_review_by_booking_id, business_client_review_on_customer, \
+    get_product_details
 
 _booking_lock = threading.Lock()
 
@@ -277,16 +279,12 @@ class CreateBooking(generics.ListCreateAPIView):
         if len(product_values) != len(product_ids):
             return Response({"message": "Can't create booking", "errors": "Invalid Products"}, 400)
 
-        is_valid, errors = valid_booking_with_product_details(
-            product_values, product_list, request.data['start_time'], request.data['end_time'])
-        if not is_valid:
-            return Response({"message": "Can't create booking", "errors": errors}, 400)
-
         total_money = 0.0
         for product in product_list:
             total_money += float(product_values[product['product_id']]['price'] * product['quantity'])
 
         # Validate coupon and get discounted value
+        total_coupon_discount = 0
         entity_id = request.data['entity_id']
         if request.data['coupon'] is not None:
             coupon = get_discounted_value(
@@ -294,26 +292,38 @@ class CreateBooking(generics.ListCreateAPIView):
             if not coupon['is_valid']:
                 return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
             request.data['total_money'] = coupon['discounted_value']
+            total_coupon_discount = total_money - coupon['discounted_value']
         else:
             request.data['total_money'] = total_money
+        request.data['total_coupon_discount'] = total_coupon_discount
 
         # Create Booking
         payment_mode = request.data['payment_mode']
         if payment_mode == PaymentMode.cod.value:
             request.data['payment_status'] = PaymentStatus.not_required.value
 
+        total_net_value = 0
+        for product in product_list:
+            product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
+            product['net_value'] = \
+                product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
+            product['coupon_value'] = total_coupon_discount * (float(product["product_value"]) / total_money)
+            total_net_value += \
+                product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
+        request.data["total_net_value"] = total_net_value
+
         with _booking_lock:
+            is_valid, errors = valid_booking_with_product_details(
+                product_values, product_list, request.data['start_time'], request.data['end_time'])
+            if not is_valid:
+                return Response({"message": "Can't create booking", "errors": errors}, 400)
+
             bookings_serializer = BookingsSerializer()
             booking = bookings_serializer.create(request.data)
 
             # Create booking products
-            total_net_value = 0
             for product in product_list:
                 product['booking'] = booking
-                product["product_value"] = product_values[product['product_id']]['price']
-                product['net_value'] = product_values[product['product_id']]['net_value_details']['net_price']
-                total_net_value += \
-                    product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
             booked_product_serializer_object = BookedProductsSerializer()
             booked_product_serializer_object.bulk_create(product_list)
 
