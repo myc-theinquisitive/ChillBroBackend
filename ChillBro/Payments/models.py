@@ -39,6 +39,7 @@ class BookingTransactionsManager(models.Manager):
     def cancelled_revenue_transactions(self, from_date, to_date, entity_filter, entity_id):
         return self.entity_transaction_filters(from_date, to_date, entity_filter, entity_id)\
             .filter(payment_status=PayStatus.cancelled.value)
+            
 
     def generated_revenue_amount(self, from_date, to_date, entity_filter, entity_id):
         entity_amount = self.generated_revenue_transactions(from_date, to_date, entity_filter, entity_id)\
@@ -131,6 +132,7 @@ class BookingTransaction(models.Model):
 
     class Meta:
         unique_together = (("booking_id", "paid_to", "paid_by"),)
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.id + " Booking: " + self.booking_id

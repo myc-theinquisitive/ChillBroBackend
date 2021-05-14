@@ -109,15 +109,15 @@ class PaymentRevenueStatisticsView(APIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities | IsEmployeeEntities, )
 
     # check entity id
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = PaymentRevenueStatisticsViewSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
 
-        entity_id = request.data['entity_ids']
+        entity_id = request.data['entity_id']
         date_filter = request.data['date_filter']
-        entity_filter = get_entity_type(request.data['entity_filters'])
-
+        entity_filter = get_entity_type(request.data['entity_filter'])
+        print(request.data)
         self.check_object_permissions(request, entity_id)
 
         if date_filter == 'Custom':
@@ -172,14 +172,14 @@ class PaymentRevenueStatisticsView(APIView):
 class GetPaymentsRevenueStatisticsDetailsView(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = PaymentStatasticsDetailsInputSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
 
         date_filter = request.data['date_filter']
-        entity_filter = get_entity_type(request.data['entity_filters'])
-        entity_id = request.data['entity_ids']
+        entity_filter = get_entity_type(request.data['entity_filter'])
+        entity_id = request.data['entity_id']
         statistics_details_type = request.data['statistics_details_type']
 
         if date_filter == 'Custom':
@@ -205,6 +205,7 @@ class GetPaymentsRevenueStatisticsDetailsView(APIView):
                 from_date, to_date, entity_filter, entity_id)
 
         transaction_serializer = BookingTransactionDetailsSerializer(transactions, many=True)
+        
         return Response(transaction_serializer.data, 200)
 
 
@@ -212,17 +213,21 @@ class GetPaymentsRevenueStatisticsDetailsView(APIView):
 class GetTrasactionDetails(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetTrasactionDetailsSerializer(data=request.data)
         if input_serializer.is_valid():
-            from_date, to_date = get_time_period(request.data['date_filters'])
-            entity_filters = get_entity_type(request.data['entity_filters'])
+            from_date, to_date = get_time_period(request.data['date_filter'])
+            entity_filters = get_entity_type(request.data['entity_filter'])
+            payment_filters = get_payment_type(request.data['payment_status'])
             transactions = BookingTransaction.objects.filter(updated_at__gte = from_date, updated_at__lte = to_date, \
                                                              entity_id__in = request.data['entity_id'], \
                                                              entity_type__in = entity_filters,
-                                                             payment_status = request.data['payment_status'])
+                                                             payment_status__in = payment_filters)
             serializer = BookingTransactionDetailsSerializer(transactions, many = True)
-            return Response(serializer.data, 200)
+            # print(type(serializer.data.dict()),dict(serializer.data)
+            # final_transactions = {}
+            # final_transactions["results"] = dict(serializer.data)
+            return Response({"results":serializer.data}, 200)
         else:
             return Response({"message": "Can't get transaction details","errors":input_serializer.errors},400)
 

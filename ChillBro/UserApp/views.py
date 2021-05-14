@@ -61,7 +61,7 @@ class BusinessClientDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         self.check_object_permissions(request, kwargs['pk'])
-        business_client = BusinessClient.objects.filter(id=self.kwargs['pk']). \
+        business_client = BusinessClient.objects.filter(user_id=self.kwargs['pk']). \
             values('business_name', 'secondary_contact', first_name=F('user_id__first_name'),
                    email=F('user_id__email'), phone_number=F('user_id__phone_number'))[0]
         return Response(business_client)
