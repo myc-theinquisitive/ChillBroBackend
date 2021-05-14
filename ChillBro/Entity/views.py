@@ -1,8 +1,8 @@
 from django.db.models import F, Count
 from django.shortcuts import render
 from rest_framework.permissions import IsAuthenticated
-from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, AddressSerializer, \
-    EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, EntityDetailsSerialiser
+from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, \
+    EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer
 from rest_framework import generics
 from .models import MyEntity, BusinessClientEntity, EntityUPI, EntityAccount
 from rest_framework.response import Response
@@ -14,7 +14,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
 from django.db.models import Count
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
-from .constants import VerifiedStatus, EntityTypes
+from .constants import EntityTypes
 import json
 from django.db.models import Count
 from django.core.exceptions import ObjectDoesNotExist
