@@ -6,6 +6,7 @@ from django.db.models import Count
 from .BaseProduct.models import Product, ProductImage
 from .views import calculate_product_net_price
 from .Seller.models import SellerProduct
+from django.db.models import F, Count
 
 
 def get_product_id_wise_details(product_ids):

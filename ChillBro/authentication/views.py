@@ -171,12 +171,14 @@ class Login(APIView):
                         token, created = Token.objects.get_or_create(user=user)
 
                         encoded = jwt.encode(
-                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
+                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
 
                         response = Response(status=status.HTTP_200_OK)
                         response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
                         response.data = {
                             'user': email,
+                            'name': user.first_name,
+                            'id': user.id,
                             'message': "Login Successful"
                         }
                         return response

@@ -152,11 +152,24 @@ def get_complete_booking_details_by_ids(booking_ids):
         booking_dict = {
             'id': booking.id,
             'entity_type': booking.entity_type,
-            'booked_at': booking.booking_date
+            'booked_at': booking.booking_date,
+            'booking_status':booking.booking_status
         }
-        days, minutes = (datetime.now() - booking.booking_date, "%d")
-        days = str(days).split()[0]
-        booking_dict['ago'] = days + " days"
+        days = datetime.now() - booking.booking_date
+        seconds = int(days.total_seconds())
+        if seconds<60:
+            booking_dict['ago'] = "1 min"
+        else:
+            minutes = seconds//60
+            if minutes<60:
+                booking_dict['ago'] = str(minutes)+" minutes"
+            else:
+                hours = minutes//60
+                if hours<24:
+                    booking_dict['ago'] = str(hours)+" hours"
+                else:
+                    days = hours//24
+                    booking_dict['ago'] = str(days)+" days"
 
         check_in_flag = True
         try:
@@ -395,11 +408,10 @@ class CancelBookingView(generics.ListAPIView):
 class BookingsStatistics(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities | IsEmployeeEntities)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = BookingStatisticsSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
-
         date_filter = request.data['date_filter']
         entity_filter = get_entity_types_filter(request.data['entity_filter'])
         entity_id = request.data['entity_id']
@@ -471,7 +483,7 @@ class GetBookingsStatisticsDetails(generics.ListAPIView):
     serializer_class = BookingsSerializer
     queryset = Bookings.objects.order_by('booking_date').all()
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetBookingsStatisticsDetailsSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
@@ -607,7 +619,7 @@ class GetBookingDetailsView(generics.ListAPIView):
     permission_classes = (
         IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities | IsEmployeeEntities)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetBookingDetailsViewSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)

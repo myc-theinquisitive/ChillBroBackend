@@ -39,10 +39,10 @@ class CustomDatesSerializer(serializers.Serializer):
 
 class PaymentRevenueStatisticsViewSerializer(serializers.Serializer):
     date_filter = serializers.CharField(required=True)
-    entity_filters = serializers.ListField(
+    entity_filter = serializers.ListField(
         child=serializers.CharField(max_length=30)
     )
-    entity_ids = serializers.ListField(
+    entity_id = serializers.ListField(
         child=serializers.CharField(required=True, min_length=36, max_length=36)
     )
     custom_dates = CustomDatesSerializer(required=False)
@@ -53,13 +53,13 @@ class PaymentStatasticsDetailsInputSerializer(PaymentRevenueStatisticsViewSerial
 
 
 class GetTrasactionDetailsSerializer(serializers.Serializer):
-    entity_ids = serializers.ListField(
+    entity_id = serializers.ListField(
         child=serializers.CharField()
     )
-    entity_filters = serializers.ListField(
+    entity_filter = serializers.ListField(
         child=serializers.CharField()
     )
-    date_filters = serializers.CharField(required=True)
+    date_filter = serializers.CharField(required=True)
     payment_status = serializers.ListField(
         child=serializers.CharField()
     )

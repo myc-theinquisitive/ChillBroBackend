@@ -25,7 +25,7 @@ SECRET_KEY = 'd3rgelo^8wck52w2^g&1vlei$a$&s23g0fa&z0=2ic-mshux%d'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["chillbro.co.in"]
 
 
 # Application definition
@@ -142,9 +142,11 @@ USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
-
-STATIC_URL = '/static/'
-MEDIA_URL = 'http://127.0.0.1:8000/'
+FILE_UPLOAD_PERMISSIONS = 0o644
+# STATIC_URL = 'https://chillbro.co.in/'
+# STATIC_ROOT = 'chillbro_backend/'
+MEDIA_URL = 'https://chillbro.co.in/chillbro_backend/'
+MEDIA_ROOT = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
 
 
 REST_FRAMEWORK = {
@@ -187,7 +189,7 @@ EMAIL_HOST_USER = ' myc.theinquisitive@gmail.com'
 EMAIL_HOST_PASSWORD = 'MissionMyc'
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-
+LOG_PATH = "/home/ffs2imp1oh0k/adminpanel_logs/"
 LOGGING = {
     'version': 1,
     'filters': {
@@ -195,7 +197,24 @@ LOGGING = {
             '()': 'django.utils.log.RequireDebugTrue',
         }
     },
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s [%(levelname)s]- %(message)s'}
+
+    },
     'handlers': {
+        'django_error': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_PATH + 'django.log',
+            'formatter': 'standard'
+        },
+        'info': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_PATH + 'info.log',
+            'formatter': 'standard'
+        },
         'console': {
             'level': 'DEBUG',
             'filters': ['require_debug_true'],
@@ -203,6 +222,21 @@ LOGGING = {
         }
     },
     'loggers': {
+        'info': {
+            'handlers': ['info', "console"],
+            'level': 'DEBUG',
+            'propagate': True
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['django_error', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
         'django.db.backends': {
             'level': 'DEBUG',
             'handlers': ['console'],
