@@ -30,10 +30,10 @@ class SpecificAddressList(APIView):
     permission_classes = (IsAuthenticated,)
 
     @staticmethod
-    def get(request, format=None):
+    def post(request, format=None):
         serializer = AddressIdListSerializer(data=request.data)
         if serializer.is_valid():
             address_details = address_details_for_address_ids(serializer.data["ids"])
-            return Response(address_details, 200)
+            return Response({"results:":address_details}, 200)
         else:
-            return Response(serializer.errors, 400)
+            return Response({"message":"Can't get address details","errors:":serializer.errors}, 400)

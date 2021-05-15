@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.conf import settings
 from .models import Category, CategoryImage, CategoryPrices
 
 
@@ -9,7 +10,7 @@ class CategorySerializer(serializers.ModelSerializer):
     
     def to_representation(self, data):
         data = super(CategorySerializer, self).to_representation(data)
-        data['icon_url'] = data.get('icon_url').replace('home/ffs2imp1oh0k/public_html/chillbro_backend/', '')
+        data['icon_url'] = data.get('icon_url').replace(settings.IMAGE_REPLACED_STRING, '')
         return data
 
     def create(self, validated_data):

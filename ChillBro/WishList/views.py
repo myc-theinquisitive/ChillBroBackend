@@ -37,7 +37,7 @@ class AddProductToWishList(generics.CreateAPIView):
 class UserWishListDetails(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = UserWishListDetailsSerializer(data=request.data)
         if input_serializer.is_valid():
             entity_type_filters = getEntityType(request.data['entity_type_filters'])

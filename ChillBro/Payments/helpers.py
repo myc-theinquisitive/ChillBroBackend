@@ -59,9 +59,13 @@ def get_user_model():
     return settings.AUTH_USER_MODEL
 
 
+def get_media_root():
+    return settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else ""
+
+
 def image_upload_to_transaction_proof(instance, filename):
     id = instance.id
     basename, file_extension = filename.split(".")
     new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
-    return "static/images/transaction_proof/%s/%s" % (id, new_filename)
+    return get_media_root() + "static/images/transaction_proof/%s/%s" % (id, new_filename)
 

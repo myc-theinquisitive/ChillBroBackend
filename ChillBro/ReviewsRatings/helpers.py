@@ -1,12 +1,20 @@
 import uuid
 from datetime import datetime, date, timedelta
+
+from django.conf import settings
+
 from .constants import *
+
+
+def get_media_root():
+    return settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else ""
+
 
 def image_upload_to_review(instance, filename):
     id = instance.review_id
     basename, file_extension = filename.split(".")
     new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
-    return "static/images/review/%s/%s" % (id, new_filename)
+    return get_media_root() + "static/images/review/%s/%s" % (id, new_filename)
 
 
 def get_today_day():

@@ -171,6 +171,8 @@ AUTH_USER_MODEL = 'UserApp.MyUser'
 DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
+IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
+
 
 EMAIL_FROM = 'myc.theinquisitive@gmail.com'
 EMAIL_BCC = 'team.theinquisitive@gmail.com' # Any mail for BCC can be given

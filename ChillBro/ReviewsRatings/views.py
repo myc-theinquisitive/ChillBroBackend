@@ -66,7 +66,7 @@ class RelatedReviewRatingList(generics.ListAPIView):
 class EntityReviewStatistics(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = EntityReviewStatisticsSerializer(data=request.data)
         if input_serializer.is_valid():
             reviews = ReviewsRatings.objects.filter(related_id__in=request['entity_ids'])
@@ -82,7 +82,7 @@ class EntityReviewStatistics(generics.RetrieveAPIView):
 class EntityTotalReviews(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = EntityTotalReviewsSerializer(data=request.data)
         if input_serializer.is_valid():
             date_filter = request.data['date_filter']
@@ -114,9 +114,9 @@ class EntityTotalReviews(generics.ListAPIView):
                           'check_out': each_review.time,
                           'total_money': bookings[str(each_review.related_id)]['total_money']}
                 booking_ratings.append(review)
-            return Response(booking_ratings, 200)
+            return Response({"results":booking_ratings}, 200)
         else:
-            return Response(input_serializer.errors, 400)
+            return Response({"errors":input_serializer.errors}, 400)
 
 
 class CreateFeedbackAndSuggestion(generics.CreateAPIView):
@@ -135,12 +135,12 @@ class CreateFeedbackAndSuggestion(generics.CreateAPIView):
 class GetFeedbackAndSuggestions(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetFeedbackAndSuggestionsSerializer(data=request.data)
         if input_serializer.is_valid():
             categories = get_categories(request.data['category_filters'])
             feedback = FeedbackAndSuggestions.objects.filter(category__in = categories)
             serializer = FeedbackAndSuggestionsSerializer(feedback, many=True)
-            return Response(serializer.data, 200)
+            return Response({"results":serializer.data}, 200)
         else:
             return Response({"message": "Can't get the feedback details","errors":input_serializer.errors},400)

@@ -110,7 +110,7 @@ class CartDetails(generics.ListAPIView):
                     'products': cart_id_wise_product_details[each_cart.id]
                 }
             all_carts.append(each_cart_details)
-        return Response(all_carts, 200)
+        return Response({"results":all_carts}, 200)
 
 
 class DeleteProductFromCart(generics.RetrieveDestroyAPIView):

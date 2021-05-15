@@ -6,11 +6,15 @@ def get_user_model():
     return settings.AUTH_USER_MODEL
 
 
+def get_media_root():
+    return settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else ""
+
+
 def upload_image_for_entity(instance, filename, type):
     id = instance.id
     file_extension = filename.split(".")[-1]
     new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
-    return "static/images/entity/%s/%s/%s" % (id, type, new_filename)
+    return get_media_root() + "static/images/entity/%s/%s/%s" % (id, type, new_filename)
 
 
 def upload_pan_image_for_entity(instance, filename):

@@ -10,15 +10,18 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient
 
 # Create your views here.
 
+
 class ReferBusinessClientList(generics.ListCreateAPIView):
     queryset = ReferBusinessClient.objects.all()
     serializer_class = ReferBusinessClientSerializer
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
 
+
 class ReferBusinessClientDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = ReferBusinessClient.objects.all()
     serializer_class = ReferBusinessClientSerializer
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee,)
+
 
 class ShareApp(APIView):
     def get(self,request):
