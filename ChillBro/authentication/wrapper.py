@@ -5,6 +5,9 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 
 # API class from https://pypi.python.org/pypi/tmdbsimple
+from ChillBro.UserApp.exportapi import check_valid_business_client, check_valid_employee
+
+
 class API(object):
     headers = {
         'Content-Type': 'application/json',
@@ -192,3 +195,9 @@ def sendOTP(otp_code, phone_number):
 def create_wallet(user):
     wallet = Wallet(created_by=user)
     wallet.save()
+
+def check_business_client(user):
+    return check_valid_business_client(user)
+
+def check_employee(user):
+    return check_valid_employee(user)

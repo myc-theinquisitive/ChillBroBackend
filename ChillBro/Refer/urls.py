@@ -6,6 +6,9 @@ from .views import *
 urlpatterns = [
     path('business_client/',ReferBusinessClientList.as_view()),
     path('business_client/<str:pk>/',ReferBusinessClientDetail.as_view()),
+    path('signup/',SignUpRequestCreate.as_view()),
+    path('signup/<str:status>/',SignUpRequestList.as_view()),
+    path('signup/<str:pk>',SignUpRequestDetail.as_view()),
     path('share_app/', ShareApp.as_view()),
 ]
 

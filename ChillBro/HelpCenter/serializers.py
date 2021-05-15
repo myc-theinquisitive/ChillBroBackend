@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Carousel, CarouselItem, BusinessClientFAQ, HowToUse
+from .models import Carousel, CarouselItem, BusinessClientFAQ, HowToUse, HelpCenterFAQ
 
 
 class CarouselSerializer(serializers.ModelSerializer):
@@ -15,6 +15,11 @@ class CarouselItemSerializer(serializers.ModelSerializer):
 class BusinessClientFAQSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessClientFAQ
+        fields = '__all__'
+
+class HelpCenterFAQSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HelpCenterFAQ
         fields = '__all__'
 
 class HowToUseSerializer(serializers.ModelSerializer):

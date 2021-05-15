@@ -1,8 +1,9 @@
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Carousel, CarouselItem, BusinessClientFAQ, HowToUse
-from .serializers import CarouselSerializer, CarouselItemSerializer, BusinessClientFAQSerializer, HowToUseSerializer
+from .models import Carousel, CarouselItem, BusinessClientFAQ, HowToUse, HelpCenterFAQ
+from .serializers import CarouselSerializer, CarouselItemSerializer, BusinessClientFAQSerializer, HowToUseSerializer, \
+    HelpCenterFAQSerializer
 from datetime import datetime
 from django.db.models import Q
 from .constants import CarouselItemStatus
@@ -60,6 +61,15 @@ class BusinessClientFAQList(generics.ListCreateAPIView):
 class BusinessClientFAQDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BusinessClientFAQSerializer
     queryset = BusinessClientFAQ.objects.all()
+
+class HelpCenterFAQList(generics.ListCreateAPIView):
+    serializer_class = HelpCenterFAQSerializer
+    queryset = HelpCenterFAQ.objects.all()
+
+
+class HelpCenterFAQDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = HelpCenterFAQSerializer
+    queryset = HelpCenterFAQ.objects.all()
 
 class HowToUseList(generics.ListCreateAPIView):
     serializer_class = HowToUseSerializer
