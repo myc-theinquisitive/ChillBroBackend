@@ -21,7 +21,6 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
     IsBusinessClientEntities, IsEmployeeEntities
 import threading
 
-
 # Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value, \
@@ -46,16 +45,16 @@ def get_total_bookings_of_product_in_duration(product_id, start_time, end_time):
         .filter(product_id=product_id) \
         .filter(~Q(booking_status=ProductBookingStatus.cancelled.value)) \
         .filter(
-            Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gt=start_time)) |
-            Q(Q(booking__start_time__lt=end_time) & Q(booking__end_time__gte=end_time)) |
-            Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gte=end_time)) |
-            Q(Q(booking__start_time__gte=start_time) & Q(booking__end_time__lte=end_time))
-        )
+        Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gt=start_time)) |
+        Q(Q(booking__start_time__lt=end_time) & Q(booking__end_time__gte=end_time)) |
+        Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gte=end_time)) |
+        Q(Q(booking__start_time__gte=start_time) & Q(booking__end_time__lte=end_time))
+    )
 
 
 def get_total_bookings_count_of_product_in_duration(product_id, start_time, end_time):
-    bookings_count = get_total_bookings_of_product_in_duration(product_id, start_time, end_time)\
-                        .aggregate(sum=Sum('quantity'))['sum']
+    bookings_count = get_total_bookings_of_product_in_duration(product_id, start_time, end_time) \
+        .aggregate(sum=Sum('quantity'))['sum']
     if bookings_count is None:
         return 0
     return bookings_count
@@ -93,7 +92,6 @@ def valid_booking_with_product_details(products_quantity, booking_products_list,
 
 
 def valid_booking(booking_products_list, start_time, end_time):
-
     product_ids = []
     for product in booking_products_list:
         product_ids.append(product['product_id'])
@@ -126,7 +124,6 @@ def update_booking_status(booking_id, status):
 
 
 def get_complete_booking_details_by_ids(booking_ids):
-
     bookings = Bookings.objects.filter(id__in=booking_ids)
     booked_products = BookedProducts.objects.filter(booking_id__in=booking_ids)
     booking_check_ins = CheckInDetails.objects.filter(booking_id__in=booking_ids)
@@ -153,23 +150,23 @@ def get_complete_booking_details_by_ids(booking_ids):
             'id': booking.id,
             'entity_type': booking.entity_type,
             'booked_at': booking.booking_date,
-            'booking_status':booking.booking_status
+            'booking_status': booking.booking_status
         }
         days = datetime.now() - booking.booking_date
         seconds = int(days.total_seconds())
-        if seconds<60:
+        if seconds < 60:
             booking_dict['ago'] = "1 min"
         else:
-            minutes = seconds//60
-            if minutes<60:
-                booking_dict['ago'] = str(minutes)+" minutes"
+            minutes = seconds // 60
+            if minutes < 60:
+                booking_dict['ago'] = str(minutes) + " minutes"
             else:
-                hours = minutes//60
-                if hours<24:
-                    booking_dict['ago'] = str(hours)+" hours"
+                hours = minutes // 60
+                if hours < 24:
+                    booking_dict['ago'] = str(hours) + " hours"
                 else:
-                    days = hours//24
-                    booking_dict['ago'] = str(days)+" days"
+                    days = hours // 24
+                    booking_dict['ago'] = str(days) + " days"
 
         check_in_flag = True
         try:
@@ -465,7 +462,7 @@ class BookingsStatistics(generics.RetrieveAPIView):
 
         return Response(
             {
-               "received": received_bookings,
+                "received": received_bookings,
                 "received_percentage_change": received_percentage_change,
                 "ongoing": ongoing_bookings,
                 "pending": pending_bookings,
@@ -512,19 +509,19 @@ class GetBookingsStatisticsDetails(generics.ListAPIView):
             self.queryset = Bookings.objects.yet_to_return_bookings(from_date, to_date, entity_filter, entity_id)
         elif statistics_details_type == 'customer_taken_bookings':
             booking_ids = CheckInDetails.objects \
-                .customer_taken(from_date, to_date, entity_filter, entity_id)\
+                .customer_taken(from_date, to_date, entity_filter, entity_id) \
                 .values_list('booking_id', flat=True)
             self.queryset = Bookings.objects.filter(id__in=booking_ids)
         elif statistics_details_type == 'returned_bookings':
             booking_ids = CheckOutDetails.objects \
-                .returned_bookings(from_date, to_date, entity_filter, entity_id)\
+                .returned_bookings(from_date, to_date, entity_filter, entity_id) \
                 .values_list('booking_id', flat=True)
             self.queryset = Bookings.objects.filter(id__in=booking_ids)
         elif statistics_details_type == 'received_bookings':
             self.queryset = Bookings.objects.received_bookings(from_date, to_date, entity_filter, entity_id)
         elif statistics_details_type == 'cancelled_bookings':
             booking_ids = CancelledDetails.objects \
-                .cancelled_bookings(from_date, to_date, entity_filter, entity_id)\
+                .cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
                 .values_list('booking_id', flat=True)
             self.queryset = Bookings.objects.filter(id__in=booking_ids)
 
@@ -548,16 +545,16 @@ class CancelProductStatusView(generics.ListAPIView):
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
 
-        booking_products = BookedProducts.objects\
+        booking_products = BookedProducts.objects \
             .filter(booking=request.data['booking_id'], product_id=request.data['product_id'])
         if len(booking_products) == 0:
             return Response(
                 {"message": "Can't cancel product booking",
                  "error": "Invalid Booking id {} or product  {} "
-                    .format(request.data['booking_id'], request.data['product_id'])}, 400)
+                     .format(request.data['booking_id'], request.data['product_id'])}, 400)
 
         booking = Bookings.objects.get(id=request.data['booking_id'])
-        self.check_object_permissions(request,  booking)
+        self.check_object_permissions(request, booking)
         booking_products.update(booking_status=ProductBookingStatus.cancelled.value)
 
         booking_product = booking_products[0]
@@ -583,7 +580,7 @@ class CancelProductStatusView(generics.ListAPIView):
 
 class GetSpecificBookingDetails(APIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsOwner |
-                          IsBookingBusinessClient | IsBookingEmployee )
+                          IsBookingBusinessClient | IsBookingEmployee)
 
     def get(self, request, *args, **kwargs):
         try:
@@ -611,6 +608,22 @@ class GetSpecificBookingDetails(APIView):
         serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.id)
         serializer['customer_review'] = get_review_by_booking_id(booking.id)
         return Response(serializer, 200)
+
+
+class BusinessClientBookingApproval(generics.UpdateAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBookingBusinessClient | IsBookingEmployee)
+    serializer_class = BusinessClientBookingApproval
+    queryset = Bookings.objects.all()
+    lookup_url_kwarg = "booking_id"
+
+    def put(self, request, *args, **kwargs):
+        try:
+            booking = Bookings.objects.get(id=kwargs['booking_id'])
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't get booking details", "error": "Invalid Booking id"}, 400)
+
+        self.check_object_permissions(request, booking)
+        return super().put(request, *args, **kwargs)
 
 
 class GetBookingDetailsView(generics.ListAPIView):
@@ -835,7 +848,7 @@ class ProductStatisticsDetails(generics.ListAPIView):
             booking_ids = BookedProducts.objects.cancelled_bookings_for_product(
                 product_id, from_date, to_date).values_list('booking_id', flat=True)
         elif statistics_details_type == "ongoing_products":
-            booking_ids = BookedProducts.objects.ongoing_bookings_for_product(product_id)\
+            booking_ids = BookedProducts.objects.ongoing_bookings_for_product(product_id) \
                 .values_list('booking_id', flat=True)
 
         self.queryset = Bookings.objects.filter(id__in=booking_ids)
@@ -943,15 +956,16 @@ class BusinessClientProductCancellationDetails(APIView):
     def post(self, request, *args, **kwargs):
         input_serializer = BusinessClientProductCancellationSerializer(data=request.data)
         if input_serializer.is_valid():
-            booked_product = BookedProducts.objects.filter(booking = request.data['booking_id'],\
+            booked_product = BookedProducts.objects.filter(booking=request.data['booking_id'], \
                                                            product_id=request.data['product_id'])
             if len(booked_product) == 0:
-                return Response({"message": "Can't cancel the product", "errors":"There is no product{}in booking id {}"\
-                                .format(request.data['product_id'],request.data['booking_id'])},400)
+                return Response(
+                    {"message": "Can't cancel the product", "errors": "There is no product{}in booking id {}" \
+                    .format(request.data['product_id'], request.data['booking_id'])}, 400)
             request.data['cancelled_by'] = request.user.id
             input_serializer.save()
-            booked_product.update(booking_status= ProductBookingStatus.cancelled.value)
-            return Response({"message": "Successfully cancelled the product"},200)
+            booked_product.update(booking_status=ProductBookingStatus.cancelled.value)
+            return Response({"message": "Successfully cancelled the product"}, 200)
 
         else:
-            return Response({"message":"Can't cancel the product","errors":input_serializer.errors},400)
+            return Response({"message": "Can't cancel the product", "errors": input_serializer.errors}, 400)

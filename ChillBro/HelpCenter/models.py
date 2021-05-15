@@ -25,6 +25,10 @@ class BusinessClientFAQ(models.Model):
     question = models.CharField(max_length=100)
     answer = models.TextField()
 
+class HelpCenterFAQ(models.Model):
+    question = models.CharField(max_length=100)
+    answer = models.TextField()
+
 class HowToUse(models.Model):
     entity_type = models.CharField(max_length=30)
     video_url = models.URLField(max_length=256)

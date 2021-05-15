@@ -71,6 +71,8 @@ class IsEmployee(permissions.BasePermission):
         user = request.user
         try:
             employee = Employee.objects.get(user_id=user.id)
+            if not employee.is_active:
+                return False
         except ObjectDoesNotExist:
             return False
         return True
@@ -142,6 +144,8 @@ class IsEmployeeEntities(permissions.BasePermission):
         if len(entity_id) != 1:
             return False
         employee = Employee.objects.filter(entity_id__in=entity_id, user_id=user.id)
+        if not employee.is_active:
+            return False
         if len(employee) == 1:
             return True
         return False
@@ -155,6 +159,8 @@ class IsEmployeeEntityById(permissions.BasePermission):
 
         try:
             employee = Employee.objects.get(entity_id=entity_id, user_id=user.id)
+            if not employee.is_active:
+                return False
         except ObjectDoesNotExist:
             return False
         return True
@@ -168,6 +174,8 @@ class IsEmployeeEntity(permissions.BasePermission):
 
         try:
             employee = Employee.objects.get(entity_id=entity_id, user_id=user.id)
+            if not employee.is_active:
+                return False
         except ObjectDoesNotExist:
             return False
         return True
@@ -215,6 +223,8 @@ class IsBookingEmployee(permissions.BasePermission):
 
         try:
             employee = Employee.objects.get(entity_id=entity_id, user_id=user.id)
+            if not employee.is_active:
+                return False
         except ObjectDoesNotExist:
             return False
         return True

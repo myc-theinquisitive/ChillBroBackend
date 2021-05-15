@@ -9,7 +9,7 @@ from rest_framework import status
 from .wrapper import get_entity_ids_for_business_client
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsEmployeeEntityById, IsBusinessClientEmployee, IsOwnerById, IsEmployeeBusinessClient
-
+from .wrapper import logout
 
 class MyUserList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
@@ -43,9 +43,9 @@ class BusinessClientAdd(APIView):
                     return Response(business_client_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             else:
-                return Response(user_serializer.errors)
+                return Response(user_serializer.errors,400)
         else:
-            return Response(serializer.errors)
+            return Response(serializer.errors,400)
 
 
 class BusinessClientAll(generics.ListCreateAPIView):
@@ -102,11 +102,11 @@ class EmployeeAdd(APIView):
                     return Response({'message': 'Success'}, status=status.HTTP_200_OK)
                 else:
                     user_instance.delete()
-                    return Response(employee_serializer.errors)
+                    return Response(employee_serializer.errors,400)
             else:
-                return Response(user_serializer.errors)
+                return Response(user_serializer.errors,400)
         else:
-            return Response(serializer.errors)
+            return Response(serializer.errors,400)
 
 
 def get_employee_details(employee_ids):
@@ -173,8 +173,29 @@ class EmployeeActive(generics.RetrieveUpdateAPIView):
 
     def get(self, request, *args, **kwargs):
         self.check_object_permissions(request, kwargs['pk'])
-        super().get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        self.check_object_permissions(request, kwargs['pk'])
+        return super().put(request, *args, **kwargs)
+
+class EmployeeImageCreate(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated, IsOwnerById)
+    queryset = EmployeeImage.objects.all()
+    serializer_class = EmployeeImageSerializer
 
     def post(self, request, *args, **kwargs):
-        self.check_object_permissions(request, kwargs['pk'])
+        employee_id = request.data['employee']
+        self.check_object_permissions(request, employee_id)
         super().post(request, *args, **kwargs)
+
+
+class EmployeeImageDelete(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated, IsOwnerById)
+    queryset = EmployeeImage.objects.all()
+    serializer_class = EmployeeImageSerializer
+
+    def delete(self, request, *args, **kwargs):
+        employee_id = request.data['employee']
+        self.check_object_permissions(request, employee_id)
+        super().delete(request, *args, **kwargs)

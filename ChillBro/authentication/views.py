@@ -23,8 +23,7 @@ from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 import jwt
 
-from .wrapper import sendOTP
-from .wrapper import create_wallet
+from .wrapper import sendOTP, check_business_client, check_employee, create_wallet
 
 
 class Signup(APIView):
@@ -151,7 +150,6 @@ class SignupVerify(APIView):
             content = {'detail': _('Unable to verify user.')}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
-
 class Login(APIView):
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
@@ -170,6 +168,12 @@ class Login(APIView):
                     if user.is_active:
                         token, created = Token.objects.get_or_create(user=user)
 
+                        user_type = "CUSTOMER"
+                        if check_business_client(user):
+                            user_type = "BUSINESS CLIENT"
+                        elif check_employee(user):
+                            user_type = "EMPLOYEE"
+
                         encoded = jwt.encode(
                             {'token': token.key}, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
 
@@ -179,6 +183,7 @@ class Login(APIView):
                             'user': email,
                             'name': user.first_name,
                             'id': user.id,
+                            "user_type": user_type,
                             'message': "Login Successful"
                         }
                         return response

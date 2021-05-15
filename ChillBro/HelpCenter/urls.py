@@ -13,6 +13,8 @@ urlpatterns = [
     path('carousel-item/<str:pk>/', CarouselItemDetail.as_view()),
     path('business-client-faq/',BusinessClientFAQList.as_view()),
     path('business-client-faq/<str:pk>/', BusinessClientFAQDetail.as_view()),
+    path('help-center-faq/',HelpCenterFAQList.as_view()),
+    path('help-center-faq/<str:pk>/', HelpCenterFAQDetail.as_view()),
     path('how-to-use/',HowToUseList.as_view()),
     path('how-to-use/entity-type/<str:type>/', HowToUseEntityList.as_view()),
     path('how-to-use/<str:pk>/',HowToUseDetail.as_view()),

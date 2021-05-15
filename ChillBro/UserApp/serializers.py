@@ -34,6 +34,7 @@ class NewEmployeeSerializer(UserSerializer):
     role = serializers.ChoiceField(choices=[(role.name, role.value) for role in Roles])
     is_active = serializers.BooleanField()
     images = serializers.ListField(
+        allow_empty=True,
         child=serializers.ImageField()
     )
 

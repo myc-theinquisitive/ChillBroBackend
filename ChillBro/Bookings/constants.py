@@ -10,6 +10,8 @@ class EntityType(enum.Enum):
 
 
 class BookingStatus(enum.Enum):
+    yet_to_approve = "YET_TO_APPROVE"
+    business_client_rejected = "BUSINESS_CLIENT_REJECTED"
     pending = "PENDING"
     ongoing = "ONGOING"
     cancelled = "CANCELLED"

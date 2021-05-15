@@ -14,7 +14,8 @@ from .models import SellerProduct
 from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
 from .BaseProduct.models import Product, ProductVerification
-from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, IsEmployeeBusinessClient
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, \
+    IsEmployeeBusinessClient
 from .BaseProduct.constants import ActivationStatus
 from datetime import date, timedelta, datetime
 from .helpers import get_date_format
@@ -592,7 +593,7 @@ class SearchProducts(generics.ListAPIView):
 
 class ProductNetPrice(APIView):
     serializer_class = NetPriceSerializer
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, )
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient,)
 
     def get(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -616,7 +617,7 @@ class ProductSellerStatus(generics.ListAPIView):
         status = kwargs['status']
         self.check_object_permissions(request, seller_id)
 
-        self.queryset = SellerProduct.objects.select_related('product')\
+        self.queryset = SellerProduct.objects.select_related('product') \
             .filter(seller_id=seller_id, product__status=status)
         response = super().get(request, args, kwargs)
         product_ids = []
@@ -628,7 +629,7 @@ class ProductSellerStatus(generics.ListAPIView):
 
 
 class GetSellerProductList(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
     queryset = SellerProduct.objects.all()
     serializer_class = SellerProductSerializer
 
@@ -649,7 +650,7 @@ class GetSellerProductList(generics.ListAPIView):
 class ProductListBasedOnVerificationStatus(generics.ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = (IsAuthenticated & IsSuperAdminOrMYCEmployee, )
+    permission_classes = (IsAuthenticated & IsSuperAdminOrMYCEmployee,)
 
     def get(self, request, *args, **kwargs):
         activation_status = self.kwargs['status']
@@ -664,7 +665,7 @@ class ProductListBasedOnVerificationStatus(generics.ListAPIView):
 
 
 class ProductVerificationDetail(APIView):
-    permission_classes = (IsAuthenticated & IsSuperAdminOrMYCEmployee, )
+    permission_classes = (IsAuthenticated & IsSuperAdminOrMYCEmployee,)
 
     def put(self, request, *args, **kwargs):
         try:
@@ -699,3 +700,9 @@ class ProductVerificationDetail(APIView):
         product.save()
 
         return Response({"message": "Product verified successfully"}, status=status.HTTP_200_OK)
+
+    def get(self, request, *args, **kwargs):
+        product_verification = ProductVerification.objects.get(id=kwargs['product_id'])
+        product = ProductView().get_by_ids([product_verification.product])
+        add_verification_details_to_product([product_verification.product])
+        return Response(product, 200)
