@@ -265,7 +265,7 @@ class GetDateFilters(APIView):
 
     def get(self, request, *args, **kwargs):
         date_filters = [date_filter.value for date_filter in DateFilters]
-        return Response(date_filters, 200)
+        return Response({"results":date_filters}, 200)
 
 
 class CreateBooking(generics.ListCreateAPIView):
@@ -748,7 +748,9 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
         other_images = []
         check_in_images = CheckInImages.objects.filter(check_in_id=check_in_object.id)
         for check_in_image in check_in_images:
-            other_images.append(check_in_image.image.url)
+            image_url = check_in_image.image.url
+            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
+            other_images.append(image_url)
         response_data['other_images'] = other_images
 
         return Response(response_data, 200)
@@ -774,7 +776,7 @@ class ReportCustomerForBooking(generics.CreateAPIView):
 class ProductStatistics(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = ProductStatisticsSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
@@ -823,7 +825,7 @@ class ProductStatisticsDetails(generics.ListAPIView):
     serializer_class = BookingsSerializer
     queryset = Bookings.objects.order_by('booking_date').all()
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = ProductStatisticsDetailsSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)

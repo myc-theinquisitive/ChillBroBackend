@@ -11,7 +11,7 @@ def check_valid_booking(product_id, quantity,  start_time, end_time):
 
 
 def get_product_details_with_image(product_ids):
-    from Bookings.views import product_details_with_image
+    from Product.exportapi import product_details_with_image
     return product_details_with_image(product_ids)
 
 

@@ -187,7 +187,7 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
         add_verification_details_to_entities([response_data])
         add_address_details_to_entities([response_data])
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response({"results":response_data}, status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
         self.check_entity_permission(request)

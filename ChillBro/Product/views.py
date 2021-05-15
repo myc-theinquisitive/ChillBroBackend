@@ -289,10 +289,12 @@ class ProductView(ProductInterface):
 
         product_id_wise_images_dict = defaultdict(list)
         for product_image in product_images:
+            image_url = product_image.image.url
+            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
             product_id_wise_images_dict[product_image.product_id].append(
                 {
                     "id": product_image.id,
-                    "image": product_image.image.url,
+                    "image": image_url,
                     "order": product_image.order
                 }
             )
@@ -512,9 +514,9 @@ class ProductList(APIView):
         serializer = IdsListSerializer(data=request.data)
         if serializer.is_valid():
             response_data = self.product_view.get_by_ids(serializer.data["ids"])
-            return Response(response_data, 200)
+            return Response({"results":response_data}, 200)
         else:
-            return Response(serializer.errors, 400)
+            return Response({"errors":serializer.errors}, 400)
 
 
 class ProductDetail(APIView):
@@ -601,9 +603,9 @@ class ProductNetPrice(APIView):
             selling_price = serializer.data['selling_price']
             discount = serializer.data['discount']
             net_price_data = calculate_product_net_price(selling_price, discount)
-            return Response(net_price_data, status=status.HTTP_200_OK)
+            return Response({"results":net_price_data}, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"errors":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductSellerStatus(generics.ListAPIView):

@@ -19,11 +19,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'd3rgelo^8wck52w2^g&1vlei$a$&s23g0fa&z0=2ic-mshux%d'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -141,7 +136,103 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
-MEDIA_URL = 'http://127.0.0.1:8000/'
+
+IS_SERVER = False
+
+if(IS_SERVER):
+    DEBUG = False
+
+    FILE_UPLOAD_PERMISSIONS = 0o644
+    # STATIC_URL = 'https://chillbro.co.in/'
+    # STATIC_ROOT = 'chillbro_backend/'
+    MEDIA_URL = 'https://chillbro.co.in/chillbro_backend/'
+    MEDIA_ROOT = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
+
+    ALLOWED_HOSTS = ["chillbro.co.in"]
+
+    LOG_PATH = "/home/ffs2imp1oh0k/adminpanel_logs/"
+    LOGGING = {
+        'version': 1,
+        'filters': {
+            'require_debug_true': {
+                '()': 'django.utils.log.RequireDebugTrue',
+            }
+        },
+        'formatters': {
+            'standard': {
+                'format': '%(asctime)s [%(levelname)s]- %(message)s'}
+
+        },
+        'handlers': {
+            'django_error': {
+                'level': 'DEBUG',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': LOG_PATH + 'django.log',
+                'formatter': 'standard'
+            },
+            'info': {
+                'level': 'DEBUG',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': LOG_PATH + 'info.log',
+                'formatter': 'standard'
+            },
+            'console': {
+                'level': 'DEBUG',
+                'filters': ['require_debug_true'],
+                'class': 'logging.StreamHandler',
+            }
+        },
+        'loggers': {
+            'info': {
+                'handlers': ['info', "console"],
+                'level': 'DEBUG',
+                'propagate': True
+            },
+            'django': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+            'django.request': {
+                'handlers': ['django_error', 'console'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+            'django.db.backends': {
+                'level': 'DEBUG',
+                'handlers': ['console'],
+            }
+        }
+    }
+
+else:
+    DEBUG = True
+
+    MEDIA_URL = 'http://127.0.0.1:8000/'
+
+    ALLOWED_HOSTS = []
+
+    LOGGING = {
+        'version': 1,
+        'filters': {
+            'require_debug_true': {
+                '()': 'django.utils.log.RequireDebugTrue',
+            }
+        },
+        'handlers': {
+            'console': {
+                'level': 'DEBUG',
+                'filters': ['require_debug_true'],
+                'class': 'logging.StreamHandler',
+            }
+        },
+        'loggers': {
+            'django.db.backends': {
+                'level': 'DEBUG',
+                'handlers': ['console'],
+            }
+        }
+    }
 
 
 REST_FRAMEWORK = {
@@ -171,6 +262,8 @@ AUTH_USER_MODEL = 'UserApp.MyUser'
 DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
+IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
+
 
 EMAIL_FROM = 'myc.theinquisitive@gmail.com'
 EMAIL_BCC = 'team.theinquisitive@gmail.com' # Any mail for BCC can be given
@@ -184,28 +277,6 @@ EMAIL_HOST_USER = ' myc.theinquisitive@gmail.com'
 EMAIL_HOST_PASSWORD = 'MissionMyc'
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-
-LOGGING = {
-    'version': 1,
-    'filters': {
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        }
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-        }
-    },
-    'loggers': {
-        'django.db.backends': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-        }
-    }
-}
 
 TAGGIT_CASE_INSENSITIVE = True
 MYC_ID = "MYC"

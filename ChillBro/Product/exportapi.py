@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
 
@@ -40,9 +41,11 @@ def product_details_with_image(product_ids):
     products = ProductImage.objects.select_related('product').filter(product_id__in=product_ids, order=0)
     details_of_product = {}
     for each_product in products:
+        image_url = each_product.image.url
+        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
         details_of_product[each_product.product.id] = {
             'name': each_product.product.name,
-            'image_url': each_product.image.url
+            'image_url': image_url
         }
     return details_of_product
 

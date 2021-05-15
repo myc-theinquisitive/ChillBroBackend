@@ -8,6 +8,7 @@ from datetime import datetime
 from django.db.models import Q
 from .constants import CarouselItemStatus
 
+
 class CarouselList(generics.ListCreateAPIView):
     serializer_class = CarouselSerializer
     queryset = Carousel.objects.all()

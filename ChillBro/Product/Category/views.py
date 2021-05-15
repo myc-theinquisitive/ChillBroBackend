@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
@@ -73,10 +74,12 @@ def get_category_details(parent_id):
     group_images_by_category_id = defaultdict(list)
     for category_image in category_images:
         if category_image.image and hasattr(category_image.image, 'url'):
+            image_url = category_image.image.url
+            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
             group_images_by_category_id[category_image.category_id].append(
                 {
                     "id": category_image.id,
-                    "image": category_image.image.url,
+                    "image": image_url,
                     "order": category_image.order
                 }
             )
@@ -91,7 +94,7 @@ class GetCategoriesLevelWise(APIView):
 
     def get(self, request, format=None):
         response_data, group_images_by_category_id = get_category_details(None)
-        return Response(response_data, 200)
+        return Response({"results":response_data}, 200)
 
 
 class GetSpecificCategoriesLevelWise(APIView):

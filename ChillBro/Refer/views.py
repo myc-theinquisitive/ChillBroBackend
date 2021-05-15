@@ -11,6 +11,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient
 
 # Create your views here.
 
+
 class ReferBusinessClientList(generics.ListCreateAPIView):
     queryset = ReferBusinessClient.objects.all()
     serializer_class = ReferBusinessClientSerializer

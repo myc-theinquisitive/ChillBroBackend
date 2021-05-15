@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from rest_framework.generics import ListCreateAPIView
@@ -57,6 +58,8 @@ class IssueDetail(generics.RetrieveAPIView):
         response = super().get(request, args, kwargs)
         issue = self.get_object()
         images = IssueImage.objects.filter(issue=issue).values_list("image", flat=True)
+        for each_image in images:
+            each_image.replace(settings.IMAGE_REPLACED_STRING,"")
         response.data["images"] = images
         return response
 
