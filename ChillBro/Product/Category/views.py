@@ -74,12 +74,12 @@ def get_category_details(parent_id):
     group_images_by_category_id = defaultdict(list)
     for category_image in category_images:
         if category_image.image and hasattr(category_image.image, 'url'):
-            image_id = category_image.image.url
-            image_id = image_id.replace(settings.IMAGE_REPLACED_STRING,"")
+            image_url = category_image.image.url
+            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
             group_images_by_category_id[category_image.category_id].append(
                 {
                     "id": category_image.id,
-                    "image": image_id,
+                    "image": image_url,
                     "order": category_image.order
                 }
             )

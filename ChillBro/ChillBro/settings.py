@@ -143,6 +143,7 @@ USE_TZ = False
 STATIC_URL = '/static/'
 MEDIA_URL = 'http://127.0.0.1:8000/'
 
+is_server = False
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
