@@ -72,7 +72,7 @@ class Bookings(models.Model):
         default=EntityType.hotels.value)
     booking_status = models.CharField(
         max_length=30, choices=[(booking_status.value, booking_status.value) for booking_status in BookingStatus],
-        default=BookingStatus.pending.value)
+        default=BookingStatus.yet_to_approve.value)
     payment_status = models.CharField(
         max_length=30, choices=[(pay_status.value, pay_status.value) for pay_status in PaymentStatus],
         default=PaymentStatus.pending.value)

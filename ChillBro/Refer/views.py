@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient
 
+
 # Create your views here.
 
 class ReferBusinessClientList(generics.ListCreateAPIView):
@@ -15,11 +16,28 @@ class ReferBusinessClientList(generics.ListCreateAPIView):
     serializer_class = ReferBusinessClientSerializer
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
 
+
 class ReferBusinessClientDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = ReferBusinessClient.objects.all()
     serializer_class = ReferBusinessClientSerializer
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee,)
 
+
 class ShareApp(APIView):
-    def get(self,request):
-        return Response({"message":SHARE_APP_MESSAGE})
+    def get(self, request):
+        return Response({"message": SHARE_APP_MESSAGE})
+
+
+class SignUpRequestList(generics.ListCreateAPIView):
+    serializer_class = SignUpRequestSerialiser
+    queryset = SignUpRequest.objects.all()
+
+    def get(self,request,*args,**kwargs):
+        if "status" not in request.data:
+            return Response({"message":"detail not found","error":"status is required"})
+        self.queryset = SignUpRequest.objects.filter(status=request.data['status'])
+        return super().get(request,*args,**kwargs)
+
+class SignUpRequestDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = SignUpRequestApprovalSerialiser
+    queryset = SignUpRequest.objects.all()
