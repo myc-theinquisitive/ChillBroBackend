@@ -320,8 +320,9 @@ class EntityStatusAll(generics.GenericAPIView):
         entity_ids = BusinessClientEntity.objects.filter(business_client_id=request.user.id).values_list(
             'entity_id', flat=True)
         try:
-            employee = Employee.objects.get(user_id=request.user.id)
-            entity_ids = [employee.entity_id]
+            if len(entity_ids) == 0:
+                employee = Employee.objects.get(user_id=request.user.id)
+                entity_ids = [employee.entity_id]
         except:
             pass
         entities = MyEntity.objects.active().filter(id__in=entity_ids)
@@ -332,11 +333,12 @@ class EntityStatusAll(generics.GenericAPIView):
         entity_ids = BusinessClientEntity.objects.filter(business_client_id=request.user.id).values_list(
             'entity_id', flat=True)
         try:
-            employee = Employee.objects.get(user_id=request.user.id)
-            entity_ids = [employee.entity_id]
+            if len(entity_ids) == 0:
+                employee = Employee.objects.get(user_id=request.user.id)
+                entity_ids = [employee.entity_id]
         except:
             pass
-        statuses = MyEntity.objects.filter(id__in=entity_ids).values('id', 'status')
+        statuses = MyEntity.objects.filter(id__in=entity_ids).values('id', 'status', 'name')
         return Response(statuses, 200)
 
 
@@ -425,11 +427,12 @@ class BusinessClientEntitiesByType(generics.RetrieveAPIView):
 
 
 class EntityAccountDetail(generics.UpdateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
+    permission_classes = (
+    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
     serializer_class = EntityAccountSerializer
     queryset = EntityAccount.objects.all()
 
-    def put(self,request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         try:
             entity = MyEntity.objects.get(account=kwargs['pk'])
         except ObjectDoesNotExist:
@@ -441,16 +444,34 @@ class EntityAccountDetail(generics.UpdateAPIView):
 
 
 class EntityUPIDetail(generics.UpdateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
+    permission_classes = (
+    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
     serializer_class = EntityUPISerializer
     queryset = EntityUPI.objects.all()
 
-    def put(self,request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         try:
-            entity = MyEntity.objects.get(account=kwargs['pk'])
+            entity = MyEntity.objects.get(upi=kwargs['pk'])
         except ObjectDoesNotExist:
             return Response({"message": "Can't update Account Details",
                              "errors": "Invalid UPI Id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        self.check_object_permissions(request, entity)
+        return super().put(request, *args, **kwargs)
+
+
+class EntityBasicDetail(generics.UpdateAPIView):
+    permission_classes = (
+    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
+    serializer_class = EntitySerializer
+    queryset = MyEntity.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        try:
+            entity = MyEntity.objects.get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't update Basic Details",
+                             "errors": "Invalid Outlet Id"}, status=status.HTTP_400_BAD_REQUEST)
 
         self.check_object_permissions(request, entity)
         return super().put(request, *args, **kwargs)

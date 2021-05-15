@@ -610,20 +610,11 @@ class GetSpecificBookingDetails(APIView):
         return Response(serializer, 200)
 
 
-class BusinessClientBookingApproval(generics.RetrieveUpdateAPIView):
+class BusinessClientBookingApproval(generics.UpdateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBookingBusinessClient | IsBookingEmployee)
     serializer_class = BusinessClientBookingApproval
     queryset = Bookings.objects.all()
     lookup_url_kwarg = "booking_id"
-
-    def get(self, request, *args, **kwargs):
-        try:
-            booking = Bookings.objects.get(id=kwargs['booking_id'])
-        except ObjectDoesNotExist:
-            return Response({"message": "Can't get booking details", "error": "Invalid Booking id"}, 400)
-
-        self.check_object_permissions(request, booking)
-        return super().get(request, *args, **kwargs)
 
     def put(self, request, *args, **kwargs):
         try:

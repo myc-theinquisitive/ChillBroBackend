@@ -27,17 +27,21 @@ class ShareApp(APIView):
     def get(self, request):
         return Response({"message": SHARE_APP_MESSAGE})
 
+class SignUpRequestCreate(generics.CreateAPIView):
+    serializer_class = SignUpRequestSerialiser
+    queryset = SignUpRequest.objects.all()
 
-class SignUpRequestList(generics.ListCreateAPIView):
+class SignUpRequestList(generics.ListAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
     serializer_class = SignUpRequestSerialiser
     queryset = SignUpRequest.objects.all()
 
     def get(self,request,*args,**kwargs):
-        if "status" not in request.data:
-            return Response({"message":"detail not found","error":"status is required"})
-        self.queryset = SignUpRequest.objects.filter(status=request.data['status'])
+        self.queryset = SignUpRequest.objects.filter(status=kwargs['status'])
         return super().get(request,*args,**kwargs)
 
-class SignUpRequestDetail(generics.RetrieveUpdateDestroyAPIView):
+
+class SignUpRequestDetail(generics.UpdateAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
     serializer_class = SignUpRequestApprovalSerialiser
     queryset = SignUpRequest.objects.all()

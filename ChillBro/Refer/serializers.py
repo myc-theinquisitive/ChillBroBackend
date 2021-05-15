@@ -11,6 +11,7 @@ class SignUpRequestSerialiser(serializers.ModelSerializer):
     class Meta:
         model = SignUpRequest
         fields = "__all__"
+        readonly_fields = ('status')
 
 class SignUpRequestApprovalSerialiser(serializers.ModelSerializer):
     class Meta:

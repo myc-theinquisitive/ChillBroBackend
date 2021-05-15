@@ -2,10 +2,12 @@ import json
 import requests
 from Wallet.models import Wallet
 from django.core.serializers.json import DjangoJSONEncoder
-from UserApp.models import BusinessClient, Employee
 
 
 # API class from https://pypi.python.org/pypi/tmdbsimple
+from ChillBro.UserApp.exportapi import check_valid_business_client, check_valid_employee
+
+
 class API(object):
     headers = {
         'Content-Type': 'application/json',
@@ -195,17 +197,7 @@ def create_wallet(user):
     wallet.save()
 
 def check_business_client(user):
-    try:
-        business_client = BusinessClient.objects.get(user_id=user.id)
-    except:
-        return False
-    return True
+    return check_valid_business_client(user)
 
 def check_employee(user):
-    try:
-        employee = Employee.objects.get(user_id=user.id)
-        if not employee.is_active:
-            return False
-    except:
-        return False
-    return True
+    return check_valid_employee(user)

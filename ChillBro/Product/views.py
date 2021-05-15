@@ -703,6 +703,6 @@ class ProductVerificationDetail(APIView):
 
     def get(self, request, *args, **kwargs):
         product_verification = ProductVerification.objects.get(id=kwargs['product_id'])
-
+        product = ProductView().get_by_ids([product_verification.product])
         add_verification_details_to_product([product_verification.product])
-        return Response(product_verification, 200)
+        return Response(product, 200)
