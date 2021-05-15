@@ -5,8 +5,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 
 # API class from https://pypi.python.org/pypi/tmdbsimple
-from ChillBro.UserApp.exportapi import check_valid_business_client, check_valid_employee
-
+from UserApp.exportapi import check_valid_business_client, check_valid_employee
 
 class API(object):
     headers = {
