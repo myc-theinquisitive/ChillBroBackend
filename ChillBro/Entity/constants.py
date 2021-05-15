@@ -10,6 +10,7 @@ class EntityTypes(enum.Enum):
     HOTEL = "HOTEL"
     TRANSPORT = "TRANSPORT"
     RENTAL = "RENTAL"
+    RESORT = "RESORT"
 
 
 class Cities(enum.Enum):

@@ -11,6 +11,7 @@ urlpatterns = [
     path('<str:pk>/status/', EntityStatus.as_view(), name='entity_status'),
     path('business_client/count/', CountOfEntitiesAndProducts.as_view()),
     path('business_client/all-entities/', BusinessClientEntities.as_view(), name='business_client_outlets'),
+    path('business_client/entities/type-wise/', BusinessClientEntitiesByType.as_view(), name='business_client_outlets_type_wise'),
     path('<str:pk>/', EntityDetail.as_view(), name='entity_detail'),
 ]
 

@@ -36,5 +36,3 @@ urlpatterns = [
     path('helpcenter/',include('HelpCenter.urls')),
     path('', include('Product.urls')),
 ]
-
-

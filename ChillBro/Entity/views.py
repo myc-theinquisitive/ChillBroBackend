@@ -1,3 +1,20 @@
+from django.db.models import F, Count
+from django.shortcuts import render
+from rest_framework.permissions import IsAuthenticated
+from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, AddressSerializer, \
+    EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, EntityDetailsSerialiser
+from rest_framework import generics
+from .models import MyEntity, BusinessClientEntity, EntityUPI, EntityAccount
+from rest_framework.response import Response
+from rest_framework import status
+from django.http import HttpResponse
+from .wrappers import create_address
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
+    IsEmployee, IsGet, IsEmployeeEntity
+from django.db.models import Count
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.views import APIView
+from .constants import VerifiedStatus, EntityTypes
 import json
 from django.db.models import Count
 from django.core.exceptions import ObjectDoesNotExist
@@ -349,6 +366,29 @@ class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
         business_client_entities_count = business_client_entities.aggregate(count=Count('entity_id'))['count']
 
         total_products_in_entities = get_total_products_count_in_entities(business_client_entities)
+        return Response({'entities_count':business_client_entities_count,\
+                         'products_count': total_products_in_entities},200)
+                         
 
-        return Response({'entities_count': business_client_entities_count,
-                         'products_count': total_products_in_entities}, status=status.HTTP_200_OK)
+class BusinessClientEntitiesByType(generics.RetrieveAPIView):
+    serializer_class = EntitySerializer
+    queryset = BusinessClientEntity.objects.all()
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
+
+    def get(self, request, *args, **kwargs):
+        entity_ids = entity_ids_for_business_client(request.user.id)
+        hotel_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.HOTEL.value).values_list('id',
+                                                                                                         flat=True)
+        rental_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.RENTAL.value).values_list('id',
+                                                                                                           flat=True)
+        transport_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.TRANSPORT.value).values_list('id',
+                                                                                                             flat=True)
+        resort_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.RESORT.value).values_list('id',
+                                                                                                           flat=True)
+        data = {}
+        data['HOTEL'] = hotel_ids
+        data['RENTAL'] = rental_ids
+        data['TRANSPORT'] = transport_ids
+        data['RESORT'] = resort_ids
+        # serializer = self.serializer_class(data, many=True)
+        return Response(data, status=status.HTTP_200_OK)

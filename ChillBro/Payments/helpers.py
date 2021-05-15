@@ -20,6 +20,13 @@ def get_entity_type(entity_filter):
     if len(entity_filter) == 0:
         return entities
     return entity_filter
+    
+    
+def get_payment_type(payment_filter):
+    payment_types = [payment_type.value for payment_type in PayStatus]
+    if len(payment_filter) == 0:
+        return payment_types
+    return payment_filter
 
 
 def getStatus(status):
