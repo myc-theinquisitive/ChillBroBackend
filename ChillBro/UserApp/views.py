@@ -26,7 +26,7 @@ class BusinessClientAdd(APIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             request.data['is_verified'] = True
-            request.data['email']=request.data['email'].lower().strip()
+            request.data['email'] = request.data['email'].lower().strip()
             user_serializer = MyUserList.serializer_class(data=request.data)
             if user_serializer.is_valid():
                 user_instance = user_serializer.save()
@@ -76,7 +76,7 @@ class EmployeeAdd(APIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             request.data['is_verified'] = True
-            request.data['email']=request.data['email'].lower().strip()
+            request.data['email'] = request.data['email'].lower().strip()
             user_serializer = MyUserList.serializer_class(data=request.data)
             if user_serializer.is_valid():
                 user_instance = user_serializer.save()

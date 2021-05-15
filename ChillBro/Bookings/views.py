@@ -288,7 +288,7 @@ class CreateBooking(generics.ListCreateAPIView):
         entity_id = request.data['entity_id']
         if request.data['coupon'] is not None:
             coupon = get_discounted_value(
-                request.data['coupon'], request.user, product_ids, entity_id, total_money)
+                request.data['coupon'], request.user, product_ids, entity_id, request.data['entity_type'], total_money)
             if not coupon['is_valid']:
                 return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
             request.data['total_money'] = coupon['discounted_value']

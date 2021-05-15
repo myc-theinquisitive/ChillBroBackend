@@ -5,7 +5,7 @@ urlpatterns = [
     path('discount/', Discount.as_view()),
     path('use_coupon/', UseCoupon.as_view()),
     path('', CouponList.as_view()),
-    path('<int:pk>/', CouponDetail.as_view()),
-    re_path('^history/(?P<slug>[-\w]+)/$', CouponHistoryList.as_view()),
+    path('<str:code>/', CouponDetail.as_view()),
+    re_path('history/<str:slug>', CouponHistoryList.as_view()),
     path('available/', AvailableCoupons.as_view()),
 ]

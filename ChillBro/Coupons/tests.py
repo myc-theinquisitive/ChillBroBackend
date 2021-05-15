@@ -27,7 +27,7 @@ class DummyRequestUser:
 def create_coupon(code="CouponCode", discount_value=50, discount_is_percentage=True,
                   max_value_if_percentage=100, users=None, all_users=True,
                   entities=None, all_entities=True, products=None, all_products=True,
-                  max_uses=10, is_infinite=True, uses_per_user=10,
+                  product_types=None, all_product_types=True, max_uses=10, is_infinite=True, uses_per_user=10,
                   start_time="2021-01-01T00:00:00", end_time="2021-12-31T00:00:00",
                   is_active=True, minimum_order_value=100):
 
@@ -38,6 +38,7 @@ def create_coupon(code="CouponCode", discount_value=50, discount_is_percentage=T
     users = users if users else []
     entities = entities if entities else []
     products = products if products else []
+    product_types = product_types if product_types else []
 
     coupon_data = {
         "code": code,
@@ -61,6 +62,10 @@ def create_coupon(code="CouponCode", discount_value=50, discount_is_percentage=T
             "allowed_products": {
                 "products": products,
                 "all_products": all_products
+            },
+            "allowed_product_types": {
+                "product_types": product_types,
+                "all_product_types": all_product_types
             },
             "max_uses": {
                 "max_uses": max_uses,
@@ -147,20 +152,20 @@ def test_validate_coupon_for_user():
 
     # valid user test
     user = UserModel.objects.create(id="1", email="test1@gmail.com")
-    response = validate_coupon(retrieve_coupon_from_db("UserCoupon"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("UserCoupon"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
     # invalid user test
     user = UserModel.objects.create(id="2", email="test2@gmail.com")
-    response = validate_coupon(retrieve_coupon_from_db("UserCoupon"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("UserCoupon"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Invalid coupon for this User!"
 
     create_coupon(code="ALLUser", all_users=True)
 
     # all users allowed test
-    response = validate_coupon(retrieve_coupon_from_db("ALLUser"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("ALLUser"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
@@ -174,24 +179,24 @@ def test_validate_coupon_for_entity():
     user = UserModel.objects.create(id="1", email="test1@gmail.com")
 
     # valid entity test
-    response = validate_coupon(retrieve_coupon_from_db("EntityCoupon"), user, ["1"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("EntityCoupon"), user, ["1"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
     # invalid entity test
-    response = validate_coupon(retrieve_coupon_from_db("EntityCoupon"), user, ["2"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("EntityCoupon"), user, ["2"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Invalid coupon for this Entities!"
 
     # some valid entities and some invalid entities test
-    response = validate_coupon(retrieve_coupon_from_db("EntityCoupon"), user, ["1", "2"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("EntityCoupon"), user, ["1", "2"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Invalid coupon for this Entities!"
 
     create_coupon(code="ALLEntities", all_entities=True)
 
     # all entities allowed test
-    response = validate_coupon(retrieve_coupon_from_db("ALLEntities"), user, ["3"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("ALLEntities"), user, ["3"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
@@ -205,24 +210,56 @@ def test_validate_coupon_for_product():
     user = UserModel.objects.create(id="1", email="test1@gmail.com")
 
     # valid product test
-    response = validate_coupon(retrieve_coupon_from_db("Product"), user, ["Entity"], ["1"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("Product"), user, ["Entity"], ["1"], ["HOTEL"], 500)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
     # invalid product test
-    response = validate_coupon(retrieve_coupon_from_db("Product"), user, ["Entity"], ["2"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("Product"), user, ["Entity"], ["2"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Invalid coupon for this Products!"
 
     # some valid products and some invalid products test
-    response = validate_coupon(retrieve_coupon_from_db("Product"), user, ["Entity"], ["1", "2"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("Product"), user, ["Entity"], ["1", "2"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Invalid coupon for this Products!"
 
     create_coupon(code="ALLProducts", all_products=True)
 
     # all products allowed test
-    response = validate_coupon(retrieve_coupon_from_db("ALLProducts"), user, ["Entity"], ["3"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("ALLProducts"), user, ["Entity"], ["3"], ["HOTEL"], 500)
+    assert response["valid"] is True
+    assert response["message"] == "Valid Coupon!"
+
+
+@pytest.mark.django_db
+def test_validate_coupon_for_product_type():
+
+    product_types = "[\"HOTEL\"]"
+    UserModel = get_user_model()
+    create_coupon(code="ProductType", product_types=product_types, all_product_types=False)
+    user = UserModel.objects.create(id="1", email="test1@gmail.com")
+
+    # valid product type test
+    response = validate_coupon(retrieve_coupon_from_db("ProductType"), user, ["Entity"], ["1"], ["HOTEL"], 500)
+    assert response["valid"] is True
+    assert response["message"] == "Valid Coupon!"
+
+    # invalid product type test
+    response = validate_coupon(retrieve_coupon_from_db("ProductType"), user, ["Entity"], ["2"], ["RENTAL"], 500)
+    assert response["valid"] is False
+    assert response["message"] == "Invalid coupon for this Product Types!"
+
+    # some valid product types and some invalid product types test
+    response = validate_coupon(retrieve_coupon_from_db("ProductType"),
+                               user, ["Entity"], ["1", "2"], ["HOTEL", "RENTAL"], 500)
+    assert response["valid"] is False
+    assert response["message"] == "Invalid coupon for this Product Types!"
+
+    create_coupon(code="ALLProductTypes", all_product_types=True)
+
+    # all product types allowed test
+    response = validate_coupon(retrieve_coupon_from_db("ALLProductTypes"), user, ["Entity"], ["3"], ["HOTEL"], 500)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
@@ -237,7 +274,7 @@ def test_validate_coupon_max_uses():
     max_uses_coupon = create_coupon(code="MaxUses", max_uses=1, is_infinite=False)
     use_coupon(max_uses_coupon, user, "123", 300)
 
-    response = validate_coupon(retrieve_coupon_from_db("MaxUses"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("MaxUses"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Coupon uses exceeded!"
 
@@ -247,7 +284,7 @@ def test_validate_coupon_max_uses():
     use_coupon(infinite_uses_coupon, user, "234", 400)
     use_coupon(infinite_uses_coupon, user, "345", 500)
 
-    response = validate_coupon(retrieve_coupon_from_db("InfUses"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("InfUses"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
@@ -256,7 +293,7 @@ def test_validate_coupon_max_uses():
     use_coupon(max_user_uses_coupon, user, "123", 300)
     use_coupon(max_user_uses_coupon, user, "234", 400)
 
-    response = validate_coupon(retrieve_coupon_from_db("MaxUserUses"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("MaxUserUses"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Coupon uses exceeded for this User!"
 
@@ -271,28 +308,28 @@ def test_validate_validity():
     # test start date validation
     create_coupon(code="StartDate", start_time="2021-01-02T00:00:00")
 
-    response = validate_coupon(retrieve_coupon_from_db("StartDate"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("StartDate"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Coupon Not Active YET!"
 
     # test end date validation
     create_coupon(code="EndDate", end_time="2020-12-01T00:00:00")
 
-    response = validate_coupon(retrieve_coupon_from_db("EndDate"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("EndDate"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Coupon Expired!"
 
     # test is active validation
     create_coupon(code="IsActive", is_active=False)
 
-    response = validate_coupon(retrieve_coupon_from_db("IsActive"), user, ["Entity"], ["Product"], 500)
+    response = validate_coupon(retrieve_coupon_from_db("IsActive"), user, ["Entity"], ["Product"], ["HOTEL"], 500)
     assert response["valid"] is False
     assert response["message"] == "Coupon is not active"
 
     # test minimum order value validation
     create_coupon(code="MinVal", minimum_order_value=500)
 
-    response = validate_coupon(retrieve_coupon_from_db("MinVal"), user, ["Entity"], ["Product"], 300)
+    response = validate_coupon(retrieve_coupon_from_db("MinVal"), user, ["Entity"], ["Product"], ["HOTEL"], 300)
     assert response["valid"] is False
     assert response["message"] == "Minimum order value to avail the coupon is 500"
 
@@ -300,7 +337,7 @@ def test_validate_validity():
     create_coupon(code="Valid", start_time="2020-12-01T00:00:00", end_time="2021-02-01T00:00:00",
                   is_active=True, minimum_order_value=300)
 
-    response = validate_coupon(retrieve_coupon_from_db("Valid"), user, ["Entity"], ["Product"], 300)
+    response = validate_coupon(retrieve_coupon_from_db("Valid"), user, ["Entity"], ["Product"], ["HOTEL"], 300)
     assert response["valid"] is True
     assert response["message"] == "Valid Coupon!"
 
@@ -320,8 +357,10 @@ def test_available_coupons():
     create_coupon(code="NEWCOUPON5", users=["1"], all_users=False, entities=["4"], all_entities=False)
     # coupon not available for current product
     create_coupon(code="NEWCOUPON6", entities=["2"], all_entities=False, products=["4"], all_products=False)
+    # coupon available for current product type
+    create_coupon(code="NEWCOUPON7", all_product_types=False, product_types=["HOTEL"])
 
-    response = get_available_coupons("1", ["2"], ["3"], 300)
+    response = get_available_coupons("1", ["2"], ["3"], ["HOTEL"], 300)
 
     expected_response = {
         'NEWCOUPON': {
@@ -338,6 +377,11 @@ def test_available_coupons():
             'coupon_code': 'NEWCOUPON3',
             'available': False,
             'reason': 'Add Rs:200 more to avail the offer'
+        },
+        'NEWCOUPON7': {
+            'coupon_code': 'NEWCOUPON7',
+            'available': True,
+            'reason': ''
         }
     }
 

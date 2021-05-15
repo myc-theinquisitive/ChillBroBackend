@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .helpers import get_coupon_code_length
 from .models import Discount, AllowedUsersRule, AllowedEntitiesRule, AllowedProductsRule, ValidityRule, \
-    MaxUsesRule, Ruleset, Coupon, CouponHistory
+    MaxUsesRule, Ruleset, Coupon, CouponHistory, AllowedProductTypesRule
 
 
 class CouponCodeSerializer(serializers.Serializer):
@@ -10,10 +10,13 @@ class CouponCodeSerializer(serializers.Serializer):
 
 class AvailableCouponSerializer(serializers.Serializer):
     entity_ids = serializers.ListField(
-        child=serializers.CharField(max_length=16)
+        child=serializers.CharField(max_length=36)
     )
     product_ids = serializers.ListField(
-        child=serializers.CharField(max_length=16)
+        child=serializers.CharField(max_length=36)
+    )
+    product_types = serializers.ListField(
+        child=serializers.CharField(max_length=30)
     )
     order_value = serializers.IntegerField()
 
@@ -23,7 +26,7 @@ class GetDiscountSerializer(AvailableCouponSerializer):
 
 
 class UseCouponSerializer(GetDiscountSerializer):
-    order_id = serializers.CharField(max_length=16)
+    order_id = serializers.CharField(max_length=36)
 
 
 class DiscountSerializer(serializers.ModelSerializer):
@@ -56,6 +59,14 @@ class AllowedProductsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class AllowedProductTypesSerializer(serializers.ModelSerializer):
+    product_types = serializers.JSONField()
+
+    class Meta:
+        model = AllowedProductTypesRule
+        fields = '__all__'
+
+
 class ValidityRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = ValidityRule
@@ -72,6 +83,7 @@ class RuleSetSerializer(serializers.ModelSerializer):
     allowed_users = AllowedUsersSerializer()
     allowed_entities = AllowedEntitiesSerializer()
     allowed_products = AllowedProductsSerializer()
+    allowed_product_types = AllowedProductTypesSerializer()
     max_uses = MaxUsesSerializer()
     validity = ValidityRuleSerializer()
 
@@ -97,6 +109,12 @@ class RuleSetSerializer(serializers.ModelSerializer):
         allowed_products_serializer.is_valid(raise_exception=True)
         allowed_products_obj = allowed_products_serializer.save()
         validated_data["allowed_products"] = allowed_products_obj
+
+        allowed_product_types = validated_data.pop('allowed_product_types', None)
+        allowed_product_types_serializer = AllowedProductTypesSerializer(data=allowed_product_types)
+        allowed_product_types_serializer.is_valid(raise_exception=True)
+        allowed_product_types_obj = allowed_product_types_serializer.save()
+        validated_data["allowed_product_types"] = allowed_product_types_obj
 
         max_uses = validated_data.pop('max_uses', None)
         max_uses_serializer = MaxUsesSerializer(data=max_uses)
@@ -131,6 +149,13 @@ class RuleSetSerializer(serializers.ModelSerializer):
         allowed_products_obj = allowed_products_serializer.update(instance.allowed_products, allowed_products)
         validated_data["allowed_products"] = allowed_products_obj
 
+        allowed_product_types = validated_data.pop('allowed_product_types', None)
+        allowed_product_types_serializer = AllowedProductTypesSerializer(data=allowed_product_types)
+        allowed_product_types_serializer.is_valid(raise_exception=True)
+        allowed_product_types_obj = allowed_product_types_serializer.update(
+            instance.allowed_product_types, allowed_product_types)
+        validated_data["allowed_product_types"] = allowed_product_types_obj
+
         max_uses = validated_data.pop('max_uses', None)
         max_uses_serializer = MaxUsesSerializer(data=max_uses)
         max_uses_serializer.is_valid(raise_exception=True)
@@ -149,6 +174,7 @@ class RuleSetSerializer(serializers.ModelSerializer):
 class CouponSerializer(serializers.ModelSerializer):
     discount = DiscountSerializer()
     ruleset = RuleSetSerializer()
+    terms_and_conditions = serializers.JSONField()
 
     class Meta:
         model = Coupon
@@ -176,6 +202,10 @@ class CouponSerializer(serializers.ModelSerializer):
         allowed_products.pk = None
         allowed_products.save()
 
+        allowed_product_types = ruleset.allowed_product_types
+        allowed_product_types.pk = None
+        allowed_product_types.save()
+
         max_uses = ruleset.max_uses
         max_uses.pk = None
         max_uses.save()
@@ -188,6 +218,7 @@ class CouponSerializer(serializers.ModelSerializer):
         ruleset.allowed_users = allowed_users
         ruleset.allowed_entities = allowed_entities
         ruleset.allowed_products = allowed_products
+        ruleset.allowed_product_types = allowed_product_types
         ruleset.max_uses = max_uses
         ruleset.validity = validity
         ruleset.save()
@@ -239,7 +270,3 @@ class CouponHistorySerializer(serializers.ModelSerializer):
         model = CouponHistory
         fields = '__all__'
         read_only_fields = ('times_used', 'created', 'changed_by')
-
-
-class AvailableCouponsSerializer(serializers.Serializer):
-    pass
