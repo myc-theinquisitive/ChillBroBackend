@@ -19,11 +19,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'd3rgelo^8wck52w2^g&1vlei$a$&s23g0fa&z0=2ic-mshux%d'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -145,11 +140,15 @@ STATIC_URL = '/static/'
 IS_SERVER = False
 
 if(IS_SERVER):
+    DEBUG = False
+
     FILE_UPLOAD_PERMISSIONS = 0o644
     # STATIC_URL = 'https://chillbro.co.in/'
     # STATIC_ROOT = 'chillbro_backend/'
     MEDIA_URL = 'https://chillbro.co.in/chillbro_backend/'
     MEDIA_ROOT = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
+
+    ALLOWED_HOSTS = ["chillbro.co.in"]
 
     LOG_PATH = "/home/ffs2imp1oh0k/adminpanel_logs/"
     LOGGING = {
@@ -207,7 +206,11 @@ if(IS_SERVER):
     }
 
 else:
+    DEBUG = True
+
     MEDIA_URL = 'http://127.0.0.1:8000/'
+
+    ALLOWED_HOSTS = []
 
     LOGGING = {
         'version': 1,
