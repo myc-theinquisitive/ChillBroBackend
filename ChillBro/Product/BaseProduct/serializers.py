@@ -187,10 +187,9 @@ class ProductImageSerializer(serializers.ModelSerializer):
         ProductImage.objects.bulk_create(all_images)
 
 
-class ProductQuantitySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = ['quantity']
+class ProductQuantityUpdateSerializer(serializers.Serializer):
+    size = serializers.CharField(max_length=10, allow_null=True, allow_blank=True)
+    quantity = serializers.IntegerField()
 
 
 class ProductVerificationSerializer(serializers.ModelSerializer):

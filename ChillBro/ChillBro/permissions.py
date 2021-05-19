@@ -187,14 +187,14 @@ class IsSellerProduct(permissions.BasePermission):
         product_id = obj
 
         try:
-            entity_id = SellerProduct.objects.get(product_id=product_id)
+            entity = SellerProduct.objects.get(product_id=product_id)
         except ObjectDoesNotExist:
             return False
 
-        if IsBusinessClientEntity().has_object_permission(request, view, entity_id):
+        if IsBusinessClientEntity().has_object_permission(request, view, entity):
             return True
 
-        if IsEmployeeEntity().has_object_permission(request, view, entity_id):
+        if IsEmployeeEntity().has_object_permission(request, view, entity):
             return True
 
         return False
@@ -244,6 +244,7 @@ class IsBusinessClientEmployee(permissions.BasePermission):
         return True
 
 
+# TODO: what is this for
 class IsEmployeeBusinessClient(permissions.BasePermission):
     def has_object_permission(self, request, view, business_client_id):
         user = request.user

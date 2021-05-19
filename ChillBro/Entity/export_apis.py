@@ -1,3 +1,5 @@
+from django.core.exceptions import ObjectDoesNotExist
+
 from .views import entity_ids_for_user, get_entity_details
 from .models import MyEntity
 
@@ -9,7 +11,7 @@ def get_entity_ids_for_business_client(business_client_id):
 def is_entity_id_exist(entity_id):
     try:
         entity = MyEntity.objects.get(id = entity_id)
-    except:
+    except ObjectDoesNotExist:
         return False
     return True
 
