@@ -1,5 +1,6 @@
 from django.conf import settings
 import uuid
+from .constants import ActivationStatus
 
 
 def get_user_model():
@@ -8,6 +9,13 @@ def get_user_model():
 
 def get_media_root():
     return settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else ""
+
+
+def get_entity_status(statuses):
+    all_statuses = [each_entity.value for each_entity in ActivationStatus]
+    if len(statuses) == 0:
+        return all_statuses
+    return statuses
 
 
 def upload_image_for_entity(instance, filename, type):

@@ -803,7 +803,7 @@ class ProductSellerStatus(generics.ListAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         seller_ids = request.data["seller_ids"]
-        activation_statuses = request.data['statuses']
+        activation_statuses = get_status(request.data['statuses'])
         self.check_object_permissions(request, seller_ids)
 
         self.queryset = SellerProduct.objects.select_related('product') \

@@ -15,7 +15,7 @@ from rest_framework import status
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
     update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee, get_top_level_categories
 from datetime import datetime
-from .helpers import get_date_format
+from .helpers import get_date_format, get_entity_status
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsGet, IsEmployeeEntity
@@ -371,7 +371,7 @@ class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         entity_ids = entity_ids_for_user(request.user.id)
-        activation_statuses = request.data['statuses']
+        activation_statuses = get_entity_status(request.data['statuses'])
         entities = MyEntity.objects.filter(id__in=entity_ids, activation_status__in=activation_statuses)
         serializer = self.serializer_class(entities, many=True)
 
@@ -388,7 +388,8 @@ class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)
-        entities_count = len(entity_ids)
+        active_entity_ids = MyEntity.objects.active.filter(id__in=entity_ids)
+        entities_count = len(active_entity_ids)
         total_products_in_entities = get_total_products_count_in_entities(entity_ids)
         return Response(
             {
@@ -404,16 +405,16 @@ class BusinessClientEntitiesByType(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)
-        top_level_categories = get_top_level_categories()
         data = defaultdict(list)
+        for each_category in EntityTypes:
+            data[each_category.value] = []
+        entity_details = MyEntity.objects.active.filter(id__in=entity_ids)
         all_entities = []
-        for each_category in top_level_categories:
-            entity_details = MyEntity.objects.filter(id__in=entity_ids, type=each_category)
-            data[each_category]=[]
-            for each_entity in entity_details:
-                all_entities.append(each_entity.id)
-                data[each_category].append({each_entity.id:each_entity.name})
-                
+
+        for each_entity in entity_details:
+            all_entities.append(each_entity.id)
+            data[each_entity.type].append({each_entity.id: each_entity.name})
+
         data["ALL"] = all_entities
         return Response(data, status=status.HTTP_200_OK)
 
