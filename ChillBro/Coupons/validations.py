@@ -41,6 +41,17 @@ def validate_allowed_products_rule(coupon, product_ids):
     return True, ""
 
 
+def validate_allowed_product_types_rule(coupon, product_types):
+    allowed_product_types_rule = coupon.ruleset.allowed_product_types
+    if not allowed_product_types_rule.all_product_types:
+        allowed_product_types = allowed_product_types_rule.product_types
+        for product_type in product_types:
+            if not product_type in allowed_product_types:
+                return False, "Invalid coupon for this Product Types!"
+
+    return True, ""
+
+
 def validate_allowed_users_rule(coupon, user):
     allowed_users_rule = coupon.ruleset.allowed_users
     allowed_user_ids = allowed_users_rule.users
@@ -85,7 +96,7 @@ def validate_validity_rule(coupon, order_value):
     return True, ""
 
 
-def validate_coupon(coupon, user, entity_ids, product_ids, order_value):
+def validate_coupon(coupon, user, entity_ids, product_ids, product_types, order_value):
     if not coupon:
         return assemble_invalid_message(message="No coupon provided!")
 
@@ -94,6 +105,11 @@ def validate_coupon(coupon, user, entity_ids, product_ids, order_value):
 
     valid_allowed_users_rule, message = validate_allowed_users_rule(coupon=coupon, user=user)
     if not valid_allowed_users_rule:
+        return assemble_invalid_message(message=message)
+
+    valid_allowed_product_types_rule, message = validate_allowed_product_types_rule(
+        coupon=coupon, product_types=product_types)
+    if not valid_allowed_product_types_rule:
         return assemble_invalid_message(message=message)
 
     valid_allowed_entities_rule, message = validate_allowed_entities_rule(

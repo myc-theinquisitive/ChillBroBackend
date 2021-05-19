@@ -137,10 +137,10 @@ USE_TZ = False
 
 STATIC_URL = '/static/'
 
-IS_SERVER = False
+IS_SERVER = True
 
 if(IS_SERVER):
-    DEBUG = False
+    DEBUG = True
 
     FILE_UPLOAD_PERMISSIONS = 0o644
     # STATIC_URL = 'https://chillbro.co.in/'

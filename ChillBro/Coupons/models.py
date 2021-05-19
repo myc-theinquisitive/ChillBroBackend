@@ -11,6 +11,8 @@ class Ruleset(models.Model):
                                          verbose_name="Allowed entities rule")
     allowed_products = models.ForeignKey('AllowedProductsRule', on_delete=models.CASCADE,
                                          verbose_name="Allowed products rule")
+    allowed_product_types = models.ForeignKey('AllowedProductTypesRule', on_delete=models.CASCADE,
+                                              verbose_name="Allowed product types rule")
     max_uses = models.ForeignKey('MaxUsesRule', on_delete=models.CASCADE, verbose_name="Max uses rule")
     validity = models.ForeignKey('ValidityRule', on_delete=models.CASCADE, verbose_name="Validity rule")
 
@@ -64,6 +66,20 @@ class AllowedProductsRule(models.Model):
         verbose_name_plural = "Allowed Product Rules"
 
 
+class AllowedProductTypesRule(models.Model):
+    product_types = models.TextField(verbose_name="Product Types", blank=True, null=True)
+    all_product_types = models.BooleanField(default=True, verbose_name="All Product Types?")
+
+    def __str__(self):
+        if self.all_product_types:
+            return "AllowedProductTypesRule Nº{0} - ALL allowed".format(self.id)
+        return "AllowedProductTypesRule Nº{0} - Specific allowed".format(self.id)
+
+    class Meta:
+        verbose_name = "Allowed Product Type Rule"
+        verbose_name_plural = "Allowed Product Type Rules"
+
+
 class MaxUsesRule(models.Model):
     max_uses = models.BigIntegerField(default=0, verbose_name="Maximum uses")
     is_infinite = models.BooleanField(default=False, verbose_name="Infinite uses?")
@@ -101,7 +117,7 @@ class CouponUserUsages(models.Model):
 
 class CouponUsage(models.Model):
     coupon_user = models.ForeignKey('CouponUser', on_delete=models.CASCADE, verbose_name="Coupon User")
-    order_id = models.TextField(max_length=16, verbose_name="Order id")
+    order_id = models.TextField(max_length=36, verbose_name="Order id")
     discount_obtained = models.IntegerField(default=0, verbose_name="Discount Obtained")
     used_on = models.DateTimeField(default=timezone.now, verbose_name="Used on")
 
@@ -143,7 +159,6 @@ class Discount(models.Model):
 
 
 class Coupon(models.Model):
-
     code = models.CharField(max_length=get_coupon_code_length(), default=get_random_code,
                             verbose_name="Coupon Code", unique=True)
     title = models.CharField(max_length=100, null=True)
@@ -166,7 +181,6 @@ class Coupon(models.Model):
 
 class CouponHistory(models.Model):
     user_model = get_user_model()
-
     code = models.CharField(max_length=get_coupon_code_length(), default=get_random_code,
                             verbose_name="Coupon Code")
     title = models.CharField(max_length=100, null=True)
@@ -181,4 +195,3 @@ class CouponHistory(models.Model):
 
     def __str__(self):
         return "Code-{0}, ChangedBy-{1}".format(self.code, self.changed_by)
-

@@ -8,6 +8,7 @@ from .models import ReviewsRatings, FeedbackAndSuggestions
 from .helpers import *
 from .wrapper import *
 from ChillBro.permissions import IsOwner
+from django.conf import settings
 
 
 class ReviewRatingList(generics.ListCreateAPIView):
@@ -24,7 +25,10 @@ class MYCReviewRatingList(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        data = {'related_id': kwargs['entity_id'], 'comment':"", 'rating':request.data['rating'], 'created_by': request.user}
+        if kwargs['entity_id'] == "MYC":
+            data = {'related_id': settings.MYC_ID, 'comment':request.data['comment'], 'rating':request.data['rating'], 'created_by': request.user}
+        else:
+            data = {'related_id': kwargs['entity_id'], 'comment':request.data['comment'], 'rating':request.data['rating'], 'created_by': request.user}
         serializer = ReviewsRatingsSerializer()
         serializer.create(data)
         return Response({"message":"suceess"},200)

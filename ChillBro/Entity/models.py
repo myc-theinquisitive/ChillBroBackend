@@ -28,10 +28,10 @@ class MyEntity(models.Model):
     gst_in = models.CharField(max_length=15, validators=[MinLengthValidator(15), validate_gst])
     aadhar_no = models.CharField(max_length=14, validators=[MinLengthValidator(14), validate_aadhar])
 
-    pan_image = models.ImageField(upload_to=upload_pan_image_for_entity)
-    registration_image = models.ImageField(upload_to=upload_registration_image_for_entity)
-    gst_image = models.ImageField(upload_to=upload_gst_image_for_entity)
-    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_entity)
+    pan_image = models.ImageField(upload_to=upload_pan_image_for_entity,max_length=500)
+    registration_image = models.ImageField(upload_to=upload_registration_image_for_entity,max_length=500)
+    gst_image = models.ImageField(upload_to=upload_gst_image_for_entity,max_length=500)
+    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_entity,max_length=500)
 
     account = models.OneToOneField('EntityAccount', on_delete=models.CASCADE)
     upi = models.OneToOneField('EntityUPI', on_delete=models.CASCADE)

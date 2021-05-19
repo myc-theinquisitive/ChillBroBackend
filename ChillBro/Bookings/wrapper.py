@@ -4,12 +4,9 @@ from Payments.exportapi import transaction_details_by_booking_id, new_booking_tr
 from Coupons.exportapi import coupon_value
 
 
-def get_discounted_value(coupon_id, user, entity_ids, product_ids, total_money):
-    return coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
-
-
-def get_coupon_value(coupon_id, user, entity_ids, product_ids, total_money):
-    return coupon_value(coupon_id, user, entity_ids, product_ids, total_money)
+def get_discounted_value(coupon_id, user, entity_ids, product_ids, product_type, total_money):
+    # Product types are same as entity types
+    return coupon_value(coupon_id, user, entity_ids, product_ids, [product_type], total_money)
 
 
 def business_client_review_on_customer(review, rating, booking_id, created_by):
