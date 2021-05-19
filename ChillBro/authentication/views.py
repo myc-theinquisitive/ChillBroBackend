@@ -175,7 +175,7 @@ class Login(APIView):
                             user_type = "EMPLOYEE"
 
                         encoded = jwt.encode(
-                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
+                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
 
                         response = Response(status=status.HTTP_200_OK)
                         response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')

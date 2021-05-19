@@ -1,13 +1,11 @@
 from collections import defaultdict
-
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Count
-
 from .BaseProduct.models import Product, ProductImage
 from .views import calculate_product_net_price
 from .Seller.models import SellerProduct
-from django.db.models import F, Count
+from django.db.models import Count
+from .BaseProduct.constants import ActivationStatus
 
 
 def get_product_id_wise_details(product_ids):
@@ -51,7 +49,9 @@ def product_details_with_image(product_ids):
 
 
 def total_products_count_in_entities(entity_ids):
-    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids).aggregate(count=Count('product'))['count']
+    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids,
+                                                  product__activation_status=ActivationStatus.ACTIVE.value)\
+                        .aggregate(count=Count('product'))['count']
     return products_count
 
 

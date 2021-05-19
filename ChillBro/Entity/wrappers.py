@@ -1,4 +1,4 @@
-from Address.exportapi import create_address, get_address_details, update_address
+from Address.exportapi import create_address, get_address_details, update_address, filter_by_city
 from UserApp.exportapi import get_employee_details_for_entities
 from collections import defaultdict
 
@@ -26,3 +26,7 @@ def get_entity_id_wise_employees(entity_ids):
     for employee in employees:
         entity_id_wise_employees[employee["entity_id"]].append(employee)
     return entity_id_wise_employees
+
+
+def filter_address_ids_by_city(address_ids, city):
+    return filter_by_city(address_ids, city)

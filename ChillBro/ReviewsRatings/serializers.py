@@ -8,15 +8,6 @@ class ReviewsRatingsSerializer(serializers.ModelSerializer):
         model = ReviewsRatings
         fields = '__all__'
 
-    def create(self, validated_data):
-        object = ReviewsRatings(
-            related_id=validated_data['related_id'],
-            comment=validated_data['comment'],
-            rating=validated_data['rating'],
-            created_by=validated_data['created_by']
-        )
-        return object.save()
-
 
 class CustomerReviewSerializer(serializers.Serializer):
     rating = serializers.IntegerField(required=True)
@@ -31,15 +22,15 @@ class CustomDatesSerializer(serializers.Serializer):
 class EntityTotalReviewsSerializer(serializers.Serializer):
     date_filter = serializers.CharField(required=True)
     entity_filters = serializers.ListField(
-        child = serializers.CharField()
+        child=serializers.CharField()
     )
     comment_required = serializers.BooleanField(required=True)
     rating_filters = serializers.ListField(
-        child = serializers.CharField()
+        child=serializers.CharField()
     )
     custom_dates = CustomDatesSerializer(required=False)
     entity_ids = serializers.ListField(
-        child = serializers.CharField()
+        child=serializers.CharField()
     )
 
 
@@ -58,5 +49,8 @@ class GetFeedbackAndSuggestionsSerializer(serializers.Serializer):
 
 class EntityReviewStatisticsSerializer(serializers.Serializer):
     entity_ids = serializers.ListField(
+        child=serializers.CharField()
+    )
+    entity_filters = serializers.ListField(
         child=serializers.CharField()
     )

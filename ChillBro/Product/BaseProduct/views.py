@@ -1,7 +1,6 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, status
 from rest_framework.views import APIView, Response
-
 from .models import ProductImage, Product
 from .serializers import ProductImageSerializer, ProductQuantitySerializer
 from ChillBro.permissions import IsBusinessClient, IsSellerProduct, IsSuperAdminOrMYCEmployee, IsOwnerById, \
@@ -30,6 +29,7 @@ class BaseProductImageDelete(generics.DestroyAPIView):
         super().delete(request, *args, **kwargs)
 
 
+# TODO: should be updated to handle product with sizes
 class ProductQuantity(APIView):
     serializer_class = ProductQuantitySerializer
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |

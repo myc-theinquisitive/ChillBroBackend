@@ -2,13 +2,16 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from datetime import datetime
-from .helpers import image_upload_to_review, FeedbackCategory
+
+from .constants import REVIEW_SCALE, FeedbackCategory
+from .helpers import image_upload_to_review
 
 
 class ReviewsRatings(models.Model):
     related_id = models.CharField(max_length=36, verbose_name="Related Id")
+    secondary_related_id = models.CharField(max_length=36, null=True, blank=True)
     comment = models.TextField(verbose_name="Comment")
-    rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(REVIEW_SCALE)])
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="Reviewed By")
     reviewed_time = models.DateTimeField(default=datetime.now)
@@ -17,7 +20,7 @@ class ReviewsRatings(models.Model):
         return "Related Id - {0} Rating - {1}".format(self.related_id, self.rating)
 
     class Meta:
-        unique_together = ('related_id', 'created_by',)
+        unique_together = ('related_id', 'secondary_related_id', 'created_by',)
 
 
 class ReviewImage(models.Model):
@@ -31,9 +34,8 @@ class ReviewImage(models.Model):
 class FeedbackAndSuggestions(models.Model):
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="Reviewed By")
-    opinion = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
-    category = models.CharField(max_length=30, choices = \
-                        [(category_type.value, category_type.value) for category_type in FeedbackCategory], \
-                        default=FeedbackCategory.suggestion.value)
+    opinion = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(REVIEW_SCALE)])
+    category = models.CharField(max_length=30, choices=
+        [(category_type.value, category_type.value) for category_type in FeedbackCategory],
+        default=FeedbackCategory.suggestion.value)
     comment = models.CharField(max_length=1000)
-
