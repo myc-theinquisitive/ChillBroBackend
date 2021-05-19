@@ -9,7 +9,7 @@ from rest_framework import status
 from .wrapper import get_entity_ids_for_business_client
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsEmployeeEntityById, IsBusinessClientEmployee, IsOwnerById, IsEmployeeBusinessClient
-from .wrapper import logout
+
 
 class MyUserList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
@@ -178,6 +178,7 @@ class EmployeeActive(generics.RetrieveUpdateAPIView):
     def put(self, request, *args, **kwargs):
         self.check_object_permissions(request, kwargs['pk'])
         return super().put(request, *args, **kwargs)
+
 
 class EmployeeImageCreate(generics.CreateAPIView):
     permission_classes = (IsAuthenticated, IsOwnerById)

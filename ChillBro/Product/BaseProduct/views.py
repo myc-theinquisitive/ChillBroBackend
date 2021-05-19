@@ -3,12 +3,11 @@ from rest_framework import generics, status
 from rest_framework.views import APIView, Response
 from .models import ProductImage, Product, ProductSize
 from .serializers import ProductImageSerializer, ProductQuantityUpdateSerializer
-from ChillBro.permissions import IsBusinessClient, IsSellerProduct, IsSuperAdminOrMYCEmployee, IsOwnerById, \
-    IsEmployeeBusinessClient
+from ChillBro.permissions import IsBusinessClient, IsSellerProduct, IsSuperAdminOrMYCEmployee, IsOwnerById
 
 
 class BaseProductImageCreate(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated, IsSellerProduct)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
 
@@ -19,7 +18,7 @@ class BaseProductImageCreate(generics.CreateAPIView):
 
 
 class BaseProductImageDelete(generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSellerProduct)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsSellerProduct)
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
 

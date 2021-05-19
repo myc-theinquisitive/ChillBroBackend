@@ -244,7 +244,6 @@ class IsBusinessClientEmployee(permissions.BasePermission):
         return True
 
 
-# TODO: what is this for
 class IsEmployeeBusinessClient(permissions.BasePermission):
     def has_object_permission(self, request, view, business_client_id):
         user = request.user
@@ -253,6 +252,6 @@ class IsEmployeeBusinessClient(permissions.BasePermission):
             business_client_entities = BusinessClientEntity.objects.get(
                 business_client_id=business_client_id).values_list('entity_id')
             employee = Employee.objects.get(entity_id__in=business_client_entities)
-        except:
+        except ObjectDoesNotExist:
             return False
         return True

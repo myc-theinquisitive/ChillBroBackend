@@ -18,7 +18,7 @@ from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
 from .BaseProduct.models import Product, ProductVerification, ComboProductItems, ProductSize
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, \
-    IsEmployeeBusinessClient, IsBusinessClientEntities, IsEmployeeEntities
+    IsBusinessClientEntities, IsEmployeeEntities
 from .BaseProduct.constants import ActivationStatus
 from datetime import date, timedelta, datetime
 from .helpers import get_date_format
