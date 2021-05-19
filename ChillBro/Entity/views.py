@@ -1,3 +1,4 @@
+from UserApp.models import Employee
 from .constants import EntityTypes
 import json
 from django.core.exceptions import ObjectDoesNotExist
@@ -12,7 +13,7 @@ from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUP
 from rest_framework.response import Response
 from rest_framework import status
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
-    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee
+    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee, get_top_level_categories
 from datetime import datetime
 from .helpers import get_date_format
 from collections import defaultdict
@@ -403,16 +404,17 @@ class BusinessClientEntitiesByType(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)
-        hotel_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.HOTEL.value).values_list('id',
-                                                                                                         flat=True)
-        rental_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.RENTAL.value).values_list('id',
-                                                                                                           flat=True)
-        transport_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.TRANSPORT.value).values_list('id',
-                                                                                                                 flat=True)
-        resort_ids = MyEntity.objects.filter(id__in=entity_ids, type=EntityTypes.RESORT.value).values_list('id',
-                                                                                                           flat=True)
-        data = {'HOTEL': hotel_ids, 'RENTAL': rental_ids, 'TRANSPORT': transport_ids, 'RESORT': resort_ids}
-        # serializer = self.serializer_class(data, many=True)
+        top_level_categories = get_top_level_categories()
+        data = defaultdict(list)
+        all_entities = []
+        for each_category in top_level_categories:
+            entity_details = MyEntity.objects.filter(id__in=entity_ids, type=each_category)
+            data[each_category]=[]
+            for each_entity in entity_details:
+                all_entities.append(each_entity.id)
+                data[each_category].append({each_entity.id:each_entity.name})
+                
+        data["ALL"] = all_entities
         return Response(data, status=status.HTTP_200_OK)
 
 

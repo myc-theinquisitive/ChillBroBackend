@@ -1,6 +1,8 @@
 from collections import defaultdict
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count
+from .Category.models import Category
 from .BaseProduct.models import Product, ProductImage
 from .views import calculate_product_net_price
 from .Seller.models import SellerProduct
@@ -61,3 +63,9 @@ def check_product_is_valid(product_id):
         return True
     except ObjectDoesNotExist:
         return False
+        
+        
+def top_level_categories():
+    return Category.objects.filter(parent_category=None).values_list('name',flat=True)
+    
+    

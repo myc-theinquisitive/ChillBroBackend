@@ -532,6 +532,7 @@ class GetBookingsStatisticsDetails(generics.ListAPIView):
         for booking in response.data["results"]:
             booking_ids.append(booking["id"])
         response.data["results"] = get_complete_booking_details_by_ids(booking_ids)
+        print(response)
         return response
 
 

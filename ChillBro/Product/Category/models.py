@@ -13,7 +13,7 @@ class Category(models.Model):
     description = models.TextField()
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE,
                                         null=True, verbose_name="Parent Category")
-    icon_url = models.ImageField(upload_to=update_image_to_category_icon)
+    icon_url = models.ImageField(upload_to=update_image_to_category_icon,max_length = 300)
 
     def __str__(self):
         return "Category - Nº{0}".format(self.name)

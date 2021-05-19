@@ -11,14 +11,14 @@ urlpatterns = [
 
     # urls for category
     path('category/', CategoryList.as_view()),
-    path('category/<int:pk>/', CategoryDetail.as_view()),
     path('category/image/', CategoryImageCreate.as_view()),
-    path('category/image/<int:pk>/', CategoryImageDelete.as_view()),
+    path('category/image/<str:pk>/', CategoryImageDelete.as_view()),
     path('category/level_wise/', GetCategoriesLevelWise.as_view()),
     re_path('^category/level_wise/(?P<slug>[-\w]+)/$', GetSpecificCategoriesLevelWise.as_view()),
-    path('category/top_level/', CategoryTopLevelList.as_view()),
-    path('category/prices/', CreateCategoryPrices.as_view()),
-    path('category/get_prices/<int:category>/', GetCategoryPrices.as_view()),
+    path('category/top_level/',CategoryTopLevelList.as_view()),
+    path('category/prices/',CreateCategoryPrices.as_view()),
+    path('category/get_prices/<int:category>/',GetCategoryPrices.as_view()),
+    path('category/<str:pk>/', CategoryDetail.as_view()),
 
     # urls for all products
     path('product/', ProductList.as_view()),

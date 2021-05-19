@@ -188,16 +188,16 @@ class Login(APIView):
                         }
                         return response
                     else:
-                        content = {'detail': _('User account not active.')}
+                        content = {'detail': _('User account not active.'),"user":""}
                         return Response(content,
                                         status=status.HTTP_401_UNAUTHORIZED)
                 else:
                     content = {'detail':
-                                   _('User account not verified.')}
+                                   _('User account not verified.'),"user":""}
                     return Response(content, status=status.HTTP_401_UNAUTHORIZED)
             else:
                 content = {'detail':
-                               _('Unable to login with provided credentials.')}
+                               _('Unable to login with provided credentials.'),"user":""}
                 return Response(content, status=status.HTTP_401_UNAUTHORIZED)
 
         else:

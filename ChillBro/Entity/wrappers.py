@@ -26,6 +26,11 @@ def get_entity_id_wise_employees(entity_ids):
     for employee in employees:
         entity_id_wise_employees[employee["entity_id"]].append(employee)
     return entity_id_wise_employees
+    
+    
+def get_top_level_categories():
+    from Product.exportapi import top_level_categories
+    return top_level_categories()
 
 
 def filter_address_ids_by_city(address_ids, city):
