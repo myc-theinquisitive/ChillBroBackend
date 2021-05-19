@@ -1,4 +1,3 @@
-from UserApp.models import Employee
 from .constants import EntityTypes
 import json
 from django.core.exceptions import ObjectDoesNotExist
@@ -13,7 +12,7 @@ from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUP
 from rest_framework.response import Response
 from rest_framework import status
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
-    update_address_for_address_id, get_entity_id_wise_employees
+    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee
 from datetime import datetime
 from .helpers import get_date_format
 from collections import defaultdict
@@ -25,11 +24,7 @@ def entity_ids_for_user(user_id):
     entity_ids = BusinessClientEntity.objects.filter(
         business_client_id=user_id).values_list('entity_id', flat=True)
     if len(entity_ids) == 0:
-        try:
-            employee = Employee.objects.get(user_id=user_id)
-            entity_ids = [employee.entity_id]
-        except ObjectDoesNotExist:
-            pass
+        entity_ids = get_entity_ids_for_employee(user_id)
     return entity_ids
 
 
