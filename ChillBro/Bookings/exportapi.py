@@ -17,7 +17,7 @@ def get_completed_booking_details_for_entity_ids(entity_filter, entity_id):
     for each_booking in bookings:
         booking = {'booking_id': each_booking.booking_id, 'check_out': each_booking.check_out,
                    'total_money': each_booking.booking.total_money}
-        all_bookings[str(each_booking.booking_id)]=booking
+        all_bookings[str(each_booking.booking_id)] = booking
     return all_bookings
 
 

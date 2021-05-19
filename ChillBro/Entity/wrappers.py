@@ -1,5 +1,5 @@
-from Address.exportapi import create_address, get_address_details, update_address
-from UserApp.exportapi import get_employee_details_for_entities
+from Address.exportapi import create_address, get_address_details, update_address, filter_by_city
+from UserApp.exportapi import get_employee_details_for_entities, entity_ids_for_employee
 from collections import defaultdict
 
 
@@ -31,3 +31,11 @@ def get_entity_id_wise_employees(entity_ids):
 def get_top_level_categories():
     from Product.exportapi import top_level_categories
     return top_level_categories()
+
+
+def filter_address_ids_by_city(address_ids, city):
+    return filter_by_city(address_ids, city)
+
+
+def get_entity_ids_for_employee(user_id):
+    return entity_ids_for_employee(user_id)

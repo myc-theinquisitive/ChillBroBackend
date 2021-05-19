@@ -1,3 +1,4 @@
+from django.db.models import Subquery, OuterRef, PositiveIntegerField
 from .BaseProduct.serializers import ProductVerificationSerializer, ProductVerificationUpdateInputSerializer
 from .Category.views import *
 from .BaseProduct.views import *
@@ -5,20 +6,28 @@ from .Hotel.views import *
 from .Rental.views import RentalView
 from .Seller.views import *
 from .product_interface import ProductInterface
-from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer, NetPriceSerializer
+from .serializers import ProductSerializer, IdsListSerializer, SellerProductSerializer, NetPriceSerializer, \
+    GetProductsBySearchFilters, GetBusinessClientProductsByStatusSerializer
 from .Hotel.views import HotelView
 from collections import defaultdict
 from .taggable_wrapper import key_value_content_type_model, key_value_tag_model
-from .wrapper import is_entity_id_valid, get_booked_count_of_product_id, get_seller_id_wise_seller_details
+from .wrapper import is_entity_id_valid, get_booked_count_of_product_id, get_seller_id_wise_seller_details, \
+    filter_seller_ids_by_city, average_rating_query_for_product, get_product_id_wise_average_rating
 from .models import SellerProduct
 from rest_framework import status
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
-from .BaseProduct.models import Product, ProductVerification
+from .BaseProduct.models import Product, ProductVerification, ComboProductItems, ProductSize
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, \
-    IsEmployeeBusinessClient
+    IsBusinessClientEntities, IsEmployeeEntities
 from .BaseProduct.constants import ActivationStatus
 from datetime import date, timedelta, datetime
 from .helpers import get_date_format
+from decimal import Decimal
+
+
+def get_invalid_product_ids(product_ids):
+    existing_product_ids = Product.objects.filter(id__in=product_ids).values_list("id", flat=True)
+    return set(product_ids) - set(existing_product_ids)
 
 
 class ProductView(ProductInterface):
@@ -93,6 +102,24 @@ class ProductView(ProductInterface):
             is_valid = False
             errors.update(self.product_serializer.errors)
 
+        # validate combo product items
+        if "is_combo" in product_data and product_data["is_combo"]:
+            if "combo_items" not in product_data or len(product_data["combo_items"]) < 2:
+                is_valid = False
+                errors["combo"].append("Combo Product must have atleast two products")
+            else:
+                product_ids = product_data["combo_items"]
+                invalid_product_ids = get_invalid_product_ids(product_ids)
+                if len(invalid_product_ids) != 0:
+                    is_valid = False
+                    errors["combo"].append("Some of the selected products are not valid")
+
+        # validate product sizes
+        if "has_sizes" in product_data and product_data["has_sizes"]:
+            if "sizes" not in product_data or len(product_data["sizes"]) < 2:
+                is_valid = False
+                errors["sizes"].append("Must have atleast two product sizes")
+
         # Entity details validation
         if "entity_id" not in product_data:
             is_valid = False
@@ -132,6 +159,10 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
+            'is_combo': boolean,
+            'combo_items': ['product_id']
+            'has_sizes': boolean,
+            'sizes': ['size'],
             'tags': ['hotel', 'stay'],
             'images': [],
             'features': {
@@ -205,6 +236,17 @@ class ProductView(ProductInterface):
             is_valid = False
             errors.update(self.product_serializer.errors)
 
+        # validate combo product items
+        if "is_combo" in product_data and product_data["is_combo"]:
+            if "add" in product_data["combo_items"]:
+                product_ids = product_data["combo_items"]["add"]
+                invalid_product_ids = get_invalid_product_ids(product_ids)
+                if len(invalid_product_ids) != 0:
+                    is_valid = False
+                    errors["combo"].append("Some of the selected products are not valid")
+            # No validations required for delete
+        # No validation product sizes
+
         # Validating product specific data
         if not self.product_specific_view:
             is_valid = False
@@ -229,6 +271,19 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
+            'is_combo': boolean,
+            'combo_items': {
+                'add': ['product_id'],
+                'delete': ['product_id']
+            }
+            'has_sizes': boolean,
+            'sizes': {
+                'add': [
+                    'size': 'XS',
+                    'quantity': 10,
+                ],
+                'delete': ['XS', 'S']
+            },
             'tags': ['hotel', 'stay', 'Single Room'],
             'features': {
                 'add': {
@@ -280,6 +335,9 @@ class ProductView(ProductInterface):
     def update_product_response(response: Dict) -> Dict:
         response.pop("created_at", None)
         response.pop("updated_at", None)
+        response.pop("active_from", None)
+        response.pop("activation_status", None)
+        response.pop("slug", None)
 
         return response
 
@@ -335,8 +393,36 @@ class ProductView(ProductInterface):
             )
         return product_id_wise_sellers_dict
 
+    @staticmethod
+    def get_product_id_wise_sizes(product_ids):
+        product_sizes = ProductSize.objects.filter(product_id__in=product_ids)
+
+        product_id_wise_sizes_dict = defaultdict(list)
+        for product_size in product_sizes:
+            product_id_wise_sizes_dict[product_size.product_id].append(product_size.size)
+        return product_id_wise_sizes_dict
+
+    def get_product_id_wise_combo_product_details(self, product_ids):
+        combo_product_items = ComboProductItems.objects.filter(product_id__in=product_ids)
+        combo_item_ids = []
+        for combo_product in combo_product_items:
+            combo_item_ids.append(combo_product.combo_item.id)
+
+        product_details = Product.objects.filter(id__in=combo_item_ids)
+        product_id_wise_product_details = defaultdict(dict)
+        for product in product_details:
+            product_id_wise_product_details[product.id] = ProductSerializer(product).data
+            self.update_product_response(product_id_wise_product_details[product.id])
+
+        product_id_wise_combo_products_dict = defaultdict(list)
+        for combo_item in combo_product_items:
+            product_id_wise_combo_products_dict[combo_item.product.id].append(
+                product_id_wise_product_details[combo_item.combo_item.id])
+
+        return product_id_wise_combo_products_dict
+
     def get(self, product_id):
-        self.product_object = Product.objects.get(id=product_id)
+        self.product_object = Product.objects.select_related("category").get(id=product_id)
         self.initialize_product_class(None)
 
         product_data = self.product_serializer.data
@@ -351,6 +437,17 @@ class ProductView(ProductInterface):
         product_id_wise_sellers_dict = self.get_product_id_wise_sellers([self.product_object.id])
         product_data["sellers"] = product_id_wise_sellers_dict[self.product_object.id]
 
+        product_id_wise_combo_products_dict = self.get_product_id_wise_combo_product_details([self.product_object.id])
+        product_data["combo_items"] = product_id_wise_combo_products_dict[self.product_object.id]
+
+        product_id_wise_sizes_dict = self.get_product_id_wise_sizes([self.product_object.id])
+        product_data["sizes"] = product_id_wise_sizes_dict[self.product_object.id]
+
+        product_data["category"] = {
+            "id": self.product_object.category.id,
+            "name": self.product_object.category.name
+        }
+
         product_specific_data = self.product_specific_view.get(self.product_object.id)
         product_specific_data.pop("product", None)
         product_data[self.product_specific_key] = product_specific_data
@@ -359,22 +456,30 @@ class ProductView(ProductInterface):
 
     def get_by_ids(self, product_ids):
 
-        products = Product.objects.filter(id__in=product_ids)
-
-        products_serializer = ProductSerializer(products, many=True)
-        products_data = products_serializer.data
+        products = Product.objects.select_related("category").filter(id__in=product_ids)
 
         product_id_wise_images_dict = self.get_product_id_wise_images(product_ids)
         product_id_wise_features_dict = self.get_product_id_wise_features(product_ids)
         product_id_wise_sellers_dict = self.get_product_id_wise_sellers(product_ids)
+        product_id_wise_combo_products_dict = self.get_product_id_wise_combo_product_details(product_ids)
+        product_id_wise_sizes_dict = self.get_product_id_wise_sizes(product_ids)
 
+        products_data = []
         group_products_by_type = defaultdict(list)
-        for product_data in products_data:
+        for product in products:
+            product_data = ProductSerializer(product).data
             product_data = self.update_product_response(product_data)
             product_data["features"] = product_id_wise_features_dict[product_data["id"]]
             product_data["images"] = product_id_wise_images_dict[product_data["id"]]
             product_data["sellers"] = product_id_wise_sellers_dict[product_data["id"]]
+            product_data["combo_items"] = product_id_wise_combo_products_dict[product_data["id"]]
+            product_data["sizes"] = product_id_wise_sizes_dict[product_data["id"]]
+            product_data["category"] = {
+                "id": product.category.id,
+                "name": product.category.name
+            }
             group_products_by_type[product_data["type"]].append(product_data)
+            products_data.append(product_data)
 
         response = []
         for type in group_products_by_type:
@@ -422,6 +527,7 @@ class ProductView(ProductInterface):
                 'images': images,
                 'sellers': sellers,
                 'bookings': {
+                    # TODO: if product has sizes then product quantity will be sum of all sizes of product
                     'total': product.quantity,
                     'booked': total_booked,
                     'left': product.quantity - total_booked
@@ -514,9 +620,9 @@ class ProductList(APIView):
         serializer = IdsListSerializer(data=request.data)
         if serializer.is_valid():
             response_data = self.product_view.get_by_ids(serializer.data["ids"])
-            return Response({"results":response_data}, 200)
+            return Response({"results": response_data}, 200)
         else:
-            return Response({"errors":serializer.errors}, 400)
+            return Response({"errors": serializer.errors}, 400)
 
 
 class ProductDetail(APIView):
@@ -556,21 +662,97 @@ class GetProductsByCategory(generics.ListAPIView):
     serializer_class = ProductSerializer
     product_view = ProductView()
 
+    @staticmethod
+    def apply_filters(category, filter_data):
+        # applying category filter
+        filter_products = Product.objects.filter(category_id=category.id)
+
+        # applying search filter
+        if filter_data["search_text"]:
+            filter_products = filter_products.search(filter_data["search_text"])
+
+        # applying price filters
+        price_filter = filter_data["price_filter"]
+        if price_filter["applied"]:
+            filter_products = filter_products.filter(
+                discounted_price__gte=price_filter["min_amount"], discounted_price__lte=price_filter["max_amount"])
+
+        # applying location Filters
+        location_filter = filter_data["location_filter"]
+        if location_filter["applied"]:
+            product_ids = filter_products.values_list("id", flat=True)
+            seller_ids = SellerProduct.objects.filter(product_id__in=product_ids)\
+                .values_list("seller_id", flat=True)
+            city_seller_ids = filter_seller_ids_by_city(seller_ids, location_filter["city"])
+            city_product_ids = SellerProduct.objects.filter(
+                seller_id__in=city_seller_ids, product_id__in=product_ids).values_list("product_id", flat=True)
+            filter_products = filter_products.filter(id__in=city_product_ids)
+
+        return filter_products.values_list("id", flat=True)
+
+    @staticmethod
+    def apply_sort_filter(query_set, sort_filter):
+        if sort_filter == "PRICE_LOW_TO_HIGH":
+            return query_set.order_by('discounted_price')
+        elif sort_filter == "PRICE_HIGH_TO_LOW":
+            return query_set.order_by('-discounted_price')
+        elif sort_filter == "AVERAGE_RATING":
+            ratings_query = average_rating_query_for_product(OuterRef('id'))
+            return query_set.annotate(
+                average_rating=Subquery(
+                    queryset=ratings_query,
+                    output_field=PositiveIntegerField()
+                )
+            ).order_by('-average_rating')
+        return query_set
+
+    @staticmethod
+    def sort_results(products_response, sort_filter):
+        if sort_filter == "PRICE_LOW_TO_HIGH":
+            products_response.sort(key=lambda product_response: Decimal(product_response['discounted_price']))
+        elif sort_filter == "PRICE_HIGH_TO_LOW":
+            products_response.sort(
+                key=lambda product_response: Decimal(product_response['discounted_price']), reverse=True)
+        elif sort_filter == "AVERAGE_RATING":
+            products_response.sort(
+                key=lambda product_response: Decimal(product_response['rating']), reverse=True)
+
+    @staticmethod
+    def add_average_rating_for_products(products_response):
+        product_ids = []
+        for product in products_response:
+            product_ids.append(product["id"])
+
+        product_id_wise_rating = get_product_id_wise_average_rating(product_ids)
+        for product in products_response:
+            product["rating"] = product_id_wise_rating[product["id"]]
+
     def get(self, request, *args, **kwargs):
+
+        input_serializer = GetProductsBySearchFilters(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't get products", "errors": input_serializer.errors}, 400)
+
         try:
+            # TODO: Modify to get products for intermediate levels that are not linked to product
             category = Category.objects.get(name__icontains=kwargs["slug"])
         except ObjectDoesNotExist:
             return Response({"errors": "Invalid Category!!!"}, 400)
 
-        self.queryset = Product.objects.filter(category_id=category.id)
+        sort_filter = request.data["sort_filter"]
+        product_ids = self.apply_filters(category, request.data)
+        self.queryset = Product.objects.filter(id__in=product_ids)
+        self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
+
         response = super().get(request, args, kwargs)
         response_data = response.data
 
         product_ids = []
         for product in response_data["results"]:
             product_ids.append(product["id"])
-
         response_data["results"] = self.product_view.get_by_ids(product_ids)
+        self.add_average_rating_for_products(response_data["results"])
+        self.sort_results(response_data["results"], sort_filter)
 
         return response
 
@@ -603,24 +785,29 @@ class ProductNetPrice(APIView):
             selling_price = serializer.data['selling_price']
             discount = serializer.data['discount']
             net_price_data = calculate_product_net_price(selling_price, discount)
-            return Response({"results":net_price_data}, status=status.HTTP_200_OK)
+            return Response({"results": net_price_data}, status=status.HTTP_200_OK)
         else:
-            return Response({"errors":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductSellerStatus(generics.ListAPIView):
     queryset = SellerProduct.objects.all()
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | (IsBusinessClient & IsOwnerById) |
-                          IsSellerProduct | IsEmployeeBusinessClient)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntities |
+                          IsEmployeeEntities)
     serializer_class = SellerProductSerializer
 
     def get(self, request, *args, **kwargs):
-        seller_id = kwargs["seller_id"]
-        status = kwargs['status']
-        self.check_object_permissions(request, seller_id)
+        input_serializer = GetBusinessClientProductsByStatusSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't get products", "errors": input_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        seller_ids = request.data["seller_ids"]
+        activation_statuses = request.data['statuses']
+        self.check_object_permissions(request, seller_ids)
 
         self.queryset = SellerProduct.objects.select_related('product') \
-            .filter(seller_id=seller_id, product__status=status)
+            .filter(seller_id__in=seller_ids, product__activation_status__in=activation_statuses)
         response = super().get(request, args, kwargs)
         product_ids = []
         for seller_product in response.data["results"]:
@@ -705,6 +892,6 @@ class ProductVerificationDetail(APIView):
 
     def get(self, request, *args, **kwargs):
         product_verification = ProductVerification.objects.get(id=kwargs['product_id'])
-        product = ProductView().get_by_ids([product_verification.product])
-        add_verification_details_to_product([product_verification.product])
-        return Response(product, 200)
+        product_data = ProductView().get(product_verification.product)
+        add_verification_details_to_product([product_data])
+        return Response(product_data, 200)

@@ -54,7 +54,13 @@ class Product(models.Model):
     discounted_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     featured = models.BooleanField(default=False)
     tags = get_taggable_manager()
+    has_sizes = models.BooleanField(default=False)
+
+    # if there are no sizes use this quantity field else check quantity from the product size model
     quantity = models.IntegerField(default=0)
+
+    # For combo products
+    is_combo = models.BooleanField(default=False)
 
     # For MYC verification
     active_from = models.DateTimeField(null=True, blank=True)
@@ -77,6 +83,31 @@ class Product(models.Model):
         return self.name
 
 
+# TODO: add order for product size, make default ordering based on order
+class ProductSize(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Product")
+    size = models.CharField(max_length=10, verbose_name="Size")
+    quantity = models.IntegerField(default=0, verbose_name="Quantity")
+
+    class Meta:
+        unique_together = ('product', 'size',)
+
+    def __str__(self):
+        return "Product Size - {0}, {1}".format(self.product.id, self.size)
+
+
+class ComboProductItems(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Product")
+    combo_item = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Combo Item",
+                                   related_name="combo_item")
+
+    class Meta:
+        unique_together = ('product', 'combo_item',)
+
+    def __str__(self):
+        return "Combo item - {0}, {1}".format(self.product.id, self.combo_item.id)
+
+
 class ProductVerification(models.Model):
     product = models.OneToOneField('Product', on_delete=models.CASCADE, verbose_name="Entity")
     comments = models.TextField(null=True, blank=True)
@@ -96,6 +127,7 @@ class ProductImage(models.Model):
 
     class Meta:
         unique_together = ('product', 'order',)
+        ordering = ['order']
 
     def __str__(self):
         return "Product Image - {0}".format(self.id)

@@ -179,6 +179,7 @@ class EmployeeActive(generics.RetrieveUpdateAPIView):
         self.check_object_permissions(request, kwargs['pk'])
         return super().put(request, *args, **kwargs)
 
+
 class EmployeeImageCreate(generics.CreateAPIView):
     permission_classes = (IsAuthenticated, IsOwnerById)
     queryset = EmployeeImage.objects.all()

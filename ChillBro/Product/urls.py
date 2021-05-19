@@ -30,6 +30,8 @@ urlpatterns = [
     # url of net prices
     path('product/net_price/', ProductNetPrice.as_view()),
 
+    path('product/business_client/verification_status/', ProductSellerStatus.as_view()),
+    path('product/seller/<str:seller_id>/', GetSellerProductList.as_view()),
 
     path('product/image/', BaseProductImageCreate.as_view()),
     path('product/image/<int:pk>/', BaseProductImageDelete.as_view()),
@@ -38,9 +40,6 @@ urlpatterns = [
 
     # urls specific to hotels
     path('product/amenities/', AmenitiesList.as_view()),
-
-    path('product/seller/<str:seller_id>/', GetSellerProductList.as_view()),
-    path('product/seller/<str:seller_id>/<str:status>/', ProductSellerStatus.as_view()),
 
     #url of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),

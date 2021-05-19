@@ -1,6 +1,9 @@
 import enum
 
 
+REVIEW_SCALE = 5
+
+
 class EntityType(enum.Enum):
     hotels = "HOTELS"
     transport = "TRANSPORT"
