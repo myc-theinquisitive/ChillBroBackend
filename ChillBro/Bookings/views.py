@@ -129,11 +129,11 @@ def get_complete_booking_details_by_ids(booking_ids):
     booking_check_ins = CheckInDetails.objects.filter(booking_id__in=booking_ids)
     booking_check_outs = CheckOutDetails.objects.filter(booking_id__in=booking_ids)
 
-    booking_id_wise_product_ids = defaultdict(list)
+    booking_id_wise_booked_products = defaultdict(list)
     product_ids = set()
     for booked_product in booked_products:
         product_ids.add(booked_product.product_id)
-        booking_id_wise_product_ids[booked_product.booking_id].append(booked_product.product_id)
+        booking_id_wise_booked_products[booked_product.booking_id].append(booked_product)
     product_id_wise_product_details = get_product_id_wise_product_details(list(product_ids))
 
     check_in_details = {}
@@ -183,8 +183,18 @@ def get_complete_booking_details_by_ids(booking_ids):
                 booking_dict['check_out'] = "Booking yet to end"
 
         booking_products_details = []
-        for product_id in booking_id_wise_product_ids[booking.id]:
-            booking_products_details.append(product_id_wise_product_details[product_id])
+        for booked_product in booking_id_wise_booked_products[booking.id]:
+            product_details = product_id_wise_product_details[booked_product.product_id]
+            booking_products_details.append(
+                {
+                    "name": product_details["name"],
+                    "type": product_details["type"],
+                    "booked_quantity": product_details["quantity"],
+                    "product_value": booked_product.product_value,
+                    "net_value": booked_product.net_value,
+                    "coupon_value": booked_product.coupon_value
+                }
+            )
         booking_dict['products'] = booking_products_details
         complete_bookings_details.append(booking_dict)
     return complete_bookings_details
