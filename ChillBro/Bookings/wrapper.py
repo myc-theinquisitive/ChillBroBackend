@@ -1,4 +1,5 @@
-from ReviewsRatings.exportapi import insert_rating, review_by_booking_id
+from ReviewsRatings.exportapi import insert_business_client_review_for_customer, \
+    business_client_review_for_customer_by_booking_id
 from Payments.exportapi import transaction_details_by_booking_id, new_booking_transaction, \
     update_booking_transaction, new_refund_transaction
 from Coupons.exportapi import coupon_value
@@ -11,15 +12,15 @@ def get_discounted_value(coupon_id, user, entity_ids, product_ids, product_type,
 
 def business_client_review_on_customer(review, rating, booking_id, created_by):
     data = {'related_id': booking_id, 'comment': review, 'rating': int(rating), 'created_by': created_by}
-    return insert_rating(data)
+    return insert_business_client_review_for_customer(data)
 
 
 def get_transaction_details_by_booking_id(booking_id):
     return transaction_details_by_booking_id(booking_id)
 
 
-def get_review_by_booking_id(booking_id):
-    return review_by_booking_id(booking_id)
+def get_business_client_review_by_booking_id(booking_id):
+    return business_client_review_for_customer_by_booking_id(booking_id)
 
 
 def get_product_details(product_ids):

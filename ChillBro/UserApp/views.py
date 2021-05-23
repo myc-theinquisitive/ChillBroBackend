@@ -9,7 +9,7 @@ from rest_framework import status
 from .wrapper import get_entity_ids_for_business_client
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsEmployeeEntityById, IsBusinessClientEmployee, IsOwnerById, IsEmployeeBusinessClient
-from .wrapper import logout
+
 
 class MyUserList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
@@ -102,11 +102,11 @@ class EmployeeAdd(APIView):
                     return Response({'message': 'Success'}, status=status.HTTP_200_OK)
                 else:
                     user_instance.delete()
-                    return Response(employee_serializer.errors,400)
+                    return Response(employee_serializer.errors, 400)
             else:
-                return Response(user_serializer.errors,400)
+                return Response(user_serializer.errors, 400)
         else:
-            return Response(serializer.errors,400)
+            return Response(serializer.errors, 400)
 
 
 def get_employee_details(employee_ids):
@@ -158,7 +158,6 @@ class EntityBusinessClientEmployee(generics.ListAPIView):
     queryset = BusinessClient.objects.all()
     serializer_class = BusinessClientSerializer
 
-    # TODO: Use user id here
     def get(self, request, *args, **kwargs):
         entity_ids = get_entity_ids_for_business_client(request.user.id)
         employee_ids = Employee.objects.filter(entity_id__in=entity_ids).values_list('id')

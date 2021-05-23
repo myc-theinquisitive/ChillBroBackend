@@ -3,7 +3,7 @@ from .helpers import image_upload_to_product, get_user_model
 from django.db.models import Q
 from django.urls import reverse
 from django.utils.text import slugify
-from .constants import ProductTypes, ActivationStatus
+from .constants import ProductTypes, ActivationStatus, PriceTypes
 from ..taggable_wrapper import get_taggable_manager, get_key_value_store
 import uuid
 
@@ -50,14 +50,19 @@ class Product(models.Model):
                             choices=[(product_type.value, product_type.value) for product_type in ProductTypes],
                             verbose_name="Product Type")
     category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
+
     price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     discounted_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    price_type = models.CharField(max_length=30, default=PriceTypes.DAY.value,
+                                  choices=[(price_type.value, price_type.value) for price_type in PriceTypes],
+                                  verbose_name="Price Type")
+
     featured = models.BooleanField(default=False)
     tags = get_taggable_manager()
     has_sizes = models.BooleanField(default=False)
 
     # if there are no sizes use this quantity field else check quantity from the product size model
-    quantity = models.IntegerField(default=0)
+    quantity = models.PositiveIntegerField(default=0)
 
     # For combo products
     is_combo = models.BooleanField(default=False)
@@ -83,26 +88,29 @@ class Product(models.Model):
         return self.name
 
 
-# TODO: add order for product size, make default ordering based on order
 class ProductSize(models.Model):
     product = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Product")
     size = models.CharField(max_length=10, verbose_name="Size")
-    quantity = models.IntegerField(default=0, verbose_name="Quantity")
+    quantity = models.PositiveIntegerField(default=0, verbose_name="Quantity")
+    order = models.PositiveIntegerField(verbose_name="Order")
 
     class Meta:
-        unique_together = ('product', 'size',)
+        unique_together = (('product', 'size'), ('product', 'order'), )
+        ordering = ('order', )
 
     def __str__(self):
-        return "Product Size - {0}, {1}".format(self.product.id, self.size)
+        return "Product Size - {0}, {1}, {2}".format(self.product.id, self.size, self.quantity)
 
 
 class ComboProductItems(models.Model):
     product = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Product")
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity")
     combo_item = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Combo Item",
                                    related_name="combo_item")
 
     class Meta:
         unique_together = ('product', 'combo_item',)
+        ordering = ['id']
 
     def __str__(self):
         return "Combo item - {0}, {1}".format(self.product.id, self.combo_item.id)

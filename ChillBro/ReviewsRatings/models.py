@@ -2,14 +2,15 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from datetime import datetime
-
-from .constants import REVIEW_SCALE, FeedbackCategory
+from .constants import REVIEW_SCALE, FeedbackCategory, BASE_RATING_STRING
 from .helpers import image_upload_to_review
 
 
 class ReviewsRatings(models.Model):
     related_id = models.CharField(max_length=36, verbose_name="Related Id")
     secondary_related_id = models.CharField(max_length=36, null=True, blank=True)
+    # For location, service etc..
+    rating_type = models.CharField(default=BASE_RATING_STRING, max_length=30)
     comment = models.TextField(verbose_name="Comment")
     rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(REVIEW_SCALE)])
     user_model = get_user_model()
@@ -20,7 +21,7 @@ class ReviewsRatings(models.Model):
         return "Related Id - {0} Rating - {1}".format(self.related_id, self.rating)
 
     class Meta:
-        unique_together = ('related_id', 'secondary_related_id', 'created_by',)
+        unique_together = ('related_id', 'secondary_related_id', 'rating_type', 'created_by',)
 
 
 class ReviewImage(models.Model):

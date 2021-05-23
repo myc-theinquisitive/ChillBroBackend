@@ -15,5 +15,5 @@ def image_upload_to_product(instance, filename):
     name = instance.product.name
     slug = slugify(name)
     basename, file_extension = filename.split(".")
-    new_filename = "%s-%s.%s" % (slug, str(uuid.uuid4()), file_extension)
+    new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
     return get_media_root() + "static/images/Product/%s/%s" % (slug, new_filename)

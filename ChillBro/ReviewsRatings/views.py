@@ -23,7 +23,7 @@ class ReviewRatingList(generics.ListCreateAPIView):
 
 
 class EntityReviewRatingList(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, )
 
     def post(self, request, *args, **kwargs):
         if kwargs['entity_id'] == "MYC":

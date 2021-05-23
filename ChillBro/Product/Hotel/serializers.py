@@ -78,6 +78,9 @@ class HotelAvailableAmenitiesSerializer(serializers.ModelSerializer):
 
 
 class HotelRoomSerializer(serializers.ModelSerializer):
+    # overriding to avoid checks
+    product = serializers.CharField(default="", allow_null=True, allow_blank=True)
+
     class Meta:
         model = HotelRoom
         fields = '__all__'

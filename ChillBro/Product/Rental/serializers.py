@@ -3,6 +3,9 @@ from .models import RentalProduct
 
 
 class RentalProductSerializer(serializers.ModelSerializer):
+    # overriding to avoid checks
+    product = serializers.CharField(default="", allow_null=True, allow_blank=True)
+
     class Meta:
         model = RentalProduct
         fields = '__all__'
