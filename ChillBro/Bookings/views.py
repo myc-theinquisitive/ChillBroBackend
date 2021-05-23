@@ -149,7 +149,10 @@ def get_complete_booking_details_by_ids(booking_ids):
             'id': booking.id,
             'entity_type': booking.entity_type,
             'booked_at': booking.booking_date,
-            'booking_status': booking.booking_status
+            'booking_status': booking.booking_status,
+            'total_money': booking.total_money,
+            'total_net_value': booking.total_net_value,
+            'total_coupon_discount': booking.total_coupon_discount
         }
         days = datetime.now() - booking.booking_date
         seconds = int(days.total_seconds())
