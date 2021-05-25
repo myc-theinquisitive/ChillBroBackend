@@ -23,8 +23,8 @@ import threading
 # Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value, \
-    get_transaction_details_by_booking_id, get_business_client_review_by_booking_id, business_client_review_on_customer, \
-    get_product_details
+    get_transaction_details_by_booking_id, get_review_by_booking_id, business_client_review_on_customer, \
+    get_product_details, get_entity_details
 
 _booking_lock = threading.Lock()
 
@@ -122,6 +122,24 @@ def update_booking_status(booking_id, status):
     return Bookings.objects.filter(id=booking_id).update(booking_status=status)
 
 
+def get_total_time_period(from_date, to_date):
+    days = from_date - to_date
+    seconds = int(days.total_seconds())
+    if seconds < 60:
+        return "1 min"
+    else:
+        minutes = seconds // 60
+        if minutes < 60:
+            return (str(minutes) + " minutes")
+        else:
+            hours = minutes // 60
+            if hours < 24:
+                return  (str(hours) + " hours")
+            else:
+                days = hours // 24
+                return (str(days) + " days")
+    
+
 def get_complete_booking_details_by_ids(booking_ids):
     bookings = Bookings.objects.filter(id__in=booking_ids)
     booked_products = BookedProducts.objects.filter(booking_id__in=booking_ids)
@@ -152,24 +170,14 @@ def get_complete_booking_details_by_ids(booking_ids):
             'booking_status': booking.booking_status,
             'total_money': booking.total_money,
             'total_net_value': booking.total_net_value,
-            'total_coupon_discount': booking.total_coupon_discount
+            'total_coupon_discount': booking.total_coupon_discount,
+            'from_date':booking.start_time,
+            'to_date':booking.end_time,
+            'total_days':get_total_time_period(booking.end_time, booking.start_time)
         }
-        days = datetime.now() - booking.booking_date
-        seconds = int(days.total_seconds())
-        if seconds < 60:
-            booking_dict['ago'] = "1 min"
-        else:
-            minutes = seconds // 60
-            if minutes < 60:
-                booking_dict['ago'] = str(minutes) + " minutes"
-            else:
-                hours = minutes // 60
-                if hours < 24:
-                    booking_dict['ago'] = str(hours) + " hours"
-                else:
-                    days = hours // 24
-                    booking_dict['ago'] = str(days) + " days"
-
+        
+        
+        booking_dict['ago'] = get_total_time_period(datetime.now(), booking.booking_date)
         check_in_flag = True
         try:
             booking_dict['check_in'] = check_in_details[booking.id].check_in
@@ -189,17 +197,19 @@ def get_complete_booking_details_by_ids(booking_ids):
             product_details = product_id_wise_product_details[booked_product.product_id]
             booking_products_details.append(
                 {
+                    "product_id": booked_product.product_id,
                     "name": product_details["name"],
                     "type": product_details["type"],
-                    "booked_quantity": product_details["quantity"],
                     "product_value": booked_product.product_value,
                     "net_value": booked_product.net_value,
-                    "coupon_value": booked_product.coupon_value
+                    "coupon_value": booked_product.coupon_value,
+                    "booked_quantity":booked_product.quantity
                 }
             )
         booking_dict['products'] = booking_products_details
         complete_bookings_details.append(booking_dict)
     return complete_bookings_details
+
 
 
 def are_overlapping_time_spans(start_time1, end_time1, start_time2, end_time2):
@@ -609,15 +619,29 @@ class GetSpecificBookingDetails(APIView):
         booking.user_details = user_data
 
         all_products = BookedProducts.objects.filter(booking=booking)
-        products = []
-        for product in all_products:
-            some_data_product = BookedProducts.objects.none()
-            some_data_product.product_id = product.product_id
-            some_data_product.quantity = product.quantity
-            products.append(some_data_product)
-        booking.products = products
+        
 
         serializer = GetSpecificBookingDetailsSerializer(booking).data
+        product_ids = set()
+        for booked_product in all_products:
+            product_ids.add(booked_product.product_id)
+        product_id_wise_product_details = get_product_id_wise_product_details(list(product_ids))
+        products = []
+        for booked_product in all_products:
+            products.append(
+                {
+                    "product_id": booked_product.product_id,
+                    "name": product_id_wise_product_details[booked_product.product_id]["name"],
+                    "type": product_id_wise_product_details[booked_product.product_id]["type"],
+                    "product_value": booked_product.product_value,
+                    "net_value": booked_product.net_value,
+                    "coupon_value": booked_product.coupon_value,
+                    "booked_quantity":booked_product.quantity
+                }
+            )
+        serializer['total_days'] = get_total_time_period(booking.end_time, booking.start_time)
+        serializer['products'] = products
+        serializer['outlet_details'] = get_entity_details([booking.entity_id])
         serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.id)
         serializer['customer_review'] = get_business_client_review_by_booking_id(booking.id)
         return Response(serializer, 200)

@@ -24,7 +24,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
     IsBusinessClientEntities, IsEmployeeEntities
 from .BaseProduct.constants import ActivationStatus
 from datetime import date, timedelta, datetime
-from .helpers import get_date_format
+from .helpers import get_date_format, get_status
 from decimal import Decimal
 
 
@@ -206,7 +206,7 @@ class ProductView(ProductInterface):
                     'product_id': 'product_id',
                     'quantity': 1
                 },
-            ]
+            ],
             'has_sizes': boolean,
             'sizes': ['size'],
             'tags': ['hotel', 'stay'],
@@ -849,6 +849,7 @@ class GetProductsByCategory(generics.ListAPIView):
             return Response({"message": "Can't get products", "errors": input_serializer.errors}, 400)
 
         try:
+            # TODO: Modify to get products for intermediate levels that are not linked to product
             category = Category.objects.get(name__icontains=kwargs["slug"])
         except ObjectDoesNotExist:
             return Response({"errors": "Invalid Category!!!"}, 400)
@@ -866,6 +867,8 @@ class GetProductsByCategory(generics.ListAPIView):
         for product in response_data["results"]:
             product_ids.append(product["id"])
         response_data["results"] = self.product_view.get_by_ids(product_ids)
+        self.add_average_rating_for_products(response_data["results"])
+        self.sort_results(response_data["results"], sort_filter)
 
         add_average_rating_for_products(response_data["results"])
         add_wishlist_status_for_products(request.user.id, response_data["results"])
@@ -913,7 +916,7 @@ class ProductSellerStatus(generics.ListAPIView):
                           IsEmployeeEntities)
     serializer_class = SellerProductSerializer
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetBusinessClientProductsByStatusSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't get products", "errors": input_serializer.errors},

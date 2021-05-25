@@ -19,6 +19,7 @@ def get_product_id_wise_details(product_ids):
     for each_product in products:
         discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
         product_data = {
+            'product_id':each_product.id,
             'price': each_product.discounted_price,
             'net_value_details': calculate_product_net_price(each_product.price, discount),
             'quantity': each_product.quantity,

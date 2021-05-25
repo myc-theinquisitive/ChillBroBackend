@@ -1,5 +1,4 @@
 from collections import defaultdict
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Avg, Count, Q
 from .constants import BASE_RATING_STRING, BUSINESS_CLIENT_REVIEW_ON_CUSTOMER, REVIEW_SCALE

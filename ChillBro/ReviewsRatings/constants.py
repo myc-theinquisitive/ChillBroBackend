@@ -7,11 +7,10 @@ BUSINESS_CLIENT_REVIEW_ON_CUSTOMER = "BUSINESS_CLIENT_REVIEW_ON_CUSTOMER"
 
 
 class EntityType(enum.Enum):
-    hotels = "HOTELS"
+    hotels = "HOTEL"
     transport = "TRANSPORT"
-    rentals = "RENTALS"
-    resorts = "RESORTS"
-    events = "EVENTS"
+    rentals = "RENTAL"
+    events = "EVENT"
 
 
 class FeedbackCategory(enum.Enum):

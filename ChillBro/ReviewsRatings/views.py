@@ -33,6 +33,18 @@ class EntityReviewRatingList(generics.CreateAPIView):
         serializer = ReviewsRatingsSerializer()
         serializer.create(data)
         return Response({"message": "success"}, 200)
+        
+        
+class GetBusinessCleintToMYCReview(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            business_client_review_to_MYC = ReviewsRatings.objects.get(related_id="MYC",created_by=request.user)
+        except ObjectDoesNotExist:
+            return Response({"results":{}},200)
+        serializer = ReviewsRatingsSerializer(business_client_review_to_MYC)
+        return Response({"results":serializer.data},200)
 
 
 class ReviewRatingDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -86,6 +98,15 @@ class EntityReviewStatistics(generics.RetrieveAPIView):
 
         reviews = ReviewsRatings.objects.filter(related_id__in=booking_ids)
         total_reviews = len(reviews)
+        if(total_reviews == 0):
+            return Response(
+                {
+                    "total_reviews": 0,
+                    "rating_average": 0,
+                    "rating_percentage": 0.00},
+                200
+            )
+
         rating_average = reviews.aggregate(
             rating_average=Avg('rating'))['rating_average']
         return Response(
@@ -107,7 +128,7 @@ class EntityTotalReviews(generics.ListAPIView):
 
         date_filter = request.data['date_filter']
         entity_filters = get_entity_type(request.data['entity_filters'])
-        rating_filters = request.data['rating_filters']
+        rating_filters = get_rating_filters(request.data['rating_filters'])
         comment_required = request.data['comment_required']
 
         if date_filter == 'Custom':
@@ -120,14 +141,22 @@ class EntityTotalReviews(generics.ListAPIView):
         booking_ids = []
         for each_booking in bookings:
             booking_ids.append(each_booking)
-
+        
         if comment_required:
-            reviews = ReviewsRatings.objects \
-                .filter(Q(reviewed_time__lte=from_date) & Q(reviewed_time__gte=to_date) &
+            if date_filter == 'Total':
+                reviews = ReviewsRatings.objects\
+                .filter(Q(related_id__in=booking_ids) & Q(rating__in=rating_filters))
+            else:
+                reviews = ReviewsRatings.objects\
+                .filter(Q(reviewed_time__gte=from_date) & Q(reviewed_time__lte=to_date) &
                         Q(related_id__in=booking_ids) & Q(rating__in=rating_filters))
         else:
-            reviews = ReviewsRatings.objects \
-                .filter(Q(reviewed_time__lte=from_date) & Q(reviewed_time__gte=to_date) &
+            if date_filter == 'Total':
+                reviews = ReviewsRatings.objects\
+                .filter(Q(related_id__in=booking_ids) & Q(rating__in=rating_filters))
+            else:
+                reviews = ReviewsRatings.objects \
+                .filter(Q(reviewed_time__gte=from_date) & Q(reviewed_time__lte=to_date) &
                         Q(related_id__in=booking_ids) & Q(rating__in=rating_filters) &
                         Q(Q(comment="") | Q(comment=None)))
 
@@ -137,7 +166,7 @@ class EntityTotalReviews(generics.ListAPIView):
                 'rating': each_review.rating,
                 'comment': each_review.comment,
                 'booking_id': each_review.related_id,
-                'check_out': each_review.time,
+                'check_out': each_review.reviewed_time,
                 'total_money': bookings[str(each_review.related_id)]['total_money']
             }
             booking_ratings.append(review)

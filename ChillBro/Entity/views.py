@@ -364,23 +364,23 @@ class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
     queryset = BusinessClientEntity.objects.all()
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetEntitiesByStatusSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't get entities", "errors": input_serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
-
-        entity_ids = entity_ids_for_user(request.user.id)
+        
+        entity_ids = request.data['entity_ids']
         activation_statuses = get_entity_status(request.data['statuses'])
         entities = MyEntity.objects.filter(id__in=entity_ids, activation_status__in=activation_statuses)
         serializer = self.serializer_class(entities, many=True)
-
+        
         # Adding Employees for entity
         entity_id_wise_employees = get_entity_id_wise_employees(entity_ids)
         for entity in serializer.data:
             entity["employees"] = entity_id_wise_employees[entity["id"]]
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        add_address_details_to_entities(serializer.data)
+        return Response({"results":serializer.data}, status=status.HTTP_200_OK)
 
 
 class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
@@ -388,7 +388,8 @@ class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)
-        active_entity_ids = MyEntity.objects.active.filter(id__in=entity_ids)
+        active_entity_ids = MyEntity.objects.active().filter(id__in=entity_ids)
+
         entities_count = len(active_entity_ids)
         total_products_in_entities = get_total_products_count_in_entities(entity_ids)
         return Response(
@@ -408,7 +409,7 @@ class BusinessClientEntitiesByType(generics.RetrieveAPIView):
         data = defaultdict(list)
         for each_category in EntityTypes:
             data[each_category.value] = []
-        entity_details = MyEntity.objects.active.filter(id__in=entity_ids)
+        entity_details = MyEntity.objects.active().filter(id__in=entity_ids)
         all_entities = []
 
         for each_entity in entity_details:

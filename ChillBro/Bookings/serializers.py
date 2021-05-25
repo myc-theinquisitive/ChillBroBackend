@@ -165,7 +165,6 @@ class GetSpecificBookingDetailsSerializer(serializers.Serializer):
     entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
-    products = BookedProductSerializer(many=True)
     payment_status = serializers.CharField(max_length=30)
     payment_mode = serializers.CharField(max_length=30)
     user_details = UserSerializer()
