@@ -68,8 +68,7 @@ class Bookings(models.Model):
     total_coupon_discount = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
     entity_type = models.CharField(
-        max_length=30, choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in EntityType],
-        default=EntityType.hotels.value)
+        max_length=30, choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in EntityType])
     booking_status = models.CharField(
         max_length=30, choices=[(booking_status.value, booking_status.value) for booking_status in BookingStatus],
         default=BookingStatus.yet_to_approve.value)

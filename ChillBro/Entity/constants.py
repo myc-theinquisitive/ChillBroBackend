@@ -1,20 +1,10 @@
 import enum
+from ChillBro.constants import EntityType
 
 
 class Status(enum.Enum):
     ONLINE = "ONLINE"
     OFFLINE = "OFFLINE"
-
-
-class EntityTypes(enum.Enum):
-    HOTEL = "HOTEL"
-    TRANSPORT = "TRANSPORT"
-    RENTAL = "RENTAL"
-    EVENT = "EVENT"
-
-
-class Cities(enum.Enum):
-    VSKP = "VISAKHAPATNAM"
 
 
 class BankAccountTypes(enum.Enum):

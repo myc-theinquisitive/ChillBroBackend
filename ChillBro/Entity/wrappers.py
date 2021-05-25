@@ -15,7 +15,7 @@ def get_total_products_count_in_entities(entity_ids):
     from Product.exportapi import total_products_count_in_entities
     return total_products_count_in_entities(entity_ids)
 
-  
+
 def get_address_details_for_address_ids(address_ids):
     return get_address_details(address_ids)
 
@@ -26,11 +26,6 @@ def get_entity_id_wise_employees(entity_ids):
     for employee in employees:
         entity_id_wise_employees[employee["entity_id"]].append(employee)
     return entity_id_wise_employees
-    
-    
-def get_top_level_categories():
-    from Product.exportapi import top_level_categories
-    return top_level_categories()
 
 
 def filter_address_ids_by_city(address_ids, city):

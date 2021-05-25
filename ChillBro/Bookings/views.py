@@ -130,15 +130,15 @@ def get_total_time_period(from_date, to_date):
     else:
         minutes = seconds // 60
         if minutes < 60:
-            return (str(minutes) + " minutes")
+            return str(minutes) + " minutes"
         else:
             hours = minutes // 60
             if hours < 24:
-                return  (str(hours) + " hours")
+                return str(hours) + " hours"
             else:
                 days = hours // 24
-                return (str(days) + " days")
-    
+                return str(days) + " days"
+
 
 def get_complete_booking_details_by_ids(booking_ids):
     bookings = Bookings.objects.filter(id__in=booking_ids)
@@ -440,7 +440,7 @@ class BookingsStatistics(generics.RetrieveAPIView):
             previous_from_date = previous_to_date = None
         else:
             from_date, to_date = get_time_period(date_filter)
-            previous_from_date, previous_to_date = getPreviousTimePeriod(date_filter)
+            previous_from_date, previous_to_date = get_previous_time_period(date_filter)
 
         if date_filter != "Total" and from_date is None and to_date is None:
             return Response({"message": "Invalid Date Filter!!!"}, 400)

@@ -1,12 +1,5 @@
 import enum
-
-
-class EntityType(enum.Enum):
-    hotels = "HOTEL"
-    transport = "TRANSPORT"
-    rentals = "RENTAL"
-    resorts = "RESORT"
-    events = "EVENT"
+from ChillBro.constants import EntityType, DateFilters
 
 
 class BookingStatus(enum.Enum):
@@ -33,14 +26,6 @@ class PaymentMode(enum.Enum):
 class ProductBookingStatus(enum.Enum):
     booked = "BOOKED"
     cancelled = "CANCELLED"
-
-
-class DateFilters(enum.Enum):
-    today = "TODAY"
-    yesterday = "YESTERDAY"
-    week = "WEEK"
-    month = "MONTH"
-    total = "TOTAL"
 
 
 class IdProofType(enum.Enum):

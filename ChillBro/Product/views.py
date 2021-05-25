@@ -867,8 +867,6 @@ class GetProductsByCategory(generics.ListAPIView):
         for product in response_data["results"]:
             product_ids.append(product["id"])
         response_data["results"] = self.product_view.get_by_ids(product_ids)
-        self.add_average_rating_for_products(response_data["results"])
-        self.sort_results(response_data["results"], sort_filter)
 
         add_average_rating_for_products(response_data["results"])
         add_wishlist_status_for_products(request.user.id, response_data["results"])

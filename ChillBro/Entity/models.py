@@ -1,5 +1,5 @@
 from django.db import models
-from .constants import Status, EntityTypes, BankAccountTypes, ActivationStatus
+from .constants import Status, EntityType, BankAccountTypes, ActivationStatus
 import uuid
 from django.core.validators import MinLengthValidator
 from .helpers import get_user_model
@@ -18,7 +18,7 @@ class EntityManager(models.Manager):
 class MyEntity(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     name = models.CharField(max_length=100, verbose_name="Name")
-    type = models.CharField(max_length=30, choices=[(entity.name, entity.value) for entity in EntityTypes])
+    type = models.CharField(max_length=30, choices=[(entity.name, entity.value) for entity in EntityType])
     status = models.CharField(
         max_length=30, choices=[(status.name, status.value) for status in Status], default=Status.OFFLINE.value)
     address_id = models.CharField(max_length=36)

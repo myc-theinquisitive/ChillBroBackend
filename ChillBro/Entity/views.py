@@ -1,7 +1,7 @@
 import json
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
-from .constants import ActivationStatus, EntityTypes
+from .constants import ActivationStatus, EntityType
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, \
     EntityVerificationSerializer, EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, \
     EntityDetailsSerializer, EntityVerificationUpdateInputSerializer, GetEntitiesByStatusSerializer, \
@@ -12,7 +12,7 @@ from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUP
 from rest_framework.response import Response
 from rest_framework import status
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
-    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee, get_top_level_categories
+    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee
 from datetime import datetime
 from .helpers import get_date_format, get_entity_status
 from collections import defaultdict
@@ -420,7 +420,7 @@ class BusinessClientEntitiesByType(generics.RetrieveAPIView):
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)
         data = defaultdict(list)
-        for each_category in EntityTypes:
+        for each_category in EntityType:
             data[each_category.value] = []
         entity_details = MyEntity.objects.active().filter(id__in=entity_ids)
         all_entities = []
