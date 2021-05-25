@@ -23,7 +23,7 @@ import threading
 # Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value, \
-    get_transaction_details_by_booking_id, get_review_by_booking_id, business_client_review_on_customer, \
+    get_transaction_details_by_booking_id, business_client_review_on_customer, \
     get_product_details, get_entity_details
 
 _booking_lock = threading.Lock()
