@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .FCMManager import sendPush
-from .constants import NotificationStatus, setting
+from .constants import NotificationStatus, DEFAULT_SETTINGS
 from .models import Notification, NotificationUsers, NotificationSetting
 from .serializers import NotificationSerializer, NotificationUsersSerializer, NotificationDeleteSerializer, \
     NotificationSettingSerializer

@@ -150,6 +150,7 @@ class SignupVerify(APIView):
             content = {'detail': _('Unable to verify user.')}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
+
 class Login(APIView):
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
@@ -169,13 +170,15 @@ class Login(APIView):
                         token, created = Token.objects.get_or_create(user=user)
 
                         user_type = "CUSTOMER"
-                        if check_business_client(user):
+                        if user.is_superuser:
+                            user_type = "Super Admin"
+                        elif check_business_client(user):
                             user_type = "BUSINESS CLIENT"
                         elif check_employee(user):
                             user_type = "EMPLOYEE"
 
                         encoded = jwt.encode(
-                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
+                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
 
                         response = Response(status=status.HTTP_200_OK)
                         response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
@@ -188,16 +191,16 @@ class Login(APIView):
                         }
                         return response
                     else:
-                        content = {'detail': _('User account not active.'),"user":""}
+                        content = {'detail': _('User account not active.'), "user": ""}
                         return Response(content,
                                         status=status.HTTP_401_UNAUTHORIZED)
                 else:
                     content = {'detail':
-                                   _('User account not verified.'),"user":""}
+                                   _('User account not verified.'), "user": ""}
                     return Response(content, status=status.HTTP_401_UNAUTHORIZED)
             else:
                 content = {'detail':
-                               _('Unable to login with provided credentials.'),"user":""}
+                               _('Unable to login with provided credentials.'), "user": ""}
                 return Response(content, status=status.HTTP_401_UNAUTHORIZED)
 
         else:

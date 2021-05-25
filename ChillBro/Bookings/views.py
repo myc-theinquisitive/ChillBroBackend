@@ -4,7 +4,6 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from .serializers import *
 from .helpers import *
 from .constants import BookingStatus, DateFilters, ProductBookingStatus, PaymentUser
@@ -614,9 +613,9 @@ class GetSpecificBookingDetails(APIView):
 
         self.check_object_permissions(request, booking)
         user_data = Bookings.objects.none()
-        user_data.name = booking.created_by.first_name + booking.created_by.last_name
+        user_data.name = booking.created_by.first_name + " " + booking.created_by.last_name
         user_data.contact_number = booking.created_by.phone_number
-        user_data.email = booking.created_by
+        user_data.email = booking.created_by.email
         booking.user_details = user_data
 
         all_products = BookedProducts.objects.filter(booking=booking)
@@ -644,7 +643,7 @@ class GetSpecificBookingDetails(APIView):
         serializer['products'] = products
         serializer['outlet_details'] = get_entity_details([booking.entity_id])
         serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.id)
-        serializer['customer_review'] = get_review_by_booking_id(booking.id)
+        serializer['customer_review'] = get_business_client_review_by_booking_id(booking.id)
         return Response(serializer, 200)
 
 

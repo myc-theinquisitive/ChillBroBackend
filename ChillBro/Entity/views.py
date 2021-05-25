@@ -1,5 +1,3 @@
-from UserApp.models import Employee
-from .constants import EntityTypes
 import json
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
@@ -31,7 +29,9 @@ def entity_ids_for_user(user_id):
 
 def get_entity_details(entity_ids):
     entities = MyEntity.objects.filter(id__in=entity_ids)
-    return EntitySerializer(entities, many=True).data
+    entities_data = EntitySerializer(entities, many=True).data
+    add_address_details_to_entities(entities_data)
+    return entities_data
 
 
 def add_verification_details_to_entities(entity_details_list):
@@ -389,6 +389,7 @@ class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)
         active_entity_ids = MyEntity.objects.active().filter(id__in=entity_ids)
+
         entities_count = len(active_entity_ids)
         total_products_in_entities = get_total_products_count_in_entities(entity_ids)
         return Response(

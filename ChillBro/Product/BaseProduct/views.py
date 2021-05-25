@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, status
 from rest_framework.views import APIView, Response
@@ -12,9 +13,19 @@ class BaseProductImageCreate(generics.CreateAPIView):
     serializer_class = ProductImageSerializer
 
     def post(self, request, *args, **kwargs):
-        product_id = request.data['product']
+        try:
+            product = Product.objects.get(id=request.data['product'])
+        except ObjectDoesNotExist:
+            return Response({"errors": "Product does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        product_id = product.id
         self.check_object_permissions(request, product_id)
-        super().post(request, *args, **kwargs)
+
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        serializer.create(request.data)
+        return Response({"message": "Product added successfully"}, status=status.HTTP_201_CREATED)
 
 
 class BaseProductImageDelete(generics.DestroyAPIView):
@@ -23,9 +34,13 @@ class BaseProductImageDelete(generics.DestroyAPIView):
     serializer_class = ProductImageSerializer
 
     def delete(self, request, *args, **kwargs):
-        product_id = request.data['product']
-        self.check_object_permissions(request, product_id)
-        super().delete(request, *args, **kwargs)
+        try:
+            product_image = ProductImage.objects.get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            return Response({"errors": "Product image does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        self.check_object_permissions(request, product_image.product_id)
+        return super().delete(request, *args, **kwargs)
 
 
 class ProductQuantity(APIView):

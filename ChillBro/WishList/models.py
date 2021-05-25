@@ -1,9 +1,8 @@
 from django.db import models
 import uuid
-from .constants import *
+from .constants import EntityType
 from .helpers import *
 from datetime import datetime
-# Create your models here.
 
 
 def get_id():

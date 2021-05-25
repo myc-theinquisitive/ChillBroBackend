@@ -23,7 +23,7 @@ class ReviewRatingList(generics.ListCreateAPIView):
 
 
 class EntityReviewRatingList(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, )
 
     def post(self, request, *args, **kwargs):
         if kwargs['entity_id'] == "MYC":
@@ -45,7 +45,6 @@ class GetBusinessCleintToMYCReview(generics.ListAPIView):
             return Response({"results":{}},200)
         serializer = ReviewsRatingsSerializer(business_client_review_to_MYC)
         return Response({"results":serializer.data},200)
-    
 
 
 class ReviewRatingDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -107,6 +106,7 @@ class EntityReviewStatistics(generics.RetrieveAPIView):
                     "rating_percentage": 0.00},
                 200
             )
+
         rating_average = reviews.aggregate(
             rating_average=Avg('rating'))['rating_average']
         return Response(
@@ -142,7 +142,6 @@ class EntityTotalReviews(generics.ListAPIView):
         for each_booking in bookings:
             booking_ids.append(each_booking)
         
-
         if comment_required:
             if date_filter == 'Total':
                 reviews = ReviewsRatings.objects\
@@ -160,8 +159,6 @@ class EntityTotalReviews(generics.ListAPIView):
                 .filter(Q(reviewed_time__gte=from_date) & Q(reviewed_time__lte=to_date) &
                         Q(related_id__in=booking_ids) & Q(rating__in=rating_filters) &
                         Q(Q(comment="") | Q(comment=None)))
-                        
-                        
 
         booking_ratings = []
         for each_review in reviews:
@@ -172,7 +169,6 @@ class EntityTotalReviews(generics.ListAPIView):
                 'check_out': each_review.reviewed_time,
                 'total_money': bookings[str(each_review.related_id)]['total_money']
             }
-            print(reviews, review)
             booking_ratings.append(review)
 
         return Response({"results": booking_ratings}, 200)

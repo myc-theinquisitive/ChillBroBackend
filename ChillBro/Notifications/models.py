@@ -31,7 +31,7 @@ class NotificationUsers(models.Model):
 
 class NotificationSetting(models.Model):
     user_model = get_user_model()
-    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE,unique=True)
+    created_by = models.OneToOneField(user_model, on_delete=models.CASCADE)
     all = models.BooleanField(default=True)
     bookings = models.BooleanField(default=True)
     payments = models.BooleanField(default=True)

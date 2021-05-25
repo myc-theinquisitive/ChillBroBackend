@@ -3,6 +3,7 @@ from .views import ReviewRatingList, ReviewRatingDetail, RelatedReviewRatingList
     EntityTotalReviews, EntityReviewRatingList, CreateFeedbackAndSuggestion, GetFeedbackAndSuggestions, \
     GetBusinessCleintToMYCReview
 
+  
 urlpatterns = [
     path('', ReviewRatingList.as_view()),
     path('<int:pk>/', ReviewRatingDetail.as_view()),
