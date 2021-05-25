@@ -29,11 +29,13 @@ def validate_aadhar(aadhar_no): # 4444 3333 2222
         raise ValidationError(('Invalid AadharNo'))
     return True
 
+
 def validate_bank_account_no(account_no): # 1010101010
     regex = re.compile("[0-9]{9,18}")
     if not regex.match(account_no):
         raise ValidationError('Invalid Account Number')
     return True
+
 
 def validate_ifsc_code(ifsc_code):  # SBIN0125620
     regex = re.compile("[A-Z]{4}0[A-Z0-9]{6}")
@@ -47,6 +49,7 @@ def validate_upi_id(upi_id): #9898989898@ybl
     if not regex.match(upi_id):
         raise ValidationError('Invalid UPI ID')
     return True
+
 
 def validate_phone(phone):
     if len(phone) != 10:

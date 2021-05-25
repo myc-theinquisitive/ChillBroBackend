@@ -8,9 +8,15 @@ class EntitySerializer(serializers.ModelSerializer):
         model = MyEntity
         fields = '__all__'
         read_only_fields = ('activation_status', 'active_from')
-        
+
+
+class EntityRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EntityRegistration
+        fields = '__all__'
+
     def to_representation(self, data):
-        data = super(EntitySerializer, self).to_representation(data)
+        data = super(EntityRegistrationSerializer, self).to_representation(data)
         data['pan_image'] = data.get('pan_image').replace(settings.IMAGE_REPLACED_STRING, '')
         data['registration_image'] = data.get('registration_image').replace(settings.IMAGE_REPLACED_STRING, '')
         data['gst_image'] = data.get('gst_image').replace(settings.IMAGE_REPLACED_STRING, '')
@@ -35,7 +41,7 @@ class EntityVerificationUpdateInputSerializer(serializers.ModelSerializer):
 class EntityEditSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyEntity
-        exclude = ('address_id', 'account', 'upi', )
+        exclude = ('address_id', 'account', 'upi', 'registration', )
 
 
 class EntityAccountSerializer(serializers.ModelSerializer):
@@ -61,13 +67,14 @@ class BusinessClientEntitySerializer(serializers.ModelSerializer):
 
 
 class EntityDetailsSerializer(EntitySerializer):
+    registration = EntityRegistrationSerializer()
     account = EntityAccountSerializer()
     upi = EntityUPISerializer()
 
 
 class GetEntitiesByStatusSerializer(serializers.Serializer):
     entity_ids = serializers.ListField(
-        child = serializers.CharField()    
+        child=serializers.CharField()
     )
     statuses = serializers.ListField(
         child=serializers.CharField(max_length=30)

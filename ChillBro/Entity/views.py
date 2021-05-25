@@ -1,13 +1,14 @@
 import json
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
-from .constants import ActivationStatus
+from .constants import ActivationStatus, EntityTypes
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, \
     EntityVerificationSerializer, EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, \
-    EntityDetailsSerializer, EntityVerificationUpdateInputSerializer, GetEntitiesByStatusSerializer
+    EntityDetailsSerializer, EntityVerificationUpdateInputSerializer, GetEntitiesByStatusSerializer, \
+    EntityRegistrationSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
-from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUPI, EntityAccount
+from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUPI, EntityAccount, EntityRegistration
 from rest_framework.response import Response
 from rest_framework import status
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
@@ -101,8 +102,12 @@ class EntityList(generics.ListCreateAPIView):
         request.data._mutable = True
         request.data['address_id'] = address_details['address_id']
 
+        entity_registration_serializer = EntityRegistrationSerializer(data=request.data)
         entity_upi_serializer = EntityUPISerializer(data=request.data)
         entity_account_serializer = EntityAccountSerializer(data=request.data)
+        if not entity_registration_serializer.is_valid():
+            return Response({"message": "Can't create outlet", "errors": entity_registration_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
         if not entity_account_serializer.is_valid():
             return Response({"message": "Can't create outlet", "errors": entity_account_serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -110,8 +115,10 @@ class EntityList(generics.ListCreateAPIView):
             return Response({"message": "Can't create outlet", "errors": entity_upi_serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        registration_instance = entity_registration_serializer.save()
         upi_instance = entity_upi_serializer.save()
         account_instance = entity_account_serializer.save()
+        request.data['registration'] = registration_instance.id
         request.data['account'] = account_instance.id
         request.data['upi'] = upi_instance.id
 
@@ -165,7 +172,7 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         self.check_entity_permission(request)
-        entity = MyEntity.objects.select_related('account', 'upi').get(id=self.kwargs['pk'])
+        entity = MyEntity.objects.select_related('account', 'upi', 'registration').get(id=self.kwargs['pk'])
         serializer = EntityDetailsSerializer(entity)
 
         response_data = serializer.data
@@ -191,14 +198,19 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
             return Response({"message": "Can't update outlet details", "errors": address_details['errors']},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        registration = EntityRegistration.objects.get(id=entity.registration_id)
         account = EntityAccount.objects.get(id=entity.account_id)
         upi = EntityUPI.objects.get(id=entity.upi_id)
 
+        registration_serializer = EntityRegistrationSerializer(registration, data=request.data)
         account_serializer = EntityAccountSerializer(account, data=request.data)
         upi_serializer = EntityUPISerializer(upi, data=request.data)
         if not serializer.is_valid():
             return Response({"message": "Can't update outlet details",
                              "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        if not registration_serializer.is_valid():
+            return Response({"message": "Can't update outlet details",
+                             "errors": registration_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         if not account_serializer.is_valid():
             return Response({"message": "Can't update outlet details",
                              "errors": account_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -207,6 +219,7 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
                              "errors": upi_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer.save()
+        registration_serializer.save()
         account_serializer.save()
         upi_serializer.save()
         return Response({"message": "Outlet details updated successfully"}, status=status.HTTP_200_OK)
@@ -361,7 +374,7 @@ class BusinessClientEntities(generics.ListAPIView):
 
 class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
     serializer_class = EntitySerializer
-    queryset = BusinessClientEntity.objects.all()
+    queryset = MyEntity.objects.all()
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,)
 
     def post(self, request, *args, **kwargs):
@@ -380,7 +393,7 @@ class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
         for entity in serializer.data:
             entity["employees"] = entity_id_wise_employees[entity["id"]]
         add_address_details_to_entities(serializer.data)
-        return Response({"results":serializer.data}, status=status.HTTP_200_OK)
+        return Response({"results": serializer.data}, status=status.HTTP_200_OK)
 
 
 class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
@@ -420,6 +433,24 @@ class BusinessClientEntitiesByType(generics.RetrieveAPIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+class EntityRegistrationDetail(generics.UpdateAPIView):
+    permission_classes = (
+        IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,
+        IsBusinessClientEntity | IsEmployeeEntity)
+    serializer_class = EntityRegistrationSerializer
+    queryset = EntityRegistration.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        try:
+            entity = MyEntity.objects.get(registration=kwargs['pk'])
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't update Registration Details",
+                             "errors": "Invalid Registration Id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        self.check_object_permissions(request, entity)
+        return super().put(request, *args, **kwargs)
+
+
 class EntityAccountDetail(generics.UpdateAPIView):
     permission_classes = (
         IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,
@@ -432,7 +463,7 @@ class EntityAccountDetail(generics.UpdateAPIView):
             entity = MyEntity.objects.get(account=kwargs['pk'])
         except ObjectDoesNotExist:
             return Response({"message": "Can't update Account Details",
-                             "errors": "Invalid Accound Id"}, status=status.HTTP_400_BAD_REQUEST)
+                             "errors": "Invalid Account Id"}, status=status.HTTP_400_BAD_REQUEST)
 
         self.check_object_permissions(request, entity)
         return super().put(request, *args, **kwargs)

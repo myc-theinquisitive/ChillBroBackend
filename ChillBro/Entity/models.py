@@ -23,16 +23,7 @@ class MyEntity(models.Model):
         max_length=30, choices=[(status.name, status.value) for status in Status], default=Status.OFFLINE.value)
     address_id = models.CharField(max_length=36)
 
-    pan_no = models.CharField(max_length=10, validators=[MinLengthValidator(10), validate_pan])
-    registration_no = models.CharField(max_length=21, validators=[MinLengthValidator(21), validate_registration])
-    gst_in = models.CharField(max_length=15, validators=[MinLengthValidator(15), validate_gst])
-    aadhar_no = models.CharField(max_length=14, validators=[MinLengthValidator(14), validate_aadhar])
-
-    pan_image = models.ImageField(upload_to=upload_pan_image_for_entity,max_length=500)
-    registration_image = models.ImageField(upload_to=upload_registration_image_for_entity,max_length=500)
-    gst_image = models.ImageField(upload_to=upload_gst_image_for_entity,max_length=500)
-    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_entity,max_length=500)
-
+    registration = models.OneToOneField('EntityRegistration', on_delete=models.CASCADE)
     account = models.OneToOneField('EntityAccount', on_delete=models.CASCADE)
     upi = models.OneToOneField('EntityUPI', on_delete=models.CASCADE)
 
@@ -52,6 +43,20 @@ class MyEntity(models.Model):
         ordering = ['-created_at']
 
 
+class EntityRegistration(models.Model):
+    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
+
+    pan_no = models.CharField(max_length=10, validators=[MinLengthValidator(10), validate_pan])
+    registration_no = models.CharField(max_length=21, validators=[MinLengthValidator(21), validate_registration])
+    gst_in = models.CharField(max_length=15, validators=[MinLengthValidator(15), validate_gst])
+    aadhar_no = models.CharField(max_length=14, validators=[MinLengthValidator(14), validate_aadhar])
+
+    pan_image = models.ImageField(upload_to=upload_pan_image_for_entity, max_length=500)
+    registration_image = models.ImageField(upload_to=upload_registration_image_for_entity, max_length=500)
+    gst_image = models.ImageField(upload_to=upload_gst_image_for_entity, max_length=500)
+    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_entity, max_length=500)
+
+
 class EntityAccount(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     bank_name = models.CharField(max_length=60)
@@ -63,12 +68,12 @@ class EntityAccount(models.Model):
 
 class EntityUPI(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
-    upi_id = models.CharField(max_length=321, validators=[MinLengthValidator(5), validate_upi_id])
+    upi_id = models.CharField(max_length=100, validators=[MinLengthValidator(5), validate_upi_id])
     phone_pe = models.CharField(max_length=10, validators=[MinLengthValidator(10), validate_phone])
     g_pay = models.CharField(max_length=10, validators=[MinLengthValidator(10), validate_phone])
     pay_tm = models.CharField(max_length=10, validators=[MinLengthValidator(10), validate_phone])
 
-    
+
 class EntityVerification(models.Model):
     entity = models.OneToOneField('MyEntity', on_delete=models.CASCADE, verbose_name="Entity")
     comments = models.TextField(null=True, blank=True)
