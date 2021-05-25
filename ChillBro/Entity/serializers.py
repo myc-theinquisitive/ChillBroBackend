@@ -63,3 +63,12 @@ class BusinessClientEntitySerializer(serializers.ModelSerializer):
 class EntityDetailsSerializer(EntitySerializer):
     account = EntityAccountSerializer()
     upi = EntityUPISerializer()
+
+
+class GetEntitiesByStatusSerializer(serializers.Serializer):
+    entity_ids = serializers.ListField(
+        child = serializers.CharField()    
+    )
+    statuses = serializers.ListField(
+        child=serializers.CharField(max_length=30)
+    )

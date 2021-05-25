@@ -30,3 +30,8 @@ def update_address(address_id, address_details):
         return {"is_valid": True, "address_id": serializer.id, "errors": None}
     else:
         return {"is_valid": False, "address_id": None, "errors": valid_serializer.errors}
+
+
+def filter_by_city(address_ids, city):
+    from .models import Address
+    return Address.objects.filter(id__in=address_ids).filter(city=city).values_list("id", flat=True)

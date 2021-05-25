@@ -1,12 +1,14 @@
 import enum
 
 
+REVIEW_SCALE = 5
+
+
 class EntityType(enum.Enum):
-    hotels = "HOTELS"
+    hotels = "HOTEL"
     transport = "TRANSPORT"
-    rentals = "RENTALS"
-    resorts = "RESORTS"
-    events = "EVENTS"
+    rentals = "RENTAL"
+    events = "EVENT"
 
 
 class FeedbackCategory(enum.Enum):

@@ -55,6 +55,12 @@ def get_entity_type(entity_filter):
     if len(entity_filter) != 0:
         return entity_filter
     return entities
+    
+def get_rating_filters(rating_filter):
+    ratings = [rating for rating in range(1,6)]
+    if len(rating_filter) == 0:
+        return ratings
+    return rating_filter
 
 
 def get_categories(category_filters):

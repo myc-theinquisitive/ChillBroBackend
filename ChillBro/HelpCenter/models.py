@@ -14,7 +14,7 @@ class CarouselItem(models.Model):
     carousel = models.ForeignKey('Carousel', on_delete=models.CASCADE)
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     title = models.CharField(max_length=30)
-    image = models.ImageField(upload_to=upload_carousel_image)
+    image = models.ImageField(upload_to=upload_carousel_image,max_length=300)
     redirection_url = models.URLField(max_length=256)
     start = models.DateTimeField()
     end = models.DateTimeField()

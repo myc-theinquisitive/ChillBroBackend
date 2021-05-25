@@ -205,7 +205,7 @@ class GetPaymentsRevenueStatisticsDetailsView(APIView):
 
         transaction_serializer = BookingTransactionDetailsSerializer(transactions, many=True)
         
-        return Response(transaction_serializer.data, 200)
+        return Response({"results":transaction_serializer.data}, 200)
 
 
 # TODO: Create get api based on entity filters, entity ids, date filters - updated_at and payment status

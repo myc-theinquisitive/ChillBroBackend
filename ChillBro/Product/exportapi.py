@@ -1,5 +1,4 @@
 from collections import defaultdict
-
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
@@ -7,7 +6,8 @@ from .Category.models import Category
 from .BaseProduct.models import Product, ProductImage
 from .views import calculate_product_net_price
 from .Seller.models import SellerProduct
-from django.db.models import F, Count
+from django.db.models import Count
+from .BaseProduct.constants import ActivationStatus
 
 
 def get_product_id_wise_details(product_ids):
@@ -19,6 +19,7 @@ def get_product_id_wise_details(product_ids):
     for each_product in products:
         discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
         product_data = {
+            'product_id':each_product.id,
             'price': each_product.discounted_price,
             'net_value_details': calculate_product_net_price(each_product.price, discount),
             'quantity': each_product.quantity,
@@ -51,7 +52,9 @@ def product_details_with_image(product_ids):
 
 
 def total_products_count_in_entities(entity_ids):
-    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids).aggregate(count=Count('product'))['count']
+    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids,
+                                                  product__activation_status=ActivationStatus.ACTIVE.value)\
+                        .aggregate(count=Count('product'))['count']
     return products_count
 
 

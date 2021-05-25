@@ -36,4 +36,4 @@ class Employee(models.Model):
 
 class EmployeeImage(models.Model):
     employee = models.ForeignKey('Employee',on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=upload_employee_image)
+    image = models.ImageField(upload_to=upload_employee_image,max_length=300)

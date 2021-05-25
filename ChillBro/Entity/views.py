@@ -1,30 +1,31 @@
 from UserApp.models import Employee
 from .constants import EntityTypes
 import json
-from django.db.models import Count
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
 from .constants import ActivationStatus
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, \
     EntityVerificationSerializer, EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, \
-    EntityDetailsSerializer, EntityVerificationUpdateInputSerializer
+    EntityDetailsSerializer, EntityVerificationUpdateInputSerializer, GetEntitiesByStatusSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUPI, EntityAccount
 from rest_framework.response import Response
 from rest_framework import status
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
-    update_address_for_address_id, get_entity_id_wise_employees, get_top_level_categories
+    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee, get_top_level_categories
 from datetime import datetime
-from .helpers import get_date_format
+from .helpers import get_date_format, get_entity_status
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsGet, IsEmployeeEntity
 
 
-def entity_ids_for_business_client(business_client_id):
+def entity_ids_for_user(user_id):
     entity_ids = BusinessClientEntity.objects.filter(
-        business_client_id=business_client_id).values_list('entity_id', flat=True)
+        business_client_id=user_id).values_list('entity_id', flat=True)
+    if len(entity_ids) == 0:
+        entity_ids = get_entity_ids_for_employee(user_id)
     return entity_ids
 
 
@@ -171,7 +172,7 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
         add_verification_details_to_entities([response_data])
         add_address_details_to_entities([response_data])
 
-        return Response({"results":response_data}, status=status.HTTP_200_OK)
+        return Response({"results": response_data}, status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
         self.check_entity_permission(request)
@@ -301,27 +302,13 @@ class EntityStatusAll(generics.GenericAPIView):
             return Response({"message": "Can't update Outlet status",
                              "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-        entity_ids = BusinessClientEntity.objects.filter(business_client_id=request.user.id).values_list(
-            'entity_id', flat=True)
-        try:
-            if len(entity_ids) == 0:
-                employee = Employee.objects.get(user_id=request.user.id)
-                entity_ids = [employee.entity_id]
-        except:
-            pass
+        entity_ids = entity_ids_for_user(request.user.id)
         entities = MyEntity.objects.active().filter(id__in=entity_ids)
         entities.update(status=serializer.data['status'])
         return Response({"message": "Outlet status updated successfully"}, status=status.HTTP_200_OK)
 
     def get(self, request):
-        entity_ids = BusinessClientEntity.objects.filter(business_client_id=request.user.id).values_list(
-            'entity_id', flat=True)
-        try:
-            if len(entity_ids) == 0:
-                employee = Employee.objects.get(user_id=request.user.id)
-                entity_ids = [employee.entity_id]
-        except:
-            pass
+        entity_ids = entity_ids_for_user(request.user.id)
         statuses = MyEntity.objects.filter(id__in=entity_ids).values('id', 'status', 'name')
         return Response(statuses, 200)
 
@@ -357,10 +344,10 @@ class EntityStatus(APIView):
 class BusinessClientEntities(generics.ListAPIView):
     serializer_class = EntitySerializer
     queryset = BusinessClientEntity.objects.all()
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,)
 
     def get(self, request, *args, **kwargs):
-        entity_ids = entity_ids_for_business_client(request.user.id)
+        entity_ids = entity_ids_for_user(request.user.id)
         entities = MyEntity.objects.active().filter(id__in=entity_ids)
         serializer = self.serializer_class(entities, many=True)
 
@@ -372,44 +359,70 @@ class BusinessClientEntities(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
+    serializer_class = EntitySerializer
+    queryset = BusinessClientEntity.objects.all()
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,)
+
+    def post(self, request, *args, **kwargs):
+        input_serializer = GetEntitiesByStatusSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't get entities", "errors": input_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        entity_ids = request.data['entity_ids']
+        activation_statuses = get_entity_status(request.data['statuses'])
+        entities = MyEntity.objects.filter(id__in=entity_ids, activation_status__in=activation_statuses)
+        serializer = self.serializer_class(entities, many=True)
+        
+        # Adding Employees for entity
+        entity_id_wise_employees = get_entity_id_wise_employees(entity_ids)
+        for entity in serializer.data:
+            entity["employees"] = entity_id_wise_employees[entity["id"]]
+        add_address_details_to_entities(serializer.data)
+        return Response({"results":serializer.data}, status=status.HTTP_200_OK)
+
+
 class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,)
 
     def get(self, request, *args, **kwargs):
-        business_client_entities = BusinessClientEntity.objects.select_related('entity').filter(
-            business_client_id=request.user, entity__activation_status=ActivationStatus.ACTIVE.value) \
-            .values_list('entity_id', flat=True)
-        business_client_entities_count = business_client_entities.aggregate(count=Count('entity_id'))['count']
-
-        total_products_in_entities = get_total_products_count_in_entities(business_client_entities)
-        return Response({'entities_count': business_client_entities_count, \
-                         'products_count': total_products_in_entities}, 200)
+        entity_ids = entity_ids_for_user(request.user.id)
+        active_entity_ids = MyEntity.objects.active().filter(id__in=entity_ids)
+        entities_count = len(active_entity_ids)
+        total_products_in_entities = get_total_products_count_in_entities(entity_ids)
+        return Response(
+            {
+                'entities_count': entities_count,
+                'products_count': total_products_in_entities
+            }, 200)
 
 
 class BusinessClientEntitiesByType(generics.RetrieveAPIView):
     serializer_class = EntitySerializer
     queryset = BusinessClientEntity.objects.all()
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee)
 
     def get(self, request, *args, **kwargs):
-        entity_ids = entity_ids_for_business_client(request.user.id)
-        top_level_categories = get_top_level_categories()
+        entity_ids = entity_ids_for_user(request.user.id)
         data = defaultdict(list)
+        for each_category in EntityTypes:
+            data[each_category.value] = []
+        entity_details = MyEntity.objects.active().filter(id__in=entity_ids)
         all_entities = []
-        for each_category in top_level_categories:
-            entity_details = MyEntity.objects.filter(id__in=entity_ids, type=each_category)
-            data[each_category]=[]
-            for each_entity in entity_details:
-                all_entities.append(each_entity.id)
-                data[each_category].append({each_entity.id:each_entity.name})
-                
+
+        for each_entity in entity_details:
+            all_entities.append(each_entity.id)
+            data[each_entity.type].append({each_entity.id: each_entity.name})
+
         data["ALL"] = all_entities
         return Response(data, status=status.HTTP_200_OK)
 
 
 class EntityAccountDetail(generics.UpdateAPIView):
     permission_classes = (
-    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
+        IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,
+        IsBusinessClientEntity | IsEmployeeEntity)
     serializer_class = EntityAccountSerializer
     queryset = EntityAccount.objects.all()
 
@@ -426,7 +439,8 @@ class EntityAccountDetail(generics.UpdateAPIView):
 
 class EntityUPIDetail(generics.UpdateAPIView):
     permission_classes = (
-    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
+        IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,
+        IsBusinessClientEntity | IsEmployeeEntity)
     serializer_class = EntityUPISerializer
     queryset = EntityUPI.objects.all()
 
@@ -443,7 +457,8 @@ class EntityUPIDetail(generics.UpdateAPIView):
 
 class EntityBasicDetail(generics.UpdateAPIView):
     permission_classes = (
-    IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient, IsBusinessClientEntity | IsEmployeeEntity)
+        IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,
+        IsBusinessClientEntity | IsEmployeeEntity)
     serializer_class = EntitySerializer
     queryset = MyEntity.objects.all()
 

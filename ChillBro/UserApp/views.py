@@ -163,7 +163,7 @@ class EntityBusinessClientEmployee(generics.ListAPIView):
         entity_ids = get_entity_ids_for_business_client(request.user.id)
         employee_ids = Employee.objects.filter(entity_id__in=entity_ids).values_list('id')
         employees = get_employee_details_with_images(employee_ids)
-        return Response(employees, 200)
+        return Response({"results":employees}, 200)
 
 
 class EmployeeActive(generics.RetrieveUpdateAPIView):
@@ -178,6 +178,7 @@ class EmployeeActive(generics.RetrieveUpdateAPIView):
     def put(self, request, *args, **kwargs):
         self.check_object_permissions(request, kwargs['pk'])
         return super().put(request, *args, **kwargs)
+
 
 class EmployeeImageCreate(generics.CreateAPIView):
     permission_classes = (IsAuthenticated, IsOwnerById)

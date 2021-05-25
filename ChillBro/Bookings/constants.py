@@ -40,6 +40,7 @@ class DateFilters(enum.Enum):
     yesterday = "YESTERDAY"
     week = "WEEK"
     month = "MONTH"
+    total = "TOTAL"
 
 
 class IdProofType(enum.Enum):
