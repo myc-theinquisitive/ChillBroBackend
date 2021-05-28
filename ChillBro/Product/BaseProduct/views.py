@@ -25,7 +25,7 @@ class BaseProductImageCreate(generics.CreateAPIView):
         if not serializer.is_valid():
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         serializer.create(request.data)
-        return Response({"message": "Product added successfully"}, status=status.HTTP_201_CREATED)
+        return Response({"message": "Product Image added successfully"}, status=status.HTTP_201_CREATED)
 
 
 class BaseProductImageDelete(generics.DestroyAPIView):

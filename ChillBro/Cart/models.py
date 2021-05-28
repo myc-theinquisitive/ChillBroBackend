@@ -14,7 +14,7 @@ class Cart(models.Model):
     entity_id = models.CharField(max_length=36)
     entity_type = models.CharField(max_length=30,
                                    choices=[(type_of_entity.value, type_of_entity.value) for type_of_entity in
-                                            EntityType], default=EntityType.HOTEL.value)
+                                            EntityType])
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     user_model = get_user_model()

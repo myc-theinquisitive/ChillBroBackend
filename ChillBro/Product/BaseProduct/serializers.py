@@ -181,8 +181,7 @@ class ComboProductItemsSerializer(serializers.ModelSerializer):
 
 
 class ProductImageSerializer(serializers.Serializer):
-
-    product = serializers.CharField(max_length=36)
+    product = serializers.CharField(max_length=36, allow_null=True, allow_blank=True)
     image = serializers.ImageField()
     order = serializers.IntegerField()
 
@@ -199,7 +198,8 @@ class ProductImageSerializer(serializers.Serializer):
         for image in product_images:
             each_image = ProductImage(
                 product=image['product'],
-                image=image['image']
+                image=image['image'],
+                order=image['order']
             )
             all_images.append(each_image)
         ProductImage.objects.bulk_create(all_images)

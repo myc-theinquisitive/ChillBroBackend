@@ -1,5 +1,5 @@
 import enum
-from ChillBro.constants import EntityType
+from ChillBro.constants import EntityType, EntitySubType
 
 
 class Status(enum.Enum):

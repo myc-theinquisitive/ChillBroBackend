@@ -1,7 +1,7 @@
 from collections import defaultdict
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Count
+from django.db.models import Count, Min
 from .Category.models import Category
 from .BaseProduct.models import Product, ProductImage
 from .views import calculate_product_net_price
@@ -19,7 +19,7 @@ def get_product_id_wise_details(product_ids):
     for each_product in products:
         discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
         product_data = {
-            'product_id':each_product.id,
+            'product_id': each_product.id,
             'price': each_product.discounted_price,
             'net_value_details': calculate_product_net_price(each_product.price, discount),
             'quantity': each_product.quantity,
@@ -43,7 +43,7 @@ def product_details_with_image(product_ids):
     details_of_product = {}
     for each_product in products:
         image_url = each_product.image.url
-        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
+        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
         details_of_product[each_product.product.id] = {
             'name': each_product.product.name,
             'image_url': image_url
@@ -67,6 +67,14 @@ def check_product_is_valid(product_id):
         
         
 def top_level_categories():
-    return Category.objects.filter(parent_category=None).values_list('name',flat=True)
+    return Category.objects.filter(parent_category=None).values_list('name', flat=True)
     
-    
+
+def seller_products_starting_price_query(seller_id):
+    return SellerProduct.objects.filter(seller_id=seller_id).select_related('Product').values('seller_id') \
+        .annotate(starting_price=Min('product__discounted_price')).values('starting_price')
+
+
+def get_sellers_product_stating_price(seller_ids):
+    return SellerProduct.objects.filter(seller_id__in=seller_ids).select_related('Product').values('seller_id') \
+        .annotate(starting_price=Min('product__discounted_price')).values('seller_id', 'starting_price')

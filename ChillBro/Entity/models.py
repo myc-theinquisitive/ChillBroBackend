@@ -1,24 +1,41 @@
 from django.db import models
-from .constants import Status, EntityType, BankAccountTypes, ActivationStatus
+from django.db.models import Q
+
+from .constants import Status, EntityType, BankAccountTypes, ActivationStatus, EntitySubType
 import uuid
 from django.core.validators import MinLengthValidator
-from .helpers import get_user_model
+from .helpers import get_user_model, image_upload_to_amenities, upload_image_for_entity
 from .validations import validate_pan, validate_aadhar, validate_registration, validate_gst, \
     validate_bank_account_no, validate_ifsc_code, validate_upi_id, validate_phone
 from .helpers import upload_aadhar_image_for_entity, upload_gst_image_for_entity, upload_pan_image_for_entity, \
     upload_registration_image_for_entity
 
 
-class EntityManager(models.Manager):
+class Amenities(models.Model):
+    name = models.CharField(max_length=40)
+    icon_url = models.ImageField(upload_to=image_upload_to_amenities)
 
+    def __str__(self):
+        return self.name
+
+
+class EntityManager(models.Manager):
     def active(self):
         return self.filter(activation_status=ActivationStatus.ACTIVE.value)
+
+    def search(self, query):
+        lookups = (Q(name__icontains=query))
+        return self.filter(lookups).distinct()
 
 
 class MyEntity(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
     name = models.CharField(max_length=100, verbose_name="Name")
-    type = models.CharField(max_length=30, choices=[(entity.name, entity.value) for entity in EntityType])
+    description = models.TextField(null=True, blank=True)
+    type = models.CharField(max_length=30, choices=[(etype.name, etype.value) for etype in EntityType])
+    sub_type = models.CharField(
+        max_length=30, choices=[(esubtype.name, esubtype.value) for esubtype in EntitySubType], null=True, blank=True)
+
     status = models.CharField(
         max_length=30, choices=[(status.name, status.value) for status in Status], default=Status.OFFLINE.value)
     address_id = models.CharField(max_length=36)
@@ -41,6 +58,32 @@ class MyEntity(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class EntityImage(models.Model):
+    entity = models.ForeignKey("MyEntity", on_delete=models.CASCADE)
+    image = models.ImageField(upload_to=upload_image_for_entity)
+    order = models.IntegerField()
+
+    class Meta:
+        unique_together = ('entity', 'order',)
+        ordering = ['order']
+
+    def __str__(self):
+        return "Entity Image - {0}".format(self.id)
+
+
+class EntityAvailableAmenities(models.Model):
+    entity = models.ForeignKey('MyEntity', on_delete=models.CASCADE, verbose_name="Entity")
+    amenity = models.ForeignKey("Amenities", on_delete=models.CASCADE, verbose_name="Amenities")
+    is_available = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('entity', 'amenity',)
+
+    def __str__(self):
+        return "Entity: {0}, Amenities: {1}, Is Available {2}"\
+            .format(self.entity_id, self.amenity.name, self.is_available)
 
 
 class EntityRegistration(models.Model):

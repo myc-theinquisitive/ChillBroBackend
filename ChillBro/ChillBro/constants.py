@@ -2,10 +2,25 @@ import enum
 
 
 class EntityType(enum.Enum):
-    HOTEL = "HOTEL"
+    STAY = "STAY"
     TRANSPORT = "TRANSPORT"
     RENTAL = "RENTAL"
     EVENT = "EVENT"
+
+
+class EntitySubType(enum.Enum):
+    # for stay
+    HOTEL = "HOTEL"
+    RESORT = "RESORT"
+    GUESTHOUSE = "GUESTHOUSE"
+
+    DORMITORY_MEN = "DORMITORY_MEN"
+    DORMITORY_WOMEN = "DORMITORY_WOMEN"
+    DORMITORY_ALL = "DORMITORY_ALL"
+
+    PG_MEN = "PG_MEN"
+    PG_WOMEN = "PG_WOMEN"
+    PG_ALL = "PG_ALL"
 
 
 class DateFilters(enum.Enum):

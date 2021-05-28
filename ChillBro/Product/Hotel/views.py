@@ -6,6 +6,8 @@ from .serializers import AmenitiesSerializer, HotelAvailableAmenitiesSerializer,
     HotelAvailableAmenitiesUpdateSerializer
 from ..product_interface import ProductInterface
 from collections import defaultdict
+from django.conf import settings
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsGet
 
 
 def validate_amenity_ids(amenity_ids: List[int]) -> (bool, List[int]):
@@ -34,7 +36,7 @@ def validate_hotel_available_amenities_ids(hotel_room_id: int, hotel_available_a
 
 
 class AmenitiesList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet)
     queryset = Amenities.objects.all()
     serializer_class = AmenitiesSerializer
 
@@ -231,9 +233,12 @@ class HotelView(ProductInterface):
 
     @staticmethod
     def convert_available_amenities_to_dict(available_amenity):
+        image_url = available_amenity.amenity.icon_url.url
+        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
         return {
             "id": available_amenity.id,
             "name": available_amenity.amenity.name,
+            "icon_url": image_url,
             "is_available": available_amenity.is_available
         }
 

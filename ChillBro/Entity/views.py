@@ -1,23 +1,40 @@
 import json
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import OuterRef, Subquery, FloatField, DecimalField
 from rest_framework.views import APIView
 from .constants import ActivationStatus, EntityType
 from .serializers import EntitySerializer, EntityStatusSerializer, BusinessClientEntitySerializer, \
     EntityVerificationSerializer, EntityAccountSerializer, EntityUPISerializer, EntityEditSerializer, \
     EntityDetailsSerializer, EntityVerificationUpdateInputSerializer, GetEntitiesByStatusSerializer, \
-    EntityRegistrationSerializer
+    EntityRegistrationSerializer, GetEntitiesBySearchFilters, AmenitiesSerializer, \
+    AmenityIsAvailableSerializer, EntityAvailableAmenitiesSerializer, NewEntitySerializer, \
+    EntityAvailableAmenitiesUpdateSerializer, EntityImageSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
-from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUPI, EntityAccount, EntityRegistration
+from .models import MyEntity, BusinessClientEntity, EntityVerification, EntityUPI, EntityAccount, \
+    EntityRegistration, Amenities, EntityAvailableAmenities, EntityImage
 from rest_framework.response import Response
 from rest_framework import status
 from .wrappers import post_create_address, get_address_details_for_address_ids, get_total_products_count_in_entities, \
-    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee
+    update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee, \
+    get_entity_id_wise_average_rating, average_rating_query_for_entity, entity_products_starting_price_query, \
+    get_entity_id_wise_starting_price, get_entity_id_wise_wishlist_status, get_rating_wise_review_details_for_entity, \
+    get_rating_type_wise_average_rating_for_entity, get_latest_ratings_for_entity
 from datetime import datetime
-from .helpers import get_date_format, get_entity_status
+from .helpers import get_date_format, get_entity_status, get_entity_types_filter
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsGet, IsEmployeeEntity
+from decimal import Decimal
+from django.conf import settings
+
+
+def filter_entity_ids_by_city(entity_ids, city):
+    from .wrappers import filter_address_ids_by_city
+    address_ids = MyEntity.objects.filter(id__in=entity_ids).values_list("address_id", flat=True)
+    city_address_ids = filter_address_ids_by_city(address_ids, city)
+    return MyEntity.objects.filter(id__in=entity_ids, address_id__in=city_address_ids)\
+        .values_list("id", flat=True)
 
 
 def entity_ids_for_user(user_id):
@@ -78,6 +95,63 @@ def add_address_details_to_entities(entity_details_list):
         entity["address"] = address_per_address_id[address_id]
 
 
+def validate_amenity_ids(amenity_ids):
+    existing_amenities = Amenities.objects.filter(id__in=amenity_ids).values_list('id', flat=True)
+    if len(existing_amenities) != len(amenity_ids):
+        return False, set(amenity_ids) - set(existing_amenities)
+    return True, []
+
+
+def validate_entity_available_amenities_ids(entity_id, entity_available_amenity_ids):
+    existing_entity_available_amenity_ids \
+        = EntityAvailableAmenities.objects.filter(id__in=entity_available_amenity_ids, entity_id=entity_id)\
+        .values_list('id', flat=True)
+    if len(existing_entity_available_amenity_ids) != len(entity_available_amenity_ids):
+        return False, set(entity_available_amenity_ids) - set(existing_entity_available_amenity_ids)
+    return True, []
+
+
+class EntityImageCreate(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsEmployeeEntity | IsBusinessClientEntity)
+    queryset = EntityImage.objects.all()
+    serializer_class = EntityImageSerializer
+
+    def post(self, request, *args, **kwargs):
+        try:
+            entity = MyEntity.objects.get(id=request.data['entity'])
+        except ObjectDoesNotExist:
+            return Response({"errors": "Entity does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+        self.check_object_permissions(request, entity)
+
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            entity_image = EntityImage.objects.get(entity=entity, order=request.data["order"])
+            return Response({"errors": "Image with order already Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+        except ObjectDoesNotExist:
+            pass
+
+        serializer.create(request.data)
+        return Response({"message": "Entity Image added successfully"}, status=status.HTTP_201_CREATED)
+
+
+class EntityImageDelete(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsEmployeeEntity | IsBusinessClientEntity)
+    queryset = EntityImage.objects.all()
+    serializer_class = EntityImageSerializer
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            entity_image = EntityImage.objects.get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            return Response({"errors": "Entity image does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+        self.check_object_permissions(request, entity_image.entity)
+
+        return super().delete(request, *args, **kwargs)
+
+
 class EntityList(generics.ListCreateAPIView):
     queryset = MyEntity.objects.all()
     serializer_class = EntitySerializer
@@ -89,18 +163,31 @@ class EntityList(generics.ListCreateAPIView):
         add_address_details_to_entities(response.data["results"])
         return response
 
+    @staticmethod
+    def validate_entity_amenities(amenities_data):
+        errors = defaultdict(list)
+        is_valid = True
+
+        serializer = AmenityIsAvailableSerializer(data=amenities_data, many=True)
+        if not serializer.is_valid():
+            return False, serializer.errors
+
+        amenity_ids = []
+        for amenity_dict in amenities_data:
+            amenity_ids.append(amenity_dict["amenity"])
+
+        amenity_ids_valid, invalid_ids = validate_amenity_ids(amenity_ids)
+        if not amenity_ids_valid:
+            is_valid = False
+            errors["invalid_amenity_ids"] = invalid_ids
+
+        return is_valid, errors
+
     def post(self, request, *args, **kwargs):
         request_data = request.data.dict()
         address_data = request_data.pop('address', {})
+        # remove while not using forms from postman
         address_data = json.loads(address_data)
-
-        address_details = post_create_address(address_data)
-        if not address_details['is_valid']:
-            return Response({"message": "Can't create outlet", "errors": address_details['errors']},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        request.data._mutable = True
-        request.data['address_id'] = address_details['address_id']
 
         entity_registration_serializer = EntityRegistrationSerializer(data=request.data)
         entity_upi_serializer = EntityUPISerializer(data=request.data)
@@ -115,18 +202,56 @@ class EntityList(generics.ListCreateAPIView):
             return Response({"message": "Can't create outlet", "errors": entity_upi_serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        registration_instance = entity_registration_serializer.save()
-        upi_instance = entity_upi_serializer.save()
-        account_instance = entity_account_serializer.save()
-        request.data['registration'] = registration_instance.id
-        request.data['account'] = account_instance.id
-        request.data['upi'] = upi_instance.id
+        amenities_data = request_data.pop("amenities", [])
+        # remove while not using forms from postman
+        amenities_data = json.loads(amenities_data)
+        amenities_data_valid, errors = self.validate_entity_amenities(amenities_data)
+        if not amenities_data_valid:
+            return Response({"message": "Can't create outlet", "errors": errors},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.serializer_class(data=request.data)
+        # Validating images
+        entity_images = request_data.pop("images", [])
+        entity_image_serializer = EntityImageSerializer(data=entity_images, many=True)
+        if not entity_image_serializer.is_valid():
+            Response({"message": "Can't create outlet", "errors": entity_image_serializer.errors},
+                     status=status.HTTP_400_BAD_REQUEST)
+
+        request.data._mutable = True
+        serializer = NewEntitySerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"message": "Can't create outlet", "errors": serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
-        entity = serializer.save()
+
+        address_details = post_create_address(address_data)
+        if not address_details['is_valid']:
+            return Response({"message": "Can't create outlet", "errors": address_details['errors']},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        registration_instance = entity_registration_serializer.save()
+        upi_instance = entity_upi_serializer.save()
+        account_instance = entity_account_serializer.save()
+
+        request.data['address_id'] = address_details['address_id']
+        request.data['registration'] = registration_instance.id
+        request.data['account'] = account_instance.id
+        request.data['upi'] = upi_instance.id
+        entity = EntitySerializer().create(request.data)
+
+        for amenity in amenities_data:
+            amenity["entity"] = entity.id
+        entity_available_amenities_serializer = EntityAvailableAmenitiesSerializer()
+        entity_available_amenities_serializer.bulk_create(amenities_data)
+
+        entity_image_dicts = []
+        for image_dict in entity_images:
+            entity_image_dict = {
+                "entity": entity.id,
+                "image": image_dict["image"],
+                "order": image_dict["order"]
+            }
+            entity_image_dicts.append(entity_image_dict)
+        EntityImageSerializer.bulk_create(entity_image_dicts)
 
         # Linking entity to business clients
         business_client_entity_data = {
@@ -161,7 +286,7 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = MyEntity.objects.all()
     serializer_class = EntitySerializer
     permission_classes = (
-        IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | (IsEmployee & IsGet), IsBusinessClientEntity)
+        IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClientEntity | IsEmployeeEntity | IsGet)
 
     def check_entity_permission(self, request):
         try:
@@ -181,6 +306,52 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
 
         return Response({"results": response_data}, status=status.HTTP_200_OK)
 
+    @staticmethod
+    def validate_entity_amenities(entity_id, amenities_data):
+        is_valid = True
+        errors = defaultdict(list)
+
+        entity_available_amenities_update_serializer = EntityAvailableAmenitiesUpdateSerializer(data=amenities_data)
+        entity_available_amenities_update_data_valid = entity_available_amenities_update_serializer.is_valid()
+
+        if not entity_available_amenities_update_data_valid:
+            is_valid = False
+            errors.update(entity_available_amenities_update_serializer.errors)
+            return is_valid, errors
+
+        # Additional validations except serializer validations
+        amenity_ids = []
+        entity_available_amenity_ids = []
+        for amenity in amenities_data["add"]:
+            entity_available_amenities_exists = EntityAvailableAmenities.objects \
+                .filter(entity_id=entity_id, amenity_id=amenity["amenity"]).exists()
+            if entity_available_amenities_exists:
+                is_valid = False
+                errors["Entity-Amenity"].append("Entity-{0}, Amenity-{1}: Already Exists!"
+                                                .format(entity_id, amenity["amenity"]))
+
+            amenity["entity"] = entity_id
+            amenity_ids.append(amenity["amenity"])
+
+        for amenity in amenities_data["change"]:
+            entity_available_amenity_ids.append(amenity["id"])
+
+        for amenity in amenities_data["delete"]:
+            entity_available_amenity_ids.append(amenity["id"])
+
+        amenity_ids_valid, invalid_amenity_ids = validate_amenity_ids(amenity_ids)
+        if not amenity_ids_valid:
+            is_valid = False
+            errors["invalid_amenity_ids"] = invalid_amenity_ids
+
+        entity_available_amenities_ids_valid, invalid_entity_available_amenities_ids \
+            = validate_entity_available_amenities_ids(entity_id, entity_available_amenity_ids)
+        if not entity_available_amenities_ids_valid:
+            is_valid = False
+            errors["invalid_entity_available_amenities_ids"] = invalid_entity_available_amenities_ids
+
+        return is_valid, errors
+
     def put(self, request, *args, **kwargs):
         self.check_entity_permission(request)
         entity = MyEntity.objects.get(id=self.kwargs['pk'])
@@ -191,12 +362,9 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
         serializer = EntityEditSerializer(entity, data=request.data)
 
         address_data = request.data.dict().pop("address", {})
+        # remove while not using forms from postman
         address_data = json.loads(address_data)
         address_id = entity.address_id
-        address_details = update_address_for_address_id(address_id, address_data)
-        if not address_details['is_valid']:
-            return Response({"message": "Can't update outlet details", "errors": address_details['errors']},
-                            status=status.HTTP_400_BAD_REQUEST)
 
         registration = EntityRegistration.objects.get(id=entity.registration_id)
         account = EntityAccount.objects.get(id=entity.account_id)
@@ -217,6 +385,25 @@ class EntityDetail(generics.RetrieveUpdateDestroyAPIView):
         if not upi_serializer.is_valid():
             return Response({"message": "Can't update outlet details",
                              "errors": upi_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        request_data = request.data.dict()
+        amenities_data = request_data.pop("amenities", {"add": [], "change": [], "delete": []})
+        # remove while not using forms from postman
+        amenities_data = json.loads(amenities_data)
+        amenities_data_valid, errors = self.validate_entity_amenities(entity.id, amenities_data)
+        if not amenities_data_valid:
+            return Response({"message": "Can't update outlet details", "errors": errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        address_details = update_address_for_address_id(address_id, address_data)
+        if not address_details['is_valid']:
+            return Response({"message": "Can't update outlet details", "errors": address_details['errors']},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        entity_available_amenities_serializer = EntityAvailableAmenitiesSerializer()
+        entity_available_amenities_serializer.bulk_create(amenities_data["add"])
+        entity_available_amenities_serializer.bulk_update(amenities_data["change"])
+        entity_available_amenities_serializer.bulk_delete(amenities_data["delete"])
 
         serializer.save()
         registration_serializer.save()
@@ -369,7 +556,7 @@ class BusinessClientEntities(generics.ListAPIView):
         for entity in serializer.data:
             entity["employees"] = entity_id_wise_employees[entity["id"]]
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"results": serializer.data}, status=status.HTTP_200_OK)
 
 
 class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
@@ -382,12 +569,18 @@ class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
         if not input_serializer.is_valid():
             return Response({"message": "Can't get entities", "errors": input_serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
-        
-        entity_ids = request.data['entity_ids']
+
+        entity_ids = entity_ids_for_user(request.user.id)
+        entity_types = get_entity_types_filter(request.data['entity_types'])
         activation_statuses = get_entity_status(request.data['statuses'])
-        entities = MyEntity.objects.filter(id__in=entity_ids, activation_status__in=activation_statuses)
+        entities = MyEntity.objects.filter(
+            id__in=entity_ids, type__in=entity_types, activation_status__in=activation_statuses)
         serializer = self.serializer_class(entities, many=True)
-        
+
+        entity_ids = []
+        for entity in entities:
+            entity_ids.append(entity.id)
+
         # Adding Employees for entity
         entity_id_wise_employees = get_entity_id_wise_employees(entity_ids)
         for entity in serializer.data:
@@ -503,3 +696,241 @@ class EntityBasicDetail(generics.UpdateAPIView):
 
         self.check_object_permissions(request, entity)
         return super().put(request, *args, **kwargs)
+
+
+class AmenitiesList(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet)
+    queryset = Amenities.objects.all()
+    serializer_class = AmenitiesSerializer
+
+
+def convert_available_amenities_to_dict(available_amenity):
+    image_url = available_amenity.amenity.icon_url.url
+    image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
+    return {
+        "name": available_amenity.amenity.name,
+        "icon_url": image_url,
+        "is_available": available_amenity.is_available
+    }
+
+
+def get_entity_id_wise_amenities_dict(entity_ids):
+    entity_amenities = EntityAvailableAmenities.objects.select_related('amenity').filter(entity_id__in=entity_ids)
+    entity_id_wise_amenities_dict = defaultdict(list)
+    for available_amenity in entity_amenities:
+        entity_id = available_amenity.entity_id
+        entity_id_wise_amenities_dict[entity_id].append(
+            convert_available_amenities_to_dict(available_amenity)
+        )
+    return entity_id_wise_amenities_dict
+
+
+def get_entity_id_wise_images(entity_ids):
+    entity_images = EntityImage.objects.filter(entity_id__in=entity_ids)
+
+    entity_id_wise_images_dict = defaultdict(list)
+    for entity_image in entity_images:
+        image_url = entity_image.image.url
+        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
+        entity_id_wise_images_dict[entity_image.entity_id].append(image_url)
+
+    return entity_id_wise_images_dict
+
+
+class EntityView:
+
+    @staticmethod
+    def add_average_rating_for_entities(entities_response):
+        entity_ids = []
+        for entity in entities_response:
+            entity_ids.append(entity["id"])
+
+        entity_id_wise_rating = get_entity_id_wise_average_rating(entity_ids)
+        for entity in entities_response:
+            entity["rating"] = entity_id_wise_rating[entity["id"]]
+
+    @staticmethod
+    def add_starting_price_for_entities(entities_response):
+        entity_ids = []
+        for entity in entities_response:
+            entity_ids.append(entity["id"])
+
+        entity_id_wise_starting_price = get_entity_id_wise_starting_price(entity_ids)
+        for entity in entities_response:
+            entity["starting_price"] = entity_id_wise_starting_price[entity["id"]]
+
+    @staticmethod
+    def add_wishlist_status_for_entities(user_id, entities_response):
+        entity_ids = []
+        for entity in entities_response:
+            entity_ids.append(entity["id"])
+
+        entity_id_wise_wishlist_status = get_entity_id_wise_wishlist_status(user_id, entity_ids)
+        for entity in entities_response:
+            entity["in_wishlist"] = entity_id_wise_wishlist_status[entity["id"]]
+
+    @staticmethod
+    def add_amenities_for_entities(entities_response):
+        entity_ids = []
+        for entity in entities_response:
+            entity_ids.append(entity["id"])
+
+        entity_id_wise_amenities_dict = get_entity_id_wise_amenities_dict(entity_ids)
+        for entity in entities_response:
+            entity["amenities"] = entity_id_wise_amenities_dict[entity["id"]]
+
+    @staticmethod
+    def add_images_for_entities(entities_response):
+        entity_ids = []
+        for entity in entities_response:
+            entity_ids.append(entity["id"])
+
+        entity_id_wise_images_dict = get_entity_id_wise_images(entity_ids)
+        for entity in entities_response:
+            entity["images"] = entity_id_wise_images_dict[entity["id"]]
+
+    @staticmethod
+    def update_entities_response(entity_response):
+        entity_response.pop("status", None)
+        entity_response.pop("active_from", None)
+        entity_response.pop("activation_status", None)
+        entity_response.pop("created_at", None)
+        entity_response.pop("registration", None)
+        entity_response.pop("account", None)
+        entity_response.pop("upi", None)
+
+    def add_details_for_entities(self, entities_data):
+        self.add_average_rating_for_entities(entities_data)
+        self.add_starting_price_for_entities(entities_data)
+        self.add_amenities_for_entities(entities_data)
+        self.add_images_for_entities(entities_data)
+        add_address_details_to_entities(entities_data)
+        for entity_response in entities_data:
+            self.update_entities_response(entity_response)
+
+    def add_user_specific_details_for_entities(self, user_id, entities_data):
+        self.add_wishlist_status_for_entities(user_id, entities_data)
+
+    def get_by_ids(self, entity_ids):
+        entities = MyEntity.objects.filter(id__in=entity_ids)
+        entities_data = EntitySerializer(entities, many=True).data
+        self.add_details_for_entities(entities_data)
+        return entities_data
+
+    def get_by_id(self, entity_id):
+        entity = MyEntity.objects.get(id=entity_id)
+        entity_data = EntitySerializer(entity).data
+
+        self.update_entities_response(entity_data)
+        self.add_starting_price_for_entities([entity_data])
+        self.add_amenities_for_entities([entity_data])
+        self.add_images_for_entities([entity_data])
+        add_address_details_to_entities([entity_data])
+
+        return entity_data
+
+
+class GetEntitiesDetailsForUser(APIView):
+    permission_classes = (IsAuthenticated,)
+    entity_view = EntityView()
+
+    def get(self, request, *args, **kwargs):
+        entity_id = kwargs['pk']
+        try:
+            entity_data = self.entity_view.get_by_id(entity_id)
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't get entity details", "errors": "Invalid Entity Id"},
+                            status=status.HTTP_200_OK)
+
+        self.entity_view.add_user_specific_details_for_entities(request.user, [entity_data])
+        rating_stats = get_rating_wise_review_details_for_entity(entity_id)
+        rating_type_stats = get_rating_type_wise_average_rating_for_entity(entity_id)
+        reviews_list = get_latest_ratings_for_entity(entity_id)
+        entity_data["reviews"] = {
+            "rating_stats": rating_stats,
+            "rating_type_stats": rating_type_stats,
+            "review_list": reviews_list
+        }
+        return Response(entity_data, status=status.HTTP_200_OK)
+
+
+class GetEntitiesBySubType(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = EntitySerializer
+    entity_view = EntityView()
+
+    @staticmethod
+    def apply_filters(entity_ids, filter_data):
+
+        # applying search filter
+        if filter_data["search_text"]:
+            filter_entities = MyEntity.objects.search(filter_data["search_text"]).filter(id__in=entity_ids)
+        else:
+            filter_entities = MyEntity.objects.filter(id__in=entity_ids)
+
+        # applying location Filters
+        location_filter = filter_data["location_filter"]
+        if location_filter["applied"]:
+            entity_ids = filter_entities.values_list("id", flat=True)
+            city_entity_ids = filter_entity_ids_by_city(entity_ids, location_filter["city"])
+            filter_entities = filter_entities.filter(id__in=city_entity_ids)
+
+        return filter_entities.values_list("id", flat=True)
+
+    @staticmethod
+    def apply_sort_filter(query_set, sort_filter):
+        if sort_filter == "AVERAGE_RATING":
+            ratings_query = average_rating_query_for_entity(OuterRef('id'))
+            return query_set.annotate(
+                average_rating=Subquery(
+                    queryset=ratings_query,
+                    output_field=FloatField()
+                )
+            ).order_by('-average_rating')
+
+        elif sort_filter == "PRICE_LOW_TO_HIGH" or sort_filter == "PRICE_HIGH_TO_LOW":
+
+            starting_price_query = entity_products_starting_price_query(OuterRef('id'))
+            query_set = query_set.annotate(
+                starting_price=Subquery(
+                    queryset=starting_price_query,
+                    output_field=DecimalField()
+                )
+            )
+
+            if sort_filter == "PRICE_LOW_TO_HIGH":
+                return query_set.order_by('starting_price')
+            elif sort_filter == "PRICE_HIGH_TO_LOW":
+                return query_set.order_by('-starting_price')
+
+        return query_set
+
+    @staticmethod
+    def sort_results(entities_response, sort_filter):
+        if sort_filter == "AVERAGE_RATING":
+            entities_response.sort(
+                key=lambda entity_response: Decimal(entity_response['rating']['avg_rating']), reverse=True)
+        elif sort_filter == "PRICE_LOW_TO_HIGH":
+            entities_response.sort(key=lambda entity_response: Decimal(entity_response['starting_price']))
+        elif sort_filter == "PRICE_HIGH_TO_LOW":
+            entities_response.sort(
+                key=lambda entity_response: Decimal(entity_response['starting_price']), reverse=True)
+
+    def get(self, request, *args, **kwargs):
+
+        input_serializer = GetEntitiesBySearchFilters(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't get outlets", "errors": input_serializer.errors}, 400)
+
+        entity_ids = MyEntity.objects.filter(sub_type__icontains=kwargs["slug"]).values_list("id", flat=True)
+        sort_filter = request.data["sort_filter"]
+        entity_ids = self.apply_filters(entity_ids, request.data)
+        self.queryset = MyEntity.objects.filter(id__in=entity_ids)
+        self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
+
+        response = super().get(request, args, kwargs)
+        response_data = response.data["results"]
+        self.entity_view.add_details_for_entities(response_data)
+        self.entity_view.add_user_specific_details_for_entities(request.user.id, response_data)
+        self.sort_results(response_data, sort_filter)
+        return response

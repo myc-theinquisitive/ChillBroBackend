@@ -248,10 +248,11 @@ class ProductView(ProductInterface):
 
         # Add Images to Product
         product_image_dicts = []
-        for image in self.product_images:
+        for image_dict in self.product_images:
             product_image_dict = {
                 "product": base_product.id,
-                "image": image
+                "image": image_dict["image"],
+                "order": image_dict["order"]
             }
             product_image_dicts.append(product_image_dict)
         ProductImageSerializer.bulk_create(product_image_dicts)
@@ -411,7 +412,7 @@ class ProductView(ProductInterface):
         product_id_wise_images_dict = defaultdict(list)
         for product_image in product_images:
             image_url = product_image.image.url
-            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
+            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
             product_id_wise_images_dict[product_image.product_id].append(
                 {
                     "id": product_image.id,

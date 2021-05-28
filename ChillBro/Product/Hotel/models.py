@@ -1,9 +1,11 @@
 from django.db import models
 from ..BaseProduct.models import Product
+from .helpers import image_upload_to_amenities
 
 
 class Amenities(models.Model):
     name = models.CharField(max_length=40)
+    icon_url = models.ImageField(upload_to=image_upload_to_amenities)
 
     def __str__(self):
         return self.name
