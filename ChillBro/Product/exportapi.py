@@ -38,17 +38,10 @@ def get_entity_id_and_entity_type(product_id):
     return seller.seller_id, seller.product.type
 
 
-def product_details_with_image(product_ids):
-    products = ProductImage.objects.select_related('product').filter(product_id__in=product_ids, order=0)
-    details_of_product = {}
-    for each_product in products:
-        image_url = each_product.image.url
-        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
-        details_of_product[each_product.product.id] = {
-            'name': each_product.product.name,
-            'image_url': image_url
-        }
-    return details_of_product
+def product_details(product_ids):
+    from .views import ProductView
+    product_view = ProductView()
+    return product_view.get_by_ids(product_ids)
 
 
 def total_products_count_in_entities(entity_ids):

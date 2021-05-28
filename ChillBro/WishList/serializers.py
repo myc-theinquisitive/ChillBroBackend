@@ -20,3 +20,6 @@ class UserWishListDetailsSerializer(serializers.Serializer):
     entity_type_filters = serializers.ListField(
         child=serializers.CharField()
     )
+    entity_sub_type_filters = serializers.ListField(
+        child=serializers.CharField()
+    )

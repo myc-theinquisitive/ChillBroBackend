@@ -25,3 +25,9 @@ def get_entity_type_and_sub_type(entity_id):
         return entity_types.type, entity_types.sub_type
     except ObjectDoesNotExist:
         return None, None
+
+
+def entity_details(entity_ids):
+    from .views import EntityView
+    entity_view = EntityView()
+    return entity_view.get_by_ids(entity_ids)

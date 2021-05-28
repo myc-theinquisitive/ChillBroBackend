@@ -1,6 +1,8 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from .wrapper import *
 from .serializers import WishListSerializer, AddProductToWishListSerializer, UserWishListDetailsSerializer, \
     AddEntityToWishListSerializer
@@ -22,7 +24,7 @@ class AddProductToWishList(generics.CreateAPIView):
             return Response({"message": "Can't add the product to wishlist",
                              "errors": "You already added this product to WishList"})
 
-        entity_id, entity_type = getEntityDetailsOfProduct(request.data['product_id'])
+        entity_id, entity_type = get_entity_details_of_product(request.data['product_id'])
         if entity_id is None and entity_type is None:
             return Response({"message": "Can't add the product to wishlist",
                              "errors": "Invalid Product Id"}, 400)
@@ -91,33 +93,56 @@ class DeleteEntityFromWishList(generics.DestroyAPIView):
         return Response({"message": "Successfully deleted entity from wishlist"}, 200)
 
 
-class UserWishListDetails(generics.ListAPIView):
+class UserWishListDetails(APIView):
     permission_classes = (IsAuthenticated,)
 
     # TODO: Handle entity case here
     def post(self, request, *args, **kwargs):
         input_serializer = UserWishListDetailsSerializer(data=request.data)
-        if input_serializer.is_valid():
-            entity_type_filters = get_entity_types(request.data['entity_type_filters'])
-
-            wishlist = WishList.objects.filter(created_by=request.user, entity_type__in=entity_type_filters)
-            if len(wishlist) == 0:
-                return Response({"message": "Sorry, There are no Wish Lists"}, 200)
-
-            product_ids = []
-            for each_wishlist in wishlist:
-                product_ids.append(each_wishlist.product_id)
-            product_details = get_product_details_with_image(product_ids)
-
-            all_wish_list_products = []
-            for each_wishlist in wishlist:
-                each_wishlist_details = {
-                    'id': each_wishlist.id, 'entity_id': each_wishlist.entity_id,
-                    'entity_type': each_wishlist.entity_type, 'product_id': each_wishlist.product_id,
-                    'product_name': product_details[each_wishlist.product_id]['name'],
-                    'product_image_url': product_details[each_wishlist.product_id]['image_url'],
-                    'added_date': each_wishlist.created_at}
-                all_wish_list_products.append(each_wishlist_details)
-            return Response({"results": all_wish_list_products}, 200)
-        else:
+        if not input_serializer.is_valid():
             return Response({"message": "Can't get the details of wishlist", "errors": input_serializer.errors}, 400)
+
+        entity_type_filters = get_entity_types(request.data['entity_type_filters'])
+        entity_sub_type_filters = get_entity_sub_types(request.data['entity_sub_type_filters'])
+
+        if request.data['entity_sub_type_filters']:
+            wishlist = WishList.objects.filter(
+                created_by=request.user, entity_type__in=entity_type_filters,
+                entity_sub_type__in=entity_sub_type_filters)
+        else:
+            wishlist = WishList.objects.filter(
+                created_by=request.user, entity_type__in=entity_type_filters)
+
+        if len(wishlist) == 0:
+            return Response({"message": "Sorry, There are no Wish Lists"}, 200)
+
+        product_ids = []
+        entity_ids = []
+        for each_wishlist in wishlist:
+            if each_wishlist.item_type == ItemType.PRODUCT.value:
+                product_ids.append(each_wishlist.product_id)
+            elif each_wishlist.item_type == ItemType.ENTITY.value:
+                entity_ids.append(each_wishlist.entity_id)
+
+        product_id_wise_details = get_product_id_wise_details(product_ids)
+        entity_id_wise_details = get_entity_id_wise_details(entity_ids)
+
+        all_wish_list_products = []
+        for each_wishlist in wishlist:
+            each_wishlist_details = {
+                'id': each_wishlist.id,
+                'entity_id': each_wishlist.entity_id,
+                'entity_type': each_wishlist.entity_type,
+                'entity_sub_type': each_wishlist.entity_sub_type,
+                'item_type': each_wishlist.item_type,
+                'added_date': each_wishlist.created_at
+            }
+            all_wish_list_products.append(each_wishlist_details)
+
+            if each_wishlist.item_type == ItemType.PRODUCT.value:
+                each_wishlist_details['product'] = product_id_wise_details[each_wishlist.product_id]
+
+            elif each_wishlist.item_type == ItemType.ENTITY.value:
+                each_wishlist_details['entity'] = entity_id_wise_details[each_wishlist.entity_id]
+
+        return Response({"results": all_wish_list_products}, 200)
