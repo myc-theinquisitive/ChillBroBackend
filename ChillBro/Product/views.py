@@ -589,6 +589,7 @@ class ProductView(ProductInterface):
                 product_dict[product_key] = product_id_product_specific_data_dict[product_dict["id"]]
                 response.append(product_dict)
 
+        add_average_rating_for_products(products_data)
         return products_data
 
     @staticmethod
@@ -850,7 +851,6 @@ class GetProductsByCategory(generics.ListAPIView):
             return Response({"message": "Can't get products", "errors": input_serializer.errors}, 400)
 
         try:
-            # TODO: Modify to get products for intermediate levels that are not linked to product
             category = Category.objects.get(name__icontains=kwargs["slug"])
         except ObjectDoesNotExist:
             return Response({"errors": "Invalid Category!!!"}, 400)
@@ -869,7 +869,6 @@ class GetProductsByCategory(generics.ListAPIView):
             product_ids.append(product["id"])
         response_data["results"] = self.product_view.get_by_ids(product_ids)
 
-        add_average_rating_for_products(response_data["results"])
         add_wishlist_status_for_products(request.user.id, response_data["results"])
         self.sort_results(response_data["results"], sort_filter)
         return response
@@ -951,7 +950,7 @@ class GetSellerProductList(generics.ListAPIView):
         product_ids = []
         for seller_product in response.data["results"]:
             product_ids.append(seller_product["product"])
-        response.data["results"] = ProductView().get_business_client_product_details(product_ids)
+        response.data["results"] = ProductView().get_by_ids(product_ids)
 
         return response
 
