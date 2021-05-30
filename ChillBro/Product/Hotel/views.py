@@ -118,6 +118,7 @@ class HotelView(ProductInterface):
         """
         hotel_room: {
             "product_id": string, # internal data need not be validated
+            "max_no_of_people": int,
             "amenities": [
                 {
                     "amenity": string,
@@ -202,6 +203,8 @@ class HotelView(ProductInterface):
     def update(self, hotel_room_data):
         """
         hotel_room: {
+            "product_id": string, # internal data need not be validated,
+            "max_no_of_people": int,
             "amenities": {
                 "add": [
                     {
@@ -280,7 +283,6 @@ class HotelView(ProductInterface):
 
         available_amenities = HotelAvailableAmenities.objects.select_related('amenity') \
             .filter(hotel_room__in=hotel_room_ids)
-
         hotel_room_wise_available_amenities_dict = defaultdict(list)
         for available_amenity in available_amenities:
             available_amenity_data = self.convert_available_amenities_to_dict(available_amenity)

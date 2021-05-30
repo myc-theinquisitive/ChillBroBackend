@@ -85,9 +85,16 @@ class HotelRoomSerializer(serializers.ModelSerializer):
         model = HotelRoom
         fields = '__all__'
 
+    def to_representation(self, instance):
+        data = super(HotelRoomSerializer, self).to_representation(instance)
+        data['product'] = instance.product_id
+        return data
+
     def create(self, validated_data):
-        return HotelRoom.objects.create(product_id=validated_data["product"])
+        return HotelRoom.objects.create(product_id=validated_data["product"],
+                                        max_no_of_people=validated_data["max_no_of_people"])
 
     def update(self, instance, validated_data):
         instance.product_id = validated_data["product"]
+        instance.max_no_of_people = validated_data["max_no_of_people"]
         instance.save()

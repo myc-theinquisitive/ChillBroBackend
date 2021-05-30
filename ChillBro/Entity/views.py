@@ -46,8 +46,8 @@ def entity_ids_for_user(user_id):
 
 
 def get_entity_details(entity_ids):
-    entities = MyEntity.objects.filter(id__in=entity_ids)
-    entities_data = EntitySerializer(entities, many=True).data
+    entities_data = MyEntity.objects.filter(id__in=entity_ids)\
+        .values('id', 'name', 'type', 'sub_type', 'address_id')
     add_address_details_to_entities(entities_data)
     return entities_data
 

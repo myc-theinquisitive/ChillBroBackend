@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 from ..BaseProduct.models import Product
 from .helpers import image_upload_to_amenities
@@ -26,6 +27,7 @@ class HotelAvailableAmenities(models.Model):
 
 class HotelRoom(models.Model):
     product = models.OneToOneField(Product, on_delete=models.CASCADE, null=True, verbose_name="Product")
+    max_no_of_people = models.IntegerField(default=1, validators=[MinValueValidator(1)])
 
     def __str__(self):
         return "Product: {0}".format(self.product.name)
