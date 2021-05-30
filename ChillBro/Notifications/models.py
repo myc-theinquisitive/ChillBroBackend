@@ -35,3 +35,9 @@ class NotificationSetting(models.Model):
     bookings = models.BooleanField(default=True)
     payments = models.BooleanField(default=True)
     general = models.BooleanField(default=True)
+
+
+class FirebaseTokens(models.Model):
+    user_model = get_user_model()
+    created_by = models.OneToOneField(user_model, on_delete=models.CASCADE)
+    token = models.CharField(max_length=500)

@@ -22,7 +22,11 @@ class BookedProductsSerializer(serializers.ModelSerializer):
                 product_id=product["product_id"],
                 product_value=product["product_value"],
                 quantity=product["quantity"],
-                net_value=product["net_value"]
+                net_value=product["net_value"],
+                size = product["size"],
+                is_combo = product["is_combo"],
+                hidden = product["hidden"],
+                parent_booked_product = product["parent_booked_product"]
             )
             new_products.append(add_booking_product)
         return BookedProducts.objects.bulk_create(new_products)
@@ -115,6 +119,9 @@ class UpdateBookingIdSerializer(serializers.Serializer):
 class BookedProductSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
     quantity = serializers.IntegerField(required=True)
+    # combo_products = serializers.ListField(
+    #     child = BookedProductSerializer(many=True)
+    # )
 
 
 class NewBookingSerializer(serializers.Serializer):

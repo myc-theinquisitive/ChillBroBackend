@@ -13,9 +13,28 @@ class CartProductsSerializer(serializers.ModelSerializer):
         model = CartProducts
         fields = '__all__'
 
+    def bulk_create(self, validated_data):
+        new_products = []
+        for product in validated_data:
+            add_booking_product = CartProducts(
+                cart=product["cart"],
+                product_id=product["product_id"],
+                quantity=product["quantity"],
+                size=product["size"],
+                is_combo=product["is_combo"],
+                hidden=product["hidden"],
+                parent_cart_product = product["parent_cart_product"]
+            )
+            new_products.append(add_booking_product)
+        return CartProducts.objects.bulk_create(new_products)
+
 
 class AddProductToCartSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
     quantity = serializers.IntegerField(required=True)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
+
+
+class CheckoutCartSerializer(serializers.Serializer):
+    entity_type = serializers.CharField(required=True)

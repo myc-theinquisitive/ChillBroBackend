@@ -24,7 +24,7 @@ import threading
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value, \
     get_transaction_details_by_booking_id, business_client_review_on_customer, \
-    get_product_details, get_entity_details
+    get_product_details, get_entity_details, get_business_client_review_by_booking_id
 
 _booking_lock = threading.Lock()
 
@@ -39,9 +39,9 @@ def render_to_pdf(template_src, context_dict={}):
     return None
 
 
-def get_total_bookings_of_product_in_duration(product_id, start_time, end_time):
+def get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size):
     return BookedProducts.objects.active().select_related('booking') \
-        .filter(product_id=product_id) \
+        .filter(product_id=product_id, size=product_size) \
         .filter(~Q(booking_status=ProductBookingStatus.cancelled.value)) \
         .filter(
         Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gt=start_time)) |
@@ -51,8 +51,8 @@ def get_total_bookings_of_product_in_duration(product_id, start_time, end_time):
     )
 
 
-def get_total_bookings_count_of_product_in_duration(product_id, start_time, end_time):
-    bookings_count = get_total_bookings_of_product_in_duration(product_id, start_time, end_time) \
+def get_total_bookings_count_of_product_in_duration(product_id, start_time, end_time, product_size):
+    bookings_count = get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size) \
         .aggregate(sum=Sum('quantity'))['sum']
     if bookings_count is None:
         return 0
@@ -62,7 +62,6 @@ def get_total_bookings_count_of_product_in_duration(product_id, start_time, end_
 def valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time):
     is_valid = True
     errors = defaultdict(list)
-
     current_time = datetime.now()
     if current_time.strftime(get_date_format()) >= start_time:
         is_valid = False
@@ -75,18 +74,64 @@ def valid_booking_with_product_details(products_quantity, booking_products_list,
         if booking_product['quantity'] <= 0:
             is_valid = False
             errors[booking_product['product_id']].append("Quantity should be greater than 0")
+        has_sizes = products_quantity[booking_product['product_id']]['has_sizes']
+        is_combo = products_quantity[booking_product['product_id']]['is_combo']
 
-        previous_bookings_count = get_total_bookings_count_of_product_in_duration(
-            booking_product['product_id'], start_time, end_time)
-        total_quantity = products_quantity[booking_product['product_id']]['quantity']
+        if is_combo:
+            all_combo_products = booking_product['combo_products']
+            all_combo_products_from_db = products_quantity[booking_product['product_id']]['combo_products']
 
-        if total_quantity - previous_bookings_count < booking_product['quantity']:
-            is_valid = False
-            if total_quantity - previous_bookings_count == 0:
-                errors[booking_product['product_id']].append("Sorry, No products are available")
+            flag = 0
+            for each_combo_product in all_combo_products:
+                previous_bookings_count = get_total_bookings_count_of_product_in_duration(
+                    each_combo_product['product_id'], start_time, end_time, each_combo_product['size']
+                )
+                each_combo_product_quantity = each_combo_product['quantity'] * booking_product['quantity']
+                total_quantity = all_combo_products_from_db[each_combo_product['product_id']]['total_quantity']
+
+                # this for loop is  for checking combo product is there in remaining_products or not_required
+                for each_booking_products_list in booking_products_list:
+                    if each_booking_products_list['product_id'] == each_combo_product['product_id']:
+                        each_combo_product_quantity += each_booking_products_list['quantity']
+
+                if total_quantity - previous_bookings_count < each_combo_product_quantity:
+                    flag = 1
+                    break
+            if flag == 1:
+                is_valid = False
+                errors[booking_product['product_id']].append("Sorry, Combo Product is unavailable")
+
+        else:
+            if has_sizes:
+                if len(booking_product['size']) == 0:
+                    is_valid = False
+                    errors[booking_product['product_id']].append("Please mention the size of the product")
+
+                product_sizes_details = products_quantity[booking_product['product_id']]['size_products']
+                flag = 0
+                for each_product_size in product_sizes_details:
+                    if each_product_size['size'] == booking_product['size']:
+                        total_quantity = each_product_size['quantity']
+                        flag = 1
+                        break
+                if flag == 0:
+                    errors[booking_product['product_id']].append("Invalid size")
+                else:
+                    previous_bookings_count = get_total_bookings_count_of_product_in_duration(
+                        booking_product['product_id'], start_time, end_time, booking_product['size'])
+
             else:
-                errors[booking_product['product_id']].append(
-                    "Sorry, only {} products are available".format(total_quantity - previous_bookings_count))
+                previous_bookings_count = get_total_bookings_count_of_product_in_duration(
+                    booking_product['product_id'], start_time, end_time, booking_product['size'])
+                total_quantity = products_quantity[booking_product['product_id']]['quantity']
+
+            if total_quantity - previous_bookings_count < booking_product['quantity']:
+                is_valid = False
+                if total_quantity - previous_bookings_count == 0:
+                    errors[booking_product['product_id']].append("Sorry, No products are available")
+                else:
+                    errors[booking_product['product_id']].append(
+                        "Sorry, only {} products are available".format(total_quantity - previous_bookings_count))
     return is_valid, errors
 
 
@@ -134,11 +179,11 @@ def get_total_time_period(from_date, to_date):
         else:
             hours = minutes // 60
             if hours < 24:
-                return  (str(hours) + " hours")
+                return (str(hours) + " hours")
             else:
                 days = hours // 24
                 return (str(days) + " days")
-    
+
 
 def get_complete_booking_details_by_ids(booking_ids):
     bookings = Bookings.objects.filter(id__in=booking_ids)
@@ -171,12 +216,11 @@ def get_complete_booking_details_by_ids(booking_ids):
             'total_money': booking.total_money,
             'total_net_value': booking.total_net_value,
             'total_coupon_discount': booking.total_coupon_discount,
-            'from_date':booking.start_time,
-            'to_date':booking.end_time,
-            'total_days':get_total_time_period(booking.end_time, booking.start_time)
+            'from_date': booking.start_time,
+            'to_date': booking.end_time,
+            'total_days': get_total_time_period(booking.end_time, booking.start_time)
         }
-        
-        
+
         booking_dict['ago'] = get_total_time_period(datetime.now(), booking.booking_date)
         check_in_flag = True
         try:
@@ -203,13 +247,12 @@ def get_complete_booking_details_by_ids(booking_ids):
                     "product_value": booked_product.product_value,
                     "net_value": booked_product.net_value,
                     "coupon_value": booked_product.coupon_value,
-                    "booked_quantity":booked_product.quantity
+                    "booked_quantity": booked_product.quantity
                 }
             )
         booking_dict['products'] = booking_products_details
         complete_bookings_details.append(booking_dict)
     return complete_bookings_details
-
 
 
 def are_overlapping_time_spans(start_time1, end_time1, start_time2, end_time2):
@@ -224,8 +267,8 @@ def are_overlapping_time_spans(start_time1, end_time1, start_time2, end_time2):
     return False
 
 
-def product_availability(product_id, start_time, end_time):
-    booked_products = get_total_bookings_of_product_in_duration(product_id, start_time, end_time)
+def product_availability(product_id, start_time, end_time, product_size):
+    booked_products = get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size)
     if not booked_products:
         booked_products = []
 
@@ -279,7 +322,11 @@ class GetProductAvailability(APIView):
         start_time = serializer.data["start_time"]
         end_time = serializer.data["end_time"]
 
-        return product_availability(product_id=product_id, start_time=start_time, end_time=end_time)
+        # TODO: have to sent product_size from frontend
+        product_size = serializer.data["product_size"]
+
+        return product_availability(product_id=product_id, start_time=start_time, end_time=end_time,
+                                    product_size=product_size)
 
 
 class GetDateFilters(APIView):
@@ -287,7 +334,7 @@ class GetDateFilters(APIView):
 
     def get(self, request, *args, **kwargs):
         date_filters = [date_filter.value for date_filter in DateFilters]
-        return Response({"results":date_filters}, 200)
+        return Response({"results": date_filters}, 200)
 
 
 class CreateBooking(generics.ListCreateAPIView):
@@ -308,6 +355,7 @@ class CreateBooking(generics.ListCreateAPIView):
 
         # Get product values
         product_values = get_product_id_wise_product_details(product_ids)
+
         if len(product_values) != len(product_ids):
             return Response({"message": "Can't create booking", "errors": "Invalid Products"}, 400)
 
@@ -336,6 +384,8 @@ class CreateBooking(generics.ListCreateAPIView):
 
         total_net_value = 0
         for product in product_list:
+            product['hidden'] = False
+            product['parent_booked_product'] = None
             product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
             product['net_value'] = \
                 product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
@@ -353,10 +403,36 @@ class CreateBooking(generics.ListCreateAPIView):
             bookings_serializer = BookingsSerializer()
             booking = bookings_serializer.create(request.data)
 
+            booked_product_serializer_object = BookedProductsSerializer()
+            booked_combo_products = []
+            product_list_copy = product_list[::]
+            for each_booking_product in product_list_copy:
+                if product_values[each_booking_product['product_id']]['is_combo']:
+                    combo_product_id = booked_product_serializer_object.create({
+                        'booking': booking,
+                        'product_id': each_booking_product['product_id'],
+                        'quantity': each_booking_product['quantity'],
+                        'is_combo': True,
+                        'product_value': each_booking_product['product_value'],
+                        'net_value': each_booking_product['net_value'],
+                        'coupon_value': each_booking_product['coupon_value']
+                    })
+                    combo_products = each_booking_product["combo_products"]
+                    product_list.remove(each_booking_product)
+                    for each_combo_product in combo_products:
+                        each_combo_product['quantity'] = each_combo_product['quantity'] * each_booking_product['quantity']
+                        each_combo_product['parent_booked_product'] = combo_product_id
+                        each_combo_product['hidden'] = True
+                        each_combo_product['product_value'] = 0
+                        each_combo_product['net_value'] = 0
+                        each_combo_product['is_combo'] = True
+                        product_list.append(each_combo_product)
+                else:
+                    each_booking_product["is_combo"] = False
+
             # Create booking products
             for product in product_list:
                 product['booking'] = booking
-            booked_product_serializer_object = BookedProductsSerializer()
             booked_product_serializer_object.bulk_create(product_list)
 
         # Create transaction for amount to be paid to entity
@@ -554,7 +630,6 @@ class GetBookingsStatisticsDetails(generics.ListAPIView):
         for booking in response.data["results"]:
             booking_ids.append(booking["id"])
         response.data["results"] = get_complete_booking_details_by_ids(booking_ids)
-        print(response)
         return response
 
 
@@ -619,7 +694,6 @@ class GetSpecificBookingDetails(APIView):
         booking.user_details = user_data
 
         all_products = BookedProducts.objects.filter(booking=booking)
-        
 
         serializer = GetSpecificBookingDetailsSerializer(booking).data
         product_ids = set()
@@ -628,17 +702,30 @@ class GetSpecificBookingDetails(APIView):
         product_id_wise_product_details = get_product_id_wise_product_details(list(product_ids))
         products = []
         for booked_product in all_products:
-            products.append(
-                {
-                    "product_id": booked_product.product_id,
-                    "name": product_id_wise_product_details[booked_product.product_id]["name"],
-                    "type": product_id_wise_product_details[booked_product.product_id]["type"],
-                    "product_value": booked_product.product_value,
-                    "net_value": booked_product.net_value,
-                    "coupon_value": booked_product.coupon_value,
-                    "booked_quantity":booked_product.quantity
-                }
-            )
+            combo_products = []
+            if booked_product.hidden is False:
+                if booked_product.is_combo:
+                    for each_combo_product in all_products:
+                        if each_combo_product.parent_booked_product_id == booked_product.id:
+                            combo_products.append({
+                                "product_id": each_combo_product.product_id,
+                                "quantity": each_combo_product.quantity,
+                                "size": each_combo_product.size,
+                                "combo_products": []
+                            })
+                products.append(
+                    {
+                        "product_id": booked_product.product_id,
+                        "name": product_id_wise_product_details[booked_product.product_id]["name"],
+                        "type": product_id_wise_product_details[booked_product.product_id]["type"],
+                        "product_value": booked_product.product_value,
+                        "net_value": booked_product.net_value,
+                        "coupon_value": booked_product.coupon_value,
+                        "booked_quantity": booked_product.quantity,
+                        "is_combo": booked_product.is_combo,
+                        "combo_products": combo_products
+                    }
+                )
         serializer['total_days'] = get_total_time_period(booking.end_time, booking.start_time)
         serializer['products'] = products
         serializer['outlet_details'] = get_entity_details([booking.entity_id])
@@ -786,7 +873,7 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
         check_in_images = CheckInImages.objects.filter(check_in_id=check_in_object.id)
         for check_in_image in check_in_images:
             image_url = check_in_image.image.url
-            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING,"")
+            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
             other_images.append(image_url)
         response_data['other_images'] = other_images
 
@@ -1000,7 +1087,7 @@ class BusinessClientProductCancellationDetails(APIView):
             if len(booked_product) == 0:
                 return Response(
                     {"message": "Can't cancel the product", "errors": "There is no product{}in booking id {}" \
-                    .format(request.data['product_id'], request.data['booking_id'])}, 400)
+                        .format(request.data['product_id'], request.data['booking_id'])}, 400)
             request.data['cancelled_by'] = request.user.id
             input_serializer.save()
             booked_product.update(booking_status=ProductBookingStatus.cancelled.value)
@@ -1008,3 +1095,124 @@ class BusinessClientProductCancellationDetails(APIView):
 
         else:
             return Response({"message": "Can't cancel the product", "errors": input_serializer.errors}, 400)
+
+
+def CreateBookingWhileCheckout(all_booking):
+    is_valid = True
+    all_errors = defaultdict(list)
+    for each_booking in all_booking:
+        is_valid, errors = CreateSingleBooking(all_booking[each_booking])
+        if not is_valid:
+            all_errors[each_booking] = errors
+    return is_valid, all_errors
+
+
+def CreateSingleBooking(booking_object):
+
+    product_list = booking_object.pop('products', None)
+    product_ids = []
+    for product in product_list:
+        product_ids.append(product['product_id'])
+
+    # Get product values
+    product_values = booking_object.pop('product_details')
+
+    total_money = 0.0
+    total_coupon_discount = 0.0
+    for product in product_list:
+        total_money += float(product_values[product['product_id']]['price'] * product['quantity'])
+        total_coupon_discount += float(product['coupon_value'])
+
+    booking_object['total_money'] = total_money
+    booking_object['total_coupon_discount'] = total_coupon_discount
+
+    # Create Booking
+    payment_mode = booking_object['payment_mode']
+    if payment_mode == PaymentMode.cod.value:
+        booking_object['payment_status'] = PaymentStatus.not_required.value
+
+    total_net_value = 0
+    for product in product_list:
+        product['hidden'] = False
+        product['parent_booked_product'] = None
+        product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
+        product['net_value'] = \
+            product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
+        total_net_value += \
+            product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
+    booking_object["total_net_value"] = total_net_value
+
+    with _booking_lock:
+        is_valid, errors = valid_booking_with_product_details(
+            product_values, product_list, booking_object['start_time'], booking_object['end_time'])
+        if not is_valid:
+            return is_valid, errors
+
+        bookings_serializer = BookingsSerializer()
+        booking = bookings_serializer.create(booking_object)
+
+        booked_product_serializer_object = BookedProductsSerializer()
+        booked_combo_products = []
+        product_list_copy = product_list[::]
+        for each_booking_product in product_list_copy:
+            if product_values[each_booking_product['product_id']]['is_combo']:
+                combo_product_id = booked_product_serializer_object.create({
+                    'booking': booking,
+                    'product_id': each_booking_product['product_id'],
+                    'quantity': each_booking_product['quantity'],
+                    'is_combo': True,
+                    'product_value': each_booking_product['product_value'],
+                    'net_value': each_booking_product['net_value'],
+                    'coupon_value': each_booking_product['coupon_value']
+                })
+                combo_products = each_booking_product["combo_products"]
+                product_list.remove(each_booking_product)
+                for each_combo_product in combo_products:
+                    each_combo_product['quantity'] = each_combo_product['quantity'] * each_booking_product[
+                        'quantity']
+                    each_combo_product['parent_booked_product'] = combo_product_id
+                    each_combo_product['hidden'] = True
+                    each_combo_product['product_value'] = 0
+                    each_combo_product['net_value'] = 0
+                    each_combo_product['is_combo'] = True
+                    product_list.append(each_combo_product)
+            else:
+                each_booking_product["is_combo"] = False
+
+        # Create booking products
+        for product in product_list:
+            product['booking'] = booking
+        booked_product_serializer_object.bulk_create(product_list)
+
+    # Create transaction for amount to be paid to entity
+    # if payment_mode == PaymentMode.online.value:
+    #     # TODO: should use net value here
+    #     create_booking_transaction(
+    #         {
+    #             'booking_id': booking.id, 'entity_id': booking_object['entity_id'],
+    #             'entity_type': booking_object['entity_type'], 'total_money': total_net_value,
+    #             'booking_date': booking.booking_date, 'booking_start': booking.start_time,
+    #             'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.myc.value
+    #         }
+    #     )
+    # else:
+    #     # TODO: should update total values
+    #     create_booking_transaction(
+    #         {
+    #             'booking_id': booking.id, 'entity_id': booking_object['entity_id'],
+    #             'entity_type': booking_object['entity_type'], 'total_money': booking_object['total_money'],
+    #             'booking_date': booking.booking_date, 'booking_start': booking.start_time,
+    #             'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.customer.value
+    #         }
+    #     )
+    #     # TODO: should use commission value here
+    #     create_booking_transaction(
+    #         {
+    #             'booking_id': booking.id, 'entity_id': booking_object['entity_id'],
+    #             'entity_type': booking_object['entity_type'],
+    #             'total_money': booking_object['total_money'] - total_net_value,
+    #             'booking_date': booking.booking_date, 'booking_start': booking.start_time,
+    #             'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.entity.value
+    #         }
+    #     )
+    return True, {}
