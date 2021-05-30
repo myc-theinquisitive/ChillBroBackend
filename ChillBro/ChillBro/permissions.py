@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from UserApp.models import Employee, BusinessClient
 from Entity.models import BusinessClientEntity
-from Product.models import SellerProduct
+from Product.models import Product
 from django.conf import settings
 
 
@@ -187,14 +187,14 @@ class IsSellerProduct(permissions.BasePermission):
         product_id = obj
 
         try:
-            entity = SellerProduct.objects.get(product_id=product_id)
+            entity_id = Product.objects.get(product_id=product_id).seller_id
         except ObjectDoesNotExist:
             return False
 
-        if IsBusinessClientEntity().has_object_permission(request, view, entity):
+        if IsBusinessClientEntityById().has_object_permission(request, view, entity_id):
             return True
 
-        if IsEmployeeEntity().has_object_permission(request, view, entity):
+        if IsEmployeeEntityById().has_object_permission(request, view, entity_id):
             return True
 
         return False

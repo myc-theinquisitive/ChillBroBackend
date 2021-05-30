@@ -36,7 +36,8 @@ class ProductSerializer(serializers.ModelSerializer):
             type=validated_data["type"], category_id=validated_data["category"], price=validated_data["price"],
             discounted_price=validated_data["discounted_price"], featured=validated_data["featured"],
             quantity=validated_data["quantity"], is_combo=validated_data["is_combo"],
-            has_sizes=validated_data["has_sizes"], price_type=validated_data["price_type"])
+            has_sizes=validated_data["has_sizes"], price_type=validated_data["price_type"],
+            seller_id=validated_data["seller_id"])
 
         if "tags" in validated_data:
             product.tags.add(*validated_data["tags"])

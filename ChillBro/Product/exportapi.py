@@ -1,13 +1,10 @@
 from collections import defaultdict
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Count, Min
+from django.db.models import Min
 from .Category.models import Category
-from .BaseProduct.models import Product, ProductImage
+from .BaseProduct.models import Product
 from .views import calculate_product_net_price
-from .Seller.models import SellerProduct
 from django.db.models import Count
-from .BaseProduct.constants import ActivationStatus
 
 
 def get_product_id_wise_details(product_ids):
@@ -32,10 +29,10 @@ def get_product_id_wise_details(product_ids):
 
 def get_entity_id_and_entity_type(product_id):
     try:
-        seller = SellerProduct.objects.select_related('product').get(product=product_id)
+        product = Product.objects.get(product=product_id)
     except ObjectDoesNotExist:
         return None, None
-    return seller.seller_id, seller.product.type
+    return product.seller_id, product.type
 
 
 def product_details(product_ids):
@@ -45,8 +42,7 @@ def product_details(product_ids):
 
 
 def total_products_count_in_entities(entity_ids):
-    products_count = SellerProduct.objects.filter(seller_id__in=entity_ids,
-                                                  product__activation_status=ActivationStatus.ACTIVE.value)\
+    products_count = Product.objects.filter(seller_id__in=entity_ids).active()\
                         .aggregate(count=Count('product'))['count']
     return products_count
 
@@ -57,17 +53,17 @@ def check_product_is_valid(product_id):
         return True
     except ObjectDoesNotExist:
         return False
-        
-        
+
+
 def top_level_categories():
     return Category.objects.filter(parent_category=None).values_list('name', flat=True)
     
 
 def seller_products_starting_price_query(seller_id):
-    return SellerProduct.objects.filter(seller_id=seller_id).select_related('Product').values('seller_id') \
-        .annotate(starting_price=Min('product__discounted_price')).values('starting_price')
+    return Product.objects.filter(seller_id=seller_id).values('seller_id') \
+        .annotate(starting_price=Min('discounted_price')).values('starting_price')
 
 
 def get_sellers_product_stating_price(seller_ids):
-    return SellerProduct.objects.filter(seller_id__in=seller_ids).select_related('Product').values('seller_id') \
-        .annotate(starting_price=Min('product__discounted_price')).values('seller_id', 'starting_price')
+    return Product.objects.filter(seller_id__in=seller_ids).values('seller_id') \
+        .annotate(starting_price=Min('discounted_price')).values('seller_id', 'starting_price')

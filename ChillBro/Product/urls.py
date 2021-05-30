@@ -1,10 +1,11 @@
-from django.urls import path, re_path
-from .views import CategoryList, CategoryDetail, CategoryImageCreate, GetCategoriesLevelWise, \
-    BaseProductImageCreate, AmenitiesList, ProductList, ProductDetail, \
-    GetProductsByCategory, GetSpecificCategoriesLevelWise, CategoryImageDelete, BaseProductImageDelete, \
-    SearchProducts, GetSellerProductList, CategoryTopLevelList, \
-    ProductNetPrice, ProductSellerStatus, ProductQuantity, BusinessClientProductDetails, CreateCategoryPrices, \
-    GetCategoryPrices, ProductVerificationDetail, ProductListBasedOnVerificationStatus
+from django.urls import path
+from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
+    ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
+    ProductVerificationDetail, ProductListBasedOnVerificationStatus
+from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
+from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
+    GetSpecificCategoriesLevelWise, CategoryTopLevelList, CreateCategoryPrices, GetCategoryPrices, CategoryDetail
+from .Hotel.views import AmenitiesList
 
 
 urlpatterns = [
@@ -14,10 +15,10 @@ urlpatterns = [
     path('category/image/', CategoryImageCreate.as_view()),
     path('category/image/<str:pk>/', CategoryImageDelete.as_view()),
     path('category/level_wise/', GetCategoriesLevelWise.as_view()),
-    re_path('^category/level_wise/(?P<slug>[-\w]+)/$', GetSpecificCategoriesLevelWise.as_view()),
-    path('category/top_level/',CategoryTopLevelList.as_view()),
-    path('category/prices/',CreateCategoryPrices.as_view()),
-    path('category/get_prices/<int:category>/',GetCategoryPrices.as_view()),
+    path('category/level_wise/<str:slug>/', GetSpecificCategoriesLevelWise.as_view()),
+    path('category/top_level/', CategoryTopLevelList.as_view()),
+    path('category/prices/', CreateCategoryPrices.as_view()),
+    path('category/get_prices/<int:category>/', GetCategoryPrices.as_view()),
     path('category/<str:pk>/', CategoryDetail.as_view()),
 
     # urls for all products
@@ -30,7 +31,7 @@ urlpatterns = [
     # url of net prices
     path('product/net_price/', ProductNetPrice.as_view()),
 
-    path('product/business_client/verification_status/', ProductSellerStatus.as_view()),
+    path('product/business_client/verification_status/', BusinessClientProductsByVerificationStatus.as_view()),
     path('product/seller/<str:seller_id>/', GetSellerProductList.as_view()),
 
     path('product/image/', BaseProductImageCreate.as_view()),
@@ -44,6 +45,6 @@ urlpatterns = [
     #url of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
 
+    path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),
-    re_path('^product/category/(?P<slug>[-\w]+)/$', GetProductsByCategory.as_view()),
 ]
