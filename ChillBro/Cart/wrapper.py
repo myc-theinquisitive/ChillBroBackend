@@ -3,9 +3,8 @@ from Coupons.exportapi import coupon_value
 from Bookings.exportapi import create_multiple_bookings
 
 
-def check_valid_booking(product_id, quantity, size, combo_products, start_time, end_time):
+def check_valid_booking(product_list, start_time, end_time):
     from Bookings.views import valid_booking
-    product_list = [{'product_id': product_id, "quantity": quantity, "size": size, "combo_products": combo_products}]
     is_valid, errors = valid_booking(product_list, start_time, end_time)
     return is_valid, errors
 

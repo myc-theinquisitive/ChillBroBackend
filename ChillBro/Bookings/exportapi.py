@@ -1,6 +1,6 @@
 from django.db.models import Sum, F
 from .serializers import *
-from .views import CreateBookingWhileCheckout
+from .views import create_multiple_bookings_while_checkout
 
 
 def get_booking_details_for_payments(entity_id, from_date, to_date, entity_filter, status):
@@ -40,4 +40,4 @@ def check_order_is_valid(booking_id):
 
 
 def create_multiple_bookings(all_bookings):
-    return CreateBookingWhileCheckout(all_bookings)
+    return create_multiple_bookings_while_checkout(all_bookings)

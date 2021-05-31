@@ -46,9 +46,7 @@ def get_product_id_wise_details(product_ids):
 
             for each_combo_product in all_combo_products:
                 combo_product_data = {
-                    "combo_product_id":each_combo_product.combo_item.id,
-                    "quantity":each_combo_product.quantity,
-                    "total_quantity":each_combo_product.combo_item.quantity
+                    "quantity":each_combo_product.quantity
                 }
                 combo_products[each_combo_product.combo_item.id] = combo_product_data
         product_data['combo_products'] = combo_products
