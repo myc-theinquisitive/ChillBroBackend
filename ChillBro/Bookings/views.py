@@ -59,6 +59,42 @@ def get_total_bookings_count_of_product_in_duration(product_id, start_time, end_
     return bookings_count
 
 
+def valid_booking_with_product_quantity(products_quantity, booking_products_list, start_time, end_time):
+    is_valid = True
+    errors = defaultdict(list)
+
+    for booking_product in booking_products_list:
+        has_sizes = products_quantity[booking_product['product_id']]['has_sizes']
+
+        if has_sizes:
+            product_sizes_details = products_quantity[booking_product['product_id']]['size_products']
+            flag = 0
+            for each_product_size in product_sizes_details:
+                if each_product_size['size'] == booking_product['size']:
+                    total_quantity = each_product_size['quantity']
+                    flag = 1
+                    break
+            if flag == 0:
+                is_valid = False
+                errors[booking_product['product_id']].append("Invalid size")
+            else:
+                previous_bookings_count = get_total_bookings_count_of_product_in_duration(
+                    booking_product['product_id'], start_time, end_time, booking_product['size'])
+
+        else:
+            previous_bookings_count = get_total_bookings_count_of_product_in_duration(
+                booking_product['product_id'], start_time, end_time, booking_product['size'])
+            total_quantity = products_quantity[booking_product['product_id']]['quantity']
+        if is_valid and total_quantity - previous_bookings_count < booking_product['quantity'] :
+            is_valid = False
+            if total_quantity - previous_bookings_count == 0:
+                errors[booking_product['product_id']].append("Sorry, No products are available")
+            else:
+                errors[booking_product['product_id']].append(
+                    "Sorry, only {} products are available".format(total_quantity - previous_bookings_count))
+    return is_valid, errors
+
+
 def valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time):
     is_valid = True
     errors = defaultdict(list)
@@ -74,38 +110,10 @@ def valid_booking_with_product_details(products_quantity, booking_products_list,
         if booking_product['quantity'] <= 0:
             is_valid = False
             errors[booking_product['product_id']].append("Quantity should be greater than 0")
-        has_sizes = products_quantity[booking_product['product_id']]['has_sizes']
 
-        if has_sizes:
-            if len(booking_product['size']) == 0:
-                is_valid = False
-                errors[booking_product['product_id']].append("Please mention the size of the product")
+    if is_valid:
+        is_valid, errors = valid_booking_with_product_quantity(products_quantity, booking_products_list, start_time, end_time)
 
-            product_sizes_details = products_quantity[booking_product['product_id']]['size_products']
-            flag = 0
-            for each_product_size in product_sizes_details:
-                if each_product_size['size'] == booking_product['size']:
-                    total_quantity = each_product_size['quantity']
-                    flag = 1
-                    break
-            if flag == 0:
-                errors[booking_product['product_id']].append("Invalid size")
-            else:
-                previous_bookings_count = get_total_bookings_count_of_product_in_duration(
-                    booking_product['product_id'], start_time, end_time, booking_product['size'])
-
-        else:
-            previous_bookings_count = get_total_bookings_count_of_product_in_duration(
-                booking_product['product_id'], start_time, end_time, booking_product['size'])
-            total_quantity = products_quantity[booking_product['product_id']]['quantity']
-
-        if is_valid and total_quantity - previous_bookings_count < booking_product['quantity'] :
-            is_valid = False
-            if total_quantity - previous_bookings_count == 0:
-                errors[booking_product['product_id']].append("Sorry, No products are available")
-            else:
-                errors[booking_product['product_id']].append(
-                    "Sorry, only {} products are available".format(total_quantity - previous_bookings_count))
     return is_valid, errors
 
 
@@ -1077,9 +1085,9 @@ def create_multiple_bookings_while_checkout(all_booking):
             for each_product in product_list:
                 if not each_product['is_combo']:
                     booking_products.append(each_product)
-
+            final_products_list = combine_products(booking_products)
             is_valid, errors = valid_booking_with_product_details(
-                product_details, booking_products, all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
+                product_details, final_products_list, all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
             if not is_valid:
                 overall_is_valid = True
                 all_errors[each_booking].append(errors)
@@ -1154,3 +1162,25 @@ def create_single_booking(booking_object, product_values):
     booked_product_serializer_object.bulk_create(product_list)
 
     return True, {}
+
+
+def combine_products(all_cart_products):
+    form_together = defaultdict()
+    for each_product in all_cart_products:
+        try:
+            form_together[each_product['product_id'] + "," + each_product['size']] = {
+                "product_id": each_product['product_id'],
+                "quantity": form_together[each_product['product_id'] + "," + each_product['size']]['quantity'] + each_product['quantity'],
+                "size": each_product['size']
+            }
+        except:
+            form_together[each_product['product_id'] + "," + each_product['size']] = {
+                "product_id": each_product['product_id'],
+                "quantity": each_product['quantity'],
+                "size": each_product['size']
+            }
+    final_products = []
+    for each_product in form_together:
+        final_products.append(form_together[each_product])
+
+    return final_products

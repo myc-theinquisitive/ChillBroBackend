@@ -148,7 +148,7 @@ class BookedProducts(models.Model):
     objects = BookedProductManager()
 
     class Meta:
-        unique_together = (("booking", "product_id","is_combo"),)
+        unique_together = (("booking", "product_id","is_combo","hidden"),)
 
     def __str__(self):
         return "Booked Product - {0}, {1}".format(self.booking_id, self.product_id)

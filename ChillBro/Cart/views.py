@@ -9,6 +9,8 @@ from .wrapper import check_valid_booking, get_product_details_with_image, check_
     get_product_id_wise_product_details, get_discounted_value, create_multiple_bookings_from_cart
 from .helpers import get_date_format
 from collections import defaultdict
+
+
 # Create your views here.
 
 
@@ -21,14 +23,16 @@ class AddProductToCart(APIView):
             return Response({"message": "Can't add product to cart", "errors": input_serializer.errors}, 400)
         product_id = request.data['product_id']
         quantity = request.data['quantity']
-        entity_id, entity_type = check_valid_product(product_id)
-        product_details = get_product_id_wise_product_details([product_id])
         combo_product_details = request.data['combo_product_details']
+        entity_id, entity_type = check_valid_product(product_id)
+        product_ids = [product_id]
+        product_details = get_product_id_wise_product_details(product_ids)
+
         products = []
         if product_details[product_id]["is_combo"]:
             combo_products_data = product_details[product_id]['combo_products']
             if len(combo_products_data) != len(combo_product_details):
-                return Response({"message": "Can't add combo product to cart","errors":"Invalid combo product data"})
+                return Response({"message": "Can't add combo product to cart", "errors": "Invalid combo product data"})
 
             for each_combo_product in combo_products_data:
                 combo_product = {
@@ -41,20 +45,38 @@ class AddProductToCart(APIView):
             products.append({
                 "product_id": product_id,
                 "quantity": quantity,
-                "size": request.data['quantity']
+                "size": request.data['size']
             })
 
         if entity_id is None and entity_type is None:
             return Response({"message": "Can't add product to cart", "errors": "Invalid Product"})
 
-        is_valid, errors = check_valid_booking(products,request.data['start_time'], request.data['end_time'])
-        if not is_valid:
-            return Response({"message": "Can't add product to cart", "errors": errors}, 400)
-
         try:
             cart = Cart.objects.get(entity_id=entity_id, entity_type=entity_type, start_time=request.data['start_time'],
                                     end_time=request.data['end_time'], created_by=request.user)
+            is_cart_exist = True
         except ObjectDoesNotExist:
+            is_cart_exist = False
+
+        if not is_cart_exist:
+            is_valid, errors = check_valid_booking(products, request.data['start_time'], request.data['end_time'])
+        else:
+            cart_products = CartProducts.objects.filter(cart_id=cart)
+            all_cart_products = []
+            for each_product in cart_products:
+                if not each_product.is_combo:
+                    all_cart_products.append({
+                        "product_id": each_product.product_id,
+                        "quantity": each_product.quantity,
+                        "size": each_product.size
+                    })
+            all_cart_products += products
+            is_valid, errors = check_valid_booking(combine_products(all_cart_products), request.data['start_time'],
+                                                   request.data['end_time'])
+        if not is_valid:
+            return Response({"message": "Can't add product to cart", "errors": errors}, 400)
+
+        if not is_cart_exist:
             serializer = CartSerializer()
             cart = serializer.create(
                 {
@@ -85,11 +107,11 @@ class AddProductToCart(APIView):
                 combo_cart_products.append({
                     "cart": cart,
                     "product_id": each_combo_product['product_id'],
-                    "quantity": each_combo_product['quantity']//quantity,
+                    "quantity": each_combo_product['quantity'],
                     "size": each_combo_product['size'],
-                    "is_combo": True,
-                    "hidden" : True,
-                    "parent_cart_product" : cart_product_id
+                    "is_combo": False,
+                    "hidden": True,
+                    "parent_cart_product": cart_product_id
                 })
             cart_product_serializer.bulk_create(combo_cart_products)
 
@@ -101,7 +123,7 @@ class UpdateCartProductQuantity(APIView):
 
     def put(self, request, *args, **kwargs):
         cart_products = CartProducts.objects.select_related('cart').filter(
-            cart=request.data['cart'], product_id=request.data['product_id'])
+            cart=request.data['cart'])
         if len(cart_products) == 0:
             return Response({"message": "Can't update the product quantity",
                              "errors": "invalid cart id or product id"}, 400)
@@ -110,7 +132,6 @@ class UpdateCartProductQuantity(APIView):
 
         product_id = request.data['product_id']
         quantity = request.data['quantity']
-        entity_id, entity_type = check_valid_product(product_id)
         product_details = get_product_id_wise_product_details([product_id])
         combo_product_details = request.data['combo_product_details']
         products = []
@@ -133,13 +154,37 @@ class UpdateCartProductQuantity(APIView):
                 "size": request.data['quantity']
             })
 
-        is_valid, errors = check_valid_booking(products,
-            cart_product.cart.start_time.strftime(get_date_format()),
-            cart_product.cart.end_time.strftime(get_date_format())
-        )
+        all_cart_products = []
+        for each_product in cart_products:
+            if each_product.parent_cart_product is None:
+                parent_cart_product_id = ""
+            else:
+                parent_cart_product_id = each_product.parent_cart_product.product_id
+            if each_product.product_id != product_id and parent_cart_product_id != product_id:
+                if not each_product.is_combo:
+                    all_cart_products.append({
+                        "product_id": each_product.product_id,
+                        "quantity": each_product.quantity,
+                        "size": each_product.size
+                    })
+        all_cart_products += products
+
+        is_valid, errors = check_valid_booking(combine_products(all_cart_products),
+                                               cart_product.cart.start_time.strftime(get_date_format()),
+                                               cart_product.cart.end_time.strftime(get_date_format())
+                                               )
         if not is_valid:
             return Response({"message": "Can't update the product quantity", "errors": errors}, 400)
-        cart_products.update(quantity=request.data['quantity'])
+        if product_details[product_id]['is_combo']:
+            for each_product in cart_products:
+                if each_product.parent_cart_product is None:
+                    each_product.quantity = request.data['quantity']
+                else:
+                    each_product.quantity = request.data['quantity'] * \
+                                                   combo_products_data[each_product.product_id]['quantity']
+                each_product.save()
+        else:
+            cart_products.update(quantity=request.data['quantity'])
         return Response({"message": "Product Quantity is updated to {}".format(request.data['quantity'])}, 200)
 
 
@@ -175,14 +220,14 @@ class CartDetails(generics.ListAPIView):
             combo_products = []
             if each_product.hidden is False:
                 if each_product.is_combo:
-                    combo_products = combo_products_details[each_product.cart_id+","+each_product.product_id]
+                    combo_products = combo_products_details[each_product.cart_id + "," + each_product.product_id]
                 cart_id_wise_product_details[each_product.cart_id].append(
                     {
                         'id': each_product.id,
-                        'product_id':each_product.product_id,
-                        'quantity':each_product.quantity,
+                        'product_id': each_product.product_id,
+                        'quantity': each_product.quantity,
                         'size': each_product.size,
-                        'is_combo' : each_product.is_combo,
+                        'is_combo': each_product.is_combo,
                         'combo_products': combo_products,
                         'product_name': product_id_wise_product_details[each_product.product_id]['name'],
                         'product_image_url': product_id_wise_product_details[each_product.product_id]['image_url']
@@ -198,7 +243,7 @@ class CartDetails(generics.ListAPIView):
                     'products': cart_id_wise_product_details[each_cart.id]
                 }
             all_carts.append(each_cart_details)
-        return Response({"results":all_carts}, 200)
+        return Response({"results": all_carts}, 200)
 
 
 class DeleteProductFromCart(generics.RetrieveDestroyAPIView):
@@ -217,34 +262,41 @@ class CheckAvailabilityOfAllProducts(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        all_cart_products = CartProducts.objects.select_related('cart')\
-                            .filter(cart__created_by=request.user)
+        all_cart_products = CartProducts.objects.select_related('cart') \
+            .filter(cart__created_by=request.user)
         out_of_stock_products = defaultdict(list)
+
+        combo_products_details = defaultdict(list)
+        for each_cart_product in all_cart_products:
+            if each_cart_product.hidden:
+                combo_products_details[
+                    each_cart_product.cart_id + "," + each_cart_product.parent_cart_product.product_id].append(
+                    {
+                        "product_id": each_cart_product.product_id,
+                        "quantity": each_cart_product.quantity,
+                        "size": each_cart_product.size,
+                    }
+                )
 
         for each_product in all_cart_products:
             products = []
             if each_product.hidden is False:
                 if each_product.is_combo:
-                    for each_combo_product in all_cart_products:
-                        if each_combo_product.parent_cart_product_id == each_product.id:
-                            products.append({
-                                "product_id": each_combo_product.product_id,
-                                "quantity": each_combo_product.quantity,
-                                "size": each_combo_product.size
-                            })
+                    products = combo_products_details[each_product.cart_id + "," + each_product.product_id]
                 else:
                     products.append({
                         "product_id": each_product.product_id,
                         "quantity": each_product.quantity,
                         "size": each_product.size
                     })
+
                 is_valid, errors = check_valid_booking(
                     products,
                     each_product.cart.start_time.strftime(get_date_format()),
                     each_product.cart.end_time.strftime(get_date_format())
                 )
                 if not is_valid:
-                    out_of_stock_products[each_product.cart.id].append({each_product.product_id:errors})
+                    out_of_stock_products[each_product.cart.id].append({each_product.product_id: errors})
         return Response(out_of_stock_products, 200)
 
 
@@ -254,12 +306,12 @@ class CheckoutCart(ListAPIView):
     def post(self, request, *args, **kwargs):
         input_serializer = CheckoutCartSerializer(data=request.data)
         if input_serializer.is_valid():
-            cart_details = Cart.objects.filter(created_by = request.user, entity_type = request.data['entity_type'] )
+            cart_details = Cart.objects.filter(created_by=request.user, entity_type=request.data['entity_type'])
             cart_items = CartProducts.objects.select_related('cart') \
-                .filter(cart__created_by = request.user, cart__entity_type= request.data['entity_type'])
+                .filter(cart__created_by=request.user, cart__entity_type=request.data['entity_type'])
 
             if len(cart_details) == 0:
-                return Response({"message": "Can't checkout","errors":"Sorry, no products in cart"})
+                return Response({"message": "Can't checkout", "errors": "Sorry, no products in cart"})
 
             entity_ids = []
             for each_cart in cart_details:
@@ -277,9 +329,9 @@ class CheckoutCart(ListAPIView):
             coupon = request.data['coupon']
             total_coupon_value = 0
 
-            if len(request.data['coupon'])>0:
+            if len(request.data['coupon']) > 0:
                 coupon_data = get_discounted_value(
-                coupon, request.user, product_ids, entity_ids, request.data['entity_type'], total_products_value)
+                    coupon, request.user, product_ids, entity_ids, request.data['entity_type'], total_products_value)
                 if not coupon_data['is_valid']:
                     return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
                 total_coupon_value = total_products_value - coupon_data['discounted_value']
@@ -292,8 +344,8 @@ class CheckoutCart(ListAPIView):
                             "product_id": each_cart_product.product_id,
                             "quantity": each_cart_product.quantity,
                             "size": each_cart_product.size,
-                            "parent_booked_product" : each_cart_product.parent_cart_product.product_id,
-                            "coupon_value" : 0,
+                            "parent_booked_product": each_cart_product.parent_cart_product.product_id,
+                            "coupon_value": 0,
                             "is_combo": False
                         }
                     )
@@ -301,14 +353,16 @@ class CheckoutCart(ListAPIView):
                     coupon_value_for_each_product = 0
                     if total_coupon_value > 0:
                         coupon_value_for_each_product = calculate_coupon_value(total_coupon_value, \
-                            product_details[each_cart_product.product_id]['price'], total_products_value, \
-                            each_cart_product.quantity)
+                                                                               product_details[
+                                                                                   each_cart_product.product_id][
+                                                                                   'price'], total_products_value, \
+                                                                               each_cart_product.quantity)
 
                     cart_products_for_bookings[each_cart_product.cart_id].append({
                         "product_id": each_cart_product.product_id,
                         "quantity": each_cart_product.quantity,
                         "size": each_cart_product.size,
-                        "parent_booked_product" : None,
+                        "parent_booked_product": None,
                         "coupon_value": coupon_value_for_each_product,
                         "is_combo": each_cart_product.is_combo
                     })
@@ -328,13 +382,34 @@ class CheckoutCart(ListAPIView):
 
             is_valid, errors = create_multiple_bookings_from_cart(final_cart_details)
             if is_valid:
-                cart_details.delete()
+                # cart_details.delete()
                 return Response({"message": "Successfully created {} bookings".format(len(final_cart_details))})
             else:
-                return Response({"message": "Can't create bookings","errors": errors})
+                return Response({"message": "Can't create bookings", "errors": errors})
         else:
-            return Response({"message":"Cant checkout the cart", "errors":input_serializer.errors},400)
+            return Response({"message": "Cant checkout the cart", "errors": input_serializer.errors}, 400)
 
 
 def calculate_coupon_value(total_coupon_value, product_value, total_products_value, quantity):
     return (float(total_coupon_value) / 100) * ((float(product_value) / float(total_products_value)) * 100) * quantity
+
+
+def combine_products(all_cart_products):
+    form_together = defaultdict()
+    for each_product in all_cart_products:
+        try:
+            form_together[each_product['product_id'] + "," + each_product['size']] = {
+                "product_id": each_product['product_id'],
+                "quantity": form_together[each_product['product_id'] + "," + each_product['size']]['quantity'] + each_product['quantity'],
+                "size": each_product['size']
+            }
+        except:
+            form_together[each_product['product_id'] + "," + each_product['size']] = {
+                "product_id": each_product['product_id'],
+                "quantity": each_product['quantity'],
+                "size": each_product['size']
+            }
+    final_products = []
+    for each_product in form_together:
+        final_products.append(form_together[each_product])
+    return final_products
