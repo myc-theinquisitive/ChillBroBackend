@@ -90,9 +90,12 @@ class EntitySerializer(serializers.ModelSerializer):
         read_only_fields = ('activation_status', 'active_from')
 
     def create(self, validated_data):
+        if "id" not in validated_data:
+            validated_data["id"] = get_id()
         return MyEntity.objects.create(
-            name=validated_data["name"], type=validated_data["type"], sub_type=validated_data["sub_type"],
-            address_id=validated_data["address_id"], registration_id=validated_data["registration"],
+            id=validated_data["id"], name=validated_data["name"], type=validated_data["type"],
+            sub_type=validated_data["sub_type"], address_id=validated_data["address_id"],
+            registration_id=validated_data["registration"],
             account_id=validated_data["account"], upi_id=validated_data["upi"],
             description=validated_data["description"]
         )

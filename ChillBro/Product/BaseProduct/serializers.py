@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, ProductImage, ProductVerification, ComboProductItems, ProductSize
+from .models import Product, ProductImage, ProductVerification, ComboProductItems, ProductSize, get_id
 from .constants import PriceTypes
 
 
@@ -27,17 +27,21 @@ class ProductSerializer(serializers.ModelSerializer):
             validated_data["has_sizes"] = False
         if "price_type" not in validated_data:
             validated_data["price_type"] = PriceTypes.DAY.value
+        if "category_product" not in validated_data:
+            validated_data["category_product"] = None
 
     def create(self, validated_data):
         self.add_default_values(validated_data)
+        if "id" not in validated_data:
+            validated_data["id"] = get_id()
 
         product = Product.objects.create(
-            name=validated_data["name"], description=validated_data["description"],
+            id=validated_data["id"], name=validated_data["name"], description=validated_data["description"],
             type=validated_data["type"], category_id=validated_data["category"], price=validated_data["price"],
             discounted_price=validated_data["discounted_price"], featured=validated_data["featured"],
             quantity=validated_data["quantity"], is_combo=validated_data["is_combo"],
             has_sizes=validated_data["has_sizes"], price_type=validated_data["price_type"],
-            seller_id=validated_data["seller_id"])
+            seller_id=validated_data["seller_id"], category_product_id=validated_data["category_product"])
 
         if "tags" in validated_data:
             product.tags.add(*validated_data["tags"])
@@ -78,6 +82,7 @@ class ProductSerializer(serializers.ModelSerializer):
         instance.description = validated_data["description"]
         instance.type = validated_data["type"]
         instance.category_id = validated_data["category"]
+        instance.category_product_id = validated_data["category_product"]
         instance.price = validated_data["price"]
         instance.discounted_price = validated_data["discounted_price"]
         instance.featured = validated_data["featured"]

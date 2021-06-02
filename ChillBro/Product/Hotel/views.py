@@ -211,13 +211,13 @@ class HotelView(ProductInterface):
                         "amenity": string,
                         "is_available": boolean
                     }
-                ]
+                ],
                 "change": [
                     {
                         "id": string,
                         "is_available": boolean
                     }
-                ]
+                ],
                 "delete": [
                     {
                         "id": string

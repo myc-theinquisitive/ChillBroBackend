@@ -4,8 +4,11 @@ from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProd
     ProductVerificationDetail, ProductListBasedOnVerificationStatus
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
-    GetSpecificCategoriesLevelWise, CategoryTopLevelList, CreateCategoryPrices, GetCategoryPrices, CategoryDetail
+    GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
+    CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail
 from .Hotel.views import AmenitiesList
+from .Vehicle.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
+    VehicleCharacteristicsDetail
 
 
 urlpatterns = [
@@ -17,9 +20,19 @@ urlpatterns = [
     path('category/level_wise/', GetCategoriesLevelWise.as_view()),
     path('category/level_wise/<str:slug>/', GetSpecificCategoriesLevelWise.as_view()),
     path('category/top_level/', CategoryTopLevelList.as_view()),
-    path('category/prices/', CreateCategoryPrices.as_view()),
-    path('category/get_prices/<int:category>/', GetCategoryPrices.as_view()),
+
+    path('category/product/', CategoryProductList.as_view()),
+    path('category/product/<str:pk>/', CategoryProductDetail.as_view()),
+    path('category/product/prices/', CategoryProductPricesList.as_view()),
+    path('category/product/prices/<str:category_product>/', CategoryProductPricesDetail.as_view()),
     path('category/<str:pk>/', CategoryDetail.as_view()),
+
+    # urls for vehicle
+    path('vehicle/type/', VehicleTypeList.as_view()),
+    path('vehicle/type/<str:pk>/', VehicleTypeDetail.as_view()),
+
+    path('vehicle/characteristics/', VehicleCharacteristicsList.as_view()),
+    path('vehicle/characteristics/<int:pk>/', VehicleCharacteristicsDetail.as_view()),
 
     # urls for all products
     path('product/', ProductList.as_view()),
@@ -42,7 +55,7 @@ urlpatterns = [
     # urls specific to hotels
     path('product/amenities/', AmenitiesList.as_view()),
 
-    #url of update product
+    # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),

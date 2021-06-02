@@ -2,9 +2,10 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from .models import Category, CategoryImage, CategoryPrices
+from .models import Category, CategoryImage, CategoryProductPrices, CategoryProduct
 from rest_framework.response import Response
-from .serializers import CategorySerializer, CategoryImageSerializer, CategoryPricesSerializer
+from .serializers import CategorySerializer, CategoryImageSerializer, CategoryProductSerializer, \
+    CategoryProductPricesSerializer
 from rest_framework.views import APIView
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsGet
@@ -116,20 +117,32 @@ class GetSpecificCategoriesLevelWise(APIView):
         return Response(response_data, 200)
 
 
-class CreateCategoryPrices(generics.ListCreateAPIView):
+class CategoryProductList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee)
-    queryset = CategoryPrices.objects.all()
-    serializer_class = CategoryPricesSerializer
+    queryset = CategoryProduct.objects.all()
+    serializer_class = CategoryProductSerializer
 
 
-class GetCategoryPrices(generics.RetrieveUpdateDestroyAPIView):
+class CategoryProductDetail(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee)
+    queryset = CategoryProductPrices.objects.all()
+    serializer_class = CategoryProductPricesSerializer
+
+
+class CategoryProductPricesList(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,  IsSuperAdminOrMYCEmployee)
+    queryset = CategoryProductPrices.objects.all()
+    serializer_class = CategoryProductPricesSerializer
+
+
+class CategoryProductPricesDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
-    queryset = CategoryPrices.objects.all()
-    serializer_class = CategoryPricesSerializer
+    queryset = CategoryProductPrices.objects.all()
+    serializer_class = CategoryProductPricesSerializer
 
     def get(self, request, *args, **kwargs):
         try:
-            prices = CategoryPrices.objects.get(category=kwargs['category'])
+            prices = CategoryProductPrices.objects.get(category_product=kwargs['category_product'])
         except ObjectDoesNotExist:
             return Response({"min_price": -1, "max_price": -1, "min_discount": -1, "max_discount": -1}, 400)
 
@@ -137,18 +150,20 @@ class GetCategoryPrices(generics.RetrieveUpdateDestroyAPIView):
         return Response(serializer.data, 200)
 
     def put(self, request, *args, **kwargs):
-        prices = CategoryPrices.objects.filter(category=kwargs['category'])
+        prices = CategoryProductPrices.objects.filter(category=kwargs['category_product'])
         if len(prices) == 0:
-            return Response({"message": "Can't edit the category", "errors": "Category prices doesn't exit"}, 400)
+            return Response({"message": "Can't edit the category product",
+                             "errors": "Category product prices doesn't exit"}, 400)
 
         prices.update(min_price=request.data['min_price'], max_price=request.data['max_price'],
                       min_discount=request.data['min_discount'], max_discount=request.data['max_discount'])
-        return Response({"message": "Successfully edited the category prices", "errors": None}, 200)
+        return Response({"message": "Successfully edited the category product prices"}, 200)
 
     def delete(self, request, *args, **kwargs):
-        prices = CategoryPrices.objects.filter(category=kwargs['category'])
+        prices = CategoryProductPrices.objects.filter(category=kwargs['category_product'])
         if len(prices) == 0:
-            return Response({"message": "Can't delete the category", "errors": "Category Prices doesn't exit"}, 400)
+            return Response({"message": "Can't delete the category product",
+                             "errors": "Category product Prices doesn't exit"}, 400)
 
         prices.delete()
-        return Response({"message": "Successfully deleted category prices", "errors": None}, 200)
+        return Response({"message": "Successfully deleted category product prices"}, 200)

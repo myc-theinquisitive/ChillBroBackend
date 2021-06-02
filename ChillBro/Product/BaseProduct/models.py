@@ -48,6 +48,8 @@ class Product(models.Model):
                             choices=[(product_type.value, product_type.value) for product_type in ProductTypes],
                             verbose_name="Product Type")
     category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
+    category_product = models.ForeignKey('CategoryProduct', on_delete=models.CASCADE,
+                                         null=True, blank=True, verbose_name="CategoryProduct")
     seller_id = models.CharField(max_length=36)
 
     price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)

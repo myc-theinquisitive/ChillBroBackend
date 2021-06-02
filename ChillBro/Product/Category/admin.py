@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, CategoryImage, CategoryPrices
+from .models import Category, CategoryImage, CategoryProduct, CategoryProductPrices
 
 
 @admin.register(Category)
@@ -12,4 +12,5 @@ class CategoryImageAdmin(admin.ModelAdmin):
     pass
 
 
-admin.site.register(CategoryPrices)
+admin.site.register(CategoryProduct)
+admin.site.register(CategoryProductPrices)

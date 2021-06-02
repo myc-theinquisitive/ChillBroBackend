@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import Category, CategoryImage, CategoryPrices
+from .models import Category, CategoryImage, CategoryProduct, CategoryProductPrices
 
 
 class CategorySerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Category
         fields = '__all__'
@@ -23,9 +24,16 @@ class CategoryImageSerializer(serializers.ModelSerializer):
         model = CategoryImage
         fields = '__all__'
 
-        
-class CategoryPricesSerializer(serializers.ModelSerializer):
+
+class CategoryProductSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = CategoryPrices
+        model = CategoryProduct
+        fields = '__all__'
+
+
+class CategoryProductPricesSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CategoryProductPrices
         fields = '__all__'

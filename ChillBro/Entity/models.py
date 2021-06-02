@@ -11,6 +11,10 @@ from .helpers import upload_aadhar_image_for_entity, upload_gst_image_for_entity
     upload_registration_image_for_entity
 
 
+def get_id():
+    return str(uuid.uuid4())
+
+
 class Amenities(models.Model):
     name = models.CharField(max_length=40)
     icon_url = models.ImageField(upload_to=image_upload_to_amenities)
