@@ -135,7 +135,7 @@ class BookedProducts(models.Model):
     is_combo = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
     parent_booked_product = models.ForeignKey('self', on_delete=models.CASCADE,
-                                            null=True, verbose_name="Parent Booked Product Id")
+                                            null=True, blank=True, verbose_name="Parent Booked Product Id")
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     coupon_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -148,7 +148,7 @@ class BookedProducts(models.Model):
     objects = BookedProductManager()
 
     class Meta:
-        unique_together = (("booking", "product_id","is_combo","hidden"),)
+        unique_together = (("booking", "product_id","hidden","parent_booked_product"),)
 
     def __str__(self):
         return "Booked Product - {0}, {1}".format(self.booking_id, self.product_id)

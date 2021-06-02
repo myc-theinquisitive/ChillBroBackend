@@ -68,19 +68,10 @@ def valid_booking_with_product_quantity(products_quantity, booking_products_list
 
         if has_sizes:
             product_sizes_details = products_quantity[booking_product['product_id']]['size_products']
-            flag = 0
-            for each_product_size in product_sizes_details:
-                if each_product_size['size'] == booking_product['size']:
-                    total_quantity = each_product_size['quantity']
-                    flag = 1
-                    break
-            if flag == 0:
-                is_valid = False
-                errors[booking_product['product_id']].append("Invalid size")
-            else:
-                previous_bookings_count = get_total_bookings_count_of_product_in_duration(
-                    booking_product['product_id'], start_time, end_time, booking_product['size'])
 
+            total_quantity = product_sizes_details[booking_product['size']]
+            previous_bookings_count = get_total_bookings_count_of_product_in_duration(
+                    booking_product['product_id'], start_time, end_time, booking_product['size'])
         else:
             previous_bookings_count = get_total_bookings_count_of_product_in_duration(
                 booking_product['product_id'], start_time, end_time, booking_product['size'])
@@ -111,8 +102,14 @@ def valid_booking_with_product_details(products_quantity, booking_products_list,
             is_valid = False
             errors[booking_product['product_id']].append("Quantity should be greater than 0")
 
-    if is_valid:
-        is_valid, errors = valid_booking_with_product_quantity(products_quantity, booking_products_list, start_time, end_time)
+        has_sizes = products_quantity[booking_product['product_id']]['has_sizes']
+        if has_sizes:
+            product_sizes_details = products_quantity[booking_product['product_id']]['size_products']
+            try:
+                quantity = product_sizes_details[booking_product['size']]
+            except:
+                is_valid = False
+                errors[booking_product['product_id']].append("Invalid Size")
 
     return is_valid, errors
 
@@ -123,7 +120,11 @@ def valid_booking(booking_products_list, start_time, end_time):
         product_ids.append(product['product_id'])
     products_quantity = get_product_id_wise_product_details(product_ids)
 
-    return valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time)
+    is_valid, errors = valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time)
+    if not is_valid:
+        return is_valid, errors
+
+    return valid_booking_with_product_quantity(products_quantity, booking_products_list, start_time, end_time)
 
 
 def cancel_booking(booking):
@@ -297,8 +298,6 @@ class GetProductAvailability(APIView):
         product_id = serializer.data["product_id"]
         start_time = serializer.data["start_time"]
         end_time = serializer.data["end_time"]
-
-        # TODO: have to sent product_size from frontend
         product_size = serializer.data["product_size"]
 
         return product_availability(product_id=product_id, start_time=start_time, end_time=end_time,
@@ -324,7 +323,7 @@ class CreateBooking(generics.ListCreateAPIView):
         if not new_booking_serializer.is_valid():
             return Response(new_booking_serializer.errors, 400)
 
-        product_list = request.data.pop('products', None)
+        product_list = request.data['products']
         product_ids = []
         for product in product_list:
             product_ids.append(product['product_id'])
@@ -335,115 +334,18 @@ class CreateBooking(generics.ListCreateAPIView):
         if len(product_values) != len(product_ids):
             return Response({"message": "Can't create booking", "errors": "Invalid Products"}, 400)
 
-        total_money = 0.0
-        for product in product_list:
-            total_money += float(product_values[product['product_id']]['price'] * product['quantity'])
+        is_valid, errors = valid_booking_with_product_details(
+            product_values, product_list, request.data['start_time'], request.data['end_time'])
+        if not is_valid:
+            return Response({"message": "Can't create booking", "errors": errors}, 400)
+        is_valid, errors = valid_booking_with_product_details(
+            product_values, product_list, request.data['start_time'], request.data['end_time'])
+        if not is_valid:
+            return Response({"message": "Can't create booking", "errors": errors},400)
 
-        # Validate coupon and get discounted value
-        total_coupon_discount = 0
-        entity_id = request.data['entity_id']
-        if request.data['coupon'] is not None:
-            coupon = get_discounted_value(
-                request.data['coupon'], request.user, product_ids, entity_id, request.data['entity_type'], total_money)
-            if not coupon['is_valid']:
-                return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
-            request.data['total_money'] = coupon['discounted_value']
-            total_coupon_discount = total_money - coupon['discounted_value']
-        else:
-            request.data['total_money'] = total_money
-        request.data['total_coupon_discount'] = total_coupon_discount
+        create_single_booking(request.data, product_values)
 
-        # Create Booking
-        payment_mode = request.data['payment_mode']
-        if payment_mode == PaymentMode.cod.value:
-            request.data['payment_status'] = PaymentStatus.not_required.value
-
-        total_net_value = 0
-        for product in product_list:
-            product['hidden'] = False
-            product['parent_booked_product'] = None
-            product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
-            product['net_value'] = \
-                product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
-            product['coupon_value'] = total_coupon_discount * (float(product["product_value"]) / total_money)
-            total_net_value += \
-                product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
-        request.data["total_net_value"] = total_net_value
-
-        with _booking_lock:
-            is_valid, errors = valid_booking_with_product_details(
-                product_values, product_list, request.data['start_time'], request.data['end_time'])
-            if not is_valid:
-                return Response({"message": "Can't create booking", "errors": errors}, 400)
-
-            bookings_serializer = BookingsSerializer()
-            booking = bookings_serializer.create(request.data)
-
-            booked_product_serializer_object = BookedProductsSerializer()
-            booked_combo_products = []
-            product_list_copy = product_list[::]
-            for each_booking_product in product_list_copy:
-                if product_values[each_booking_product['product_id']]['is_combo']:
-                    combo_product_id = booked_product_serializer_object.create({
-                        'booking': booking,
-                        'product_id': each_booking_product['product_id'],
-                        'quantity': each_booking_product['quantity'],
-                        'is_combo': True,
-                        'product_value': each_booking_product['product_value'],
-                        'net_value': each_booking_product['net_value'],
-                        'coupon_value': each_booking_product['coupon_value']
-                    })
-                    combo_products = each_booking_product["combo_products"]
-                    product_list.remove(each_booking_product)
-                    for each_combo_product in combo_products:
-                        each_combo_product['quantity'] = each_combo_product['quantity'] * each_booking_product['quantity']
-                        each_combo_product['parent_booked_product'] = combo_product_id
-                        each_combo_product['hidden'] = True
-                        each_combo_product['product_value'] = 0
-                        each_combo_product['net_value'] = 0
-                        each_combo_product['is_combo'] = True
-                        product_list.append(each_combo_product)
-                else:
-                    each_booking_product["is_combo"] = False
-
-            # Create booking products
-            for product in product_list:
-                product['booking'] = booking
-            booked_product_serializer_object.bulk_create(product_list)
-
-        # Create transaction for amount to be paid to entity
-        if payment_mode == PaymentMode.online.value:
-            # TODO: should use net value here
-            create_booking_transaction(
-                {
-                    'booking_id': booking.id, 'entity_id': request.data['entity_id'],
-                    'entity_type': request.data['entity_type'], 'total_money': total_net_value,
-                    'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-                    'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.myc.value
-                }
-            )
-        else:
-            # TODO: should update total values
-            create_booking_transaction(
-                {
-                    'booking_id': booking.id, 'entity_id': request.data['entity_id'],
-                    'entity_type': request.data['entity_type'], 'total_money': request.data['total_money'],
-                    'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-                    'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.customer.value
-                }
-            )
-            # TODO: should use commission value here
-            create_booking_transaction(
-                {
-                    'booking_id': booking.id, 'entity_id': request.data['entity_id'],
-                    'entity_type': request.data['entity_type'],
-                    'total_money': request.data['total_money'] - total_net_value,
-                    'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-                    'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.entity.value
-                }
-            )
-
-        return Response({"message": "Booking created", "booking_id": booking.id}, 200)
+        return Response({"message": "Booking created"}, 200)
 
 
 class UserBookingsList(generics.ListAPIView):
@@ -1078,16 +980,30 @@ def create_multiple_bookings_while_checkout(all_booking):
     all_errors = defaultdict(list)
     product_details = all_booking.pop('all_product_details',None)
 
+    after_grouping_of_bookings = {}
+
+    for each_booking in all_booking:
+        product_list = all_booking[each_booking]['products']
+        booking_products = []
+        for each_product in product_list:
+            if not each_product['is_combo']:
+                booking_products.append(each_product)
+        final_products_list = combine_products(booking_products)
+        after_grouping_of_bookings[each_booking] = final_products_list
+
+        is_valid, errors = valid_booking_with_product_details(
+            product_details, final_products_list, all_booking[each_booking]['start_time'],
+            all_booking[each_booking]['end_time'])
+        if not is_valid:
+            overall_is_valid = True
+            all_errors[each_booking].append(errors)
+    if not overall_is_valid:
+        return overall_is_valid, all_errors
+
     with _booking_lock:
         for each_booking in all_booking:
-            product_list = all_booking[each_booking]['products']
-            booking_products = []
-            for each_product in product_list:
-                if not each_product['is_combo']:
-                    booking_products.append(each_product)
-            final_products_list = combine_products(booking_products)
             is_valid, errors = valid_booking_with_product_details(
-                product_details, final_products_list, all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
+                product_details, after_grouping_of_bookings[each_booking], all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
             if not is_valid:
                 overall_is_valid = True
                 all_errors[each_booking].append(errors)
@@ -1157,7 +1073,6 @@ def create_single_booking(booking_object, product_values):
         each_booked_product['booking'] = booking
         if each_booked_product['parent_booked_product'] is not None:
             each_booked_product['parent_booked_product'] = booked_combo_products[each_booked_product['parent_booked_product']]
-            # each_booked_product['is_combo'] = True
 
     booked_product_serializer_object.bulk_create(product_list)
 

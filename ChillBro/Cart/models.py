@@ -32,7 +32,7 @@ class CartProducts(models.Model):
     is_combo = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
     parent_cart_product = models.ForeignKey('self', on_delete=models.CASCADE,
-                                        null=True, verbose_name="Parent Care Product Id")
+                                        null=True, blank=True, verbose_name="Parent Care Product Id")
 
     def __str__(self):
         return "cart - {} and product - {}".format(self.cart, self.product_id)

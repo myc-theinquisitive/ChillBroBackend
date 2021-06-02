@@ -28,16 +28,13 @@ def get_product_id_wise_details(product_ids):
             'has_sizes':each_product.has_sizes,
             'is_combo':each_product.is_combo
         }
-        product_sizes_details = []
+        product_sizes_details = {}
         if each_product.has_sizes:
             all_sizes_products = ProductSize.objects.filter(product_id=each_product.id)
 
             for each_size_product in all_sizes_products:
-                size_product_data = {
-                    "size": each_size_product.size,
-                    "quantity": each_size_product.quantity
-                }
-                product_sizes_details.append(size_product_data)
+                product_sizes_details[each_size_product.size] = each_size_product.quantity
+
         product_data['size_products'] = product_sizes_details
         combo_products = defaultdict()
         if each_product.is_combo:

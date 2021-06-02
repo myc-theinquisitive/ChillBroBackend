@@ -28,6 +28,9 @@ class CartProductsSerializer(serializers.ModelSerializer):
             new_products.append(add_booking_product)
         return CartProducts.objects.bulk_create(new_products)
 
+    def bulk_update(self, validated_data, quantity):
+        return CartProducts.objects.bulk_update(validated_data, quantity)
+
 
 class AddProductToCartSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
