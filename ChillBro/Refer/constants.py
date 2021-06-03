@@ -5,6 +5,7 @@ SHARE_APP_MESSAGE = '''CHILLBRO CONNECT!
         We recommend you to download the CHILLBRO CONNECT app here.
         Link: https://www.chillbro.co.in'''
 
+
 class SignUpRequestStatus(enum.Enum):
     YET_TO_VERIFY = "YET_TO_VERIFY"
     ACCEPTED = "ACCEPTED"

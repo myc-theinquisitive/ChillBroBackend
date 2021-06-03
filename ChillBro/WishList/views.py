@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from .wrapper import *
 from .serializers import WishListSerializer, AddProductToWishListSerializer, UserWishListDetailsSerializer
 from .models import *
-from .helpers import getEntityType
+from .helpers import get_entity_types
 from django.core.exceptions import ObjectDoesNotExist
 
 
@@ -38,7 +38,7 @@ class UserWishListDetails(generics.ListAPIView):
     def post(self, request, *args, **kwargs):
         input_serializer = UserWishListDetailsSerializer(data=request.data)
         if input_serializer.is_valid():
-            entity_type_filters = getEntityType(request.data['entity_type_filters'])
+            entity_type_filters = get_entity_types(request.data['entity_type_filters'])
 
             wishlist = WishList.objects.filter(created_by=request.user, entity_type__in=entity_type_filters)
             if len(wishlist) == 0:

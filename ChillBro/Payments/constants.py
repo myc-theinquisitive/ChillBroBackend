@@ -1,4 +1,5 @@
 import enum
+from ChillBro.constants import EntityType
 
 
 class PayMode(enum.Enum):
@@ -6,14 +7,6 @@ class PayMode(enum.Enum):
     upi = "UPI"
     cod = "COD"
     card = "CARD"
-
-
-class EntityType(enum.Enum):
-    hotels = "HOTEL"
-    transport = "TRANSPORT"
-    rentals = "RENTAL"
-    resorts = "RESORT"
-    events = "EVENT"
 
 
 class PayStatus(enum.Enum):
