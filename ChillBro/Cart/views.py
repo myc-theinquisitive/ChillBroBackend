@@ -384,7 +384,7 @@ class CheckoutCart(ListAPIView):
 
             is_valid, errors = create_multiple_bookings_from_cart(final_cart_details)
             if is_valid:
-                # cart_details.delete()
+                cart_details.delete()
                 return Response({"message": "Successfully created {} bookings".format(len(final_cart_details))})
             else:
                 return Response({"message": "Can't create bookings", "errors": errors})
@@ -458,4 +458,3 @@ def calculate_total_products_value(cart_items, product_details):
             total_products_value += product_details[each_product.product_id]['price'] * each_product.quantity
 
     return total_products_value
-
