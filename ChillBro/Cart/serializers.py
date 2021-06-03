@@ -28,8 +28,16 @@ class CartProductsSerializer(serializers.ModelSerializer):
             new_products.append(add_booking_product)
         return CartProducts.objects.bulk_create(new_products)
 
-    def bulk_update(self, validated_data, quantity):
-        return CartProducts.objects.bulk_update(validated_data, quantity)
+    def bulk_update(self, validated_data):
+        cart_products = []
+        for each_cart_product in validated_data:
+            update_cart_product_quantity = CartProducts(
+                id=each_cart_product['id'],
+                quantity=each_cart_product['quantity'],
+                size=each_cart_product['size']
+            )
+            cart_products.append(update_cart_product_quantity)
+        return CartProducts.objects.bulk_update(cart_products,['quantity','size'])
 
 
 class AddProductToCartSerializer(serializers.Serializer):

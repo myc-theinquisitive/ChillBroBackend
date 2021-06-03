@@ -37,4 +37,7 @@ class CartProducts(models.Model):
     def __str__(self):
         return "cart - {} and product - {}".format(self.cart, self.product_id)
 
+    class Meta:
+        unique_together = (("cart", "product_id","hidden","parent_cart_product"),)
+
 

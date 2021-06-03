@@ -338,7 +338,7 @@ class CreateBooking(generics.ListCreateAPIView):
             product_values, product_list, request.data['start_time'], request.data['end_time'])
         if not is_valid:
             return Response({"message": "Can't create booking", "errors": errors}, 400)
-        is_valid, errors = valid_booking_with_product_details(
+        is_valid, errors = valid_booking_with_product_quantity(
             product_values, product_list, request.data['start_time'], request.data['end_time'])
         if not is_valid:
             return Response({"message": "Can't create booking", "errors": errors},400)
@@ -1002,7 +1002,7 @@ def create_multiple_bookings_while_checkout(all_booking):
 
     with _booking_lock:
         for each_booking in all_booking:
-            is_valid, errors = valid_booking_with_product_details(
+            is_valid, errors = valid_booking_with_product_quantity(
                 product_details, after_grouping_of_bookings[each_booking], all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
             if not is_valid:
                 overall_is_valid = True

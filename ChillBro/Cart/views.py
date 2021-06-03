@@ -209,17 +209,16 @@ class UpdateCartProductQuantity(APIView):
                                                )
         if not is_valid:
             return Response({"message": "Can't update the product quantity", "errors": errors}, 400)
-
+        update_cart_products =[]
         for each_product in cart_products:
             if each_product.parent_cart_product is None and each_product.product_id == product_id:
-                each_product.quantity = request.data['quantity']
+                update_cart_products.append({"id":each_product.id,"quantity":request.data['quantity'],"size":size})
             elif each_product.parent_cart_product is not None and each_product.parent_cart_product.product_id == product_id:
-                each_product.quantity = request.data['quantity'] * \
-                                               combo_products_data[each_product.product_id]['quantity']
-
-            bulk_update_serializer = CartProductsSerializer()
-            bulk_update_serializer.bulk_update(cart_products,['quantity'])
-        return Response({"message": "Product Quantity is updated to {}".format(request.data['quantity'])}, 200)
+                update_cart_products.append({"id":each_product.id,"quantity":request.data['quantity'] * \
+                                               combo_products_data[each_product.product_id]['quantity'],"size":size})
+        bulk_update_serializer = CartProductsSerializer()
+        bulk_update_serializer.bulk_update(update_cart_products)
+        return Response({"message": "Product Quantity is updated to {} and size is updated to {}".format(quantity, size)}, 200)
 
 
 class CartDetails(generics.ListAPIView):
