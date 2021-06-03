@@ -28,6 +28,16 @@ class CartProducts(models.Model):
     cart = models.ForeignKey('Cart', on_delete=models.CASCADE)
     product_id = models.CharField(max_length=36)
     quantity = models.IntegerField()
+    size = models.CharField(max_length=10, verbose_name="Size")
+    is_combo = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False)
+    parent_cart_product = models.ForeignKey('self', on_delete=models.CASCADE,
+                                        null=True, blank=True, verbose_name="Parent Care Product Id")
 
     def __str__(self):
         return "cart - {} and product - {}".format(self.cart, self.product_id)
+
+    class Meta:
+        unique_together = (("cart", "product_id","hidden","parent_cart_product"),)
+
+
