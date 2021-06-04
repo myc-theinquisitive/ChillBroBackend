@@ -6,6 +6,7 @@ from Product.BaseProduct.serializers import ProductSerializer, ProductImageSeria
     ProductVerificationSerializer, ProductSizeSerializer
 from Product.Hotel.views import HotelView
 from Product.Rental.views import RentalView
+from Product.HireAVehicle.views import HireAVehicleView
 from Product.product_interface import ProductInterface
 from Product.taggable_wrapper import key_value_content_type_model, key_value_tag_model
 from typing import Dict
@@ -38,6 +39,8 @@ class ProductView(ProductInterface):
             return HotelView(), "hotel_room"
         elif product_type == "RENTAL":
             return RentalView(), "rental_product"
+        elif product_type == "HIRE_A_VEHICLE":
+            return HireAVehicleView(), "hire_a_vehicle"
         return None, None
 
     # initialize the instance variables before accessing
@@ -185,6 +188,11 @@ class ProductView(ProductInterface):
                 ]
             }
             'rental_product': {
+            }
+            'hire_a_vehicle': {
+                "vehicle_type": string,
+                "registration_no": string,
+                "default_driver": string
             }
         }
         """
@@ -341,6 +349,11 @@ class ProductView(ProductInterface):
             }
             'rental_product': {
             }
+            'hire_a_vehicle': {
+                "vehicle_type": string,
+                "registration_no": string,
+                "default_driver": string
+            }
         }
         """
 
@@ -457,7 +470,7 @@ class ProductView(ProductInterface):
         product_id_wise_images_dict = self.get_product_id_wise_images([self.product_object.id])
         product_data["images"] = product_id_wise_images_dict[self.product_object.id]
 
-        seller_id_wise_seller_details = get_seller_id_wise_seller_details(self.product_object.seller_id)
+        seller_id_wise_seller_details = get_seller_id_wise_seller_details([self.product_object.seller_id])
         product_data["seller"] = seller_id_wise_seller_details[self.product_object.seller_id]
 
         product_id_wise_combo_products_dict = self.get_product_id_wise_combo_product_details([self.product_object.id])

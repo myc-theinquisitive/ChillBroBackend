@@ -135,7 +135,6 @@ class ProductDetail(APIView):
 
     def put(self, request, id):
         request.data["id"] = id
-
         is_valid, errors = self.product_view.validate_update_data(request.data)
         if not is_valid:
             return Response(errors, 400)

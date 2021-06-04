@@ -80,7 +80,6 @@ class HotelAvailableAmenitiesSerializer(serializers.ModelSerializer):
 class HotelRoomSerializer(serializers.ModelSerializer):
     # overriding to avoid checks
     product = serializers.CharField(default="", allow_null=True, allow_blank=True)
-    max_no_of_people = serializers.IntegerField()
 
     class Meta:
         model = HotelRoom

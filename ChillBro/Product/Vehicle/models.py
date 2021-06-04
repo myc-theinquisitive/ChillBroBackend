@@ -13,6 +13,7 @@ class VehicleCharacteristics(models.Model):
     name = models.CharField(max_length=100)
     icon_url = models.ImageField(upload_to=upload_image_to_vehicle_characteristics, max_length=300)
     units = models.CharField(max_length=30, null=True, blank=True)
+    display_front = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

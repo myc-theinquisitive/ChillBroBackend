@@ -3,8 +3,8 @@ import enum
 
 class ProductTypes(enum.Enum):
     Hotel = "HOTEL"
-    Transport = "TRANSPORT"
     Rental = "RENTAL"
+    Hire_A_Vehicle = "HIRE_A_VEHICLE"
 
 
 class ActivationStatus(enum.Enum):
