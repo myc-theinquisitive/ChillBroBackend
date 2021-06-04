@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Sum, F, Subquery, OuterRef, PositiveIntegerField, Avg
+from django.db.models import Sum, F, Subquery
 from .serializers import *
+from .views import create_multiple_bookings_while_checkout
 
 
 def get_booking_details_for_payments(entity_id, from_date, to_date, entity_filter, status):
@@ -53,3 +54,7 @@ def total_reviews_for_entity_based_on_bookings(entity_id):
 
 def get_booking_ids_for_entity(entity_id):
     return Bookings.objects.filter(entity_id=entity_id).values_list("id", flat=True)
+
+
+def create_multiple_bookings(all_bookings):
+    return create_multiple_bookings_while_checkout(all_bookings)

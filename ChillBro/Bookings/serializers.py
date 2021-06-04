@@ -22,7 +22,12 @@ class BookedProductsSerializer(serializers.ModelSerializer):
                 product_id=product["product_id"],
                 product_value=product["product_value"],
                 quantity=product["quantity"],
-                net_value=product["net_value"]
+                net_value=product["net_value"],
+                size = product["size"],
+                is_combo = product["is_combo"],
+                hidden = product["hidden"],
+                parent_booked_product = product["parent_booked_product"],
+                coupon_value = product["coupon_value"]
             )
             new_products.append(add_booking_product)
         return BookedProducts.objects.bulk_create(new_products)

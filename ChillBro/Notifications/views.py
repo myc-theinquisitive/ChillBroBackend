@@ -5,21 +5,21 @@ from rest_framework.views import APIView
 
 from .FCMManager import sendPush
 from .constants import NotificationStatus, DEFAULT_SETTINGS
-from .models import Notification, NotificationUsers, NotificationSetting
+from .models import Notification, NotificationUsers, NotificationSetting, FirebaseTokens
 from .serializers import NotificationSerializer, NotificationUsersSerializer, NotificationDeleteSerializer, \
-    NotificationSettingSerializer
+    NotificationSettingSerializer, FirebaseTokensSerializer
 import json
 
 
-def sendNotification(request):
-    tokens = [
-        "ei-Qxh3FRPK17QQnhyyMZp:APA91bGkoNekZACN-5317AQvHngErIQsTx2b5vCkCnk4W770avNLMTXc0xb022hsylKUcnLJ89yjEiGc0afc1eFkvWPMAKMMEaafA8aZz2eXK8wbx102T0GQa58xptBLnITl98cTU8Iv"
-        # ,"c5zCzCU8TO-IJfVxD7g1JX:APA91bHtp4RnrjWAi6mzgGUCV_K9wrlr_O03Xn_KyPRYyOE3T5RW3dGHjdLfvrFXHwkPtY7TQOUyMiUrYEbw_Nyb_0efIiHpb-4VSJVMeYWkE1cLEaNAa85K0tlOMNlDqS_oLVy-SdYe"
-        # ,"evOISh8zTp-kt2VI4G_JRa:APA91bGI6sbpKLdziEBnrr2AtBS1lXYmgJYy61Z081wWZ9f8G2LHiH_Tk-bm0mZ9B9UTnjGtJfKZabQGf0LOrdClFnHMGzJNw2Q1ilX3oj_TJR0LfPrIIR5F2YMzRV1vCqGCyCJ_k36s"
-        # ,"cTdgTuntS2KtzBVLShswu5:APA91bGJXS2ApEXOzBo-CMtV9UWjua7YhnYFFPv1fDx1tVIvVY-9QxRSPJX0tiOoGh0RcW7MtvHrxgC7FPp5xjPgocdxt_TnhKjP0crapOppxLZEsYDipT5Xk5Aj412rsKg83lnCnKBN"
-    ]
-    sendPush("Hi", "testing, meesage from vamsi", tokens)
-    return HttpResponse("success", 200)
+class sendNotification(generics.ListAPIView):
+
+    def post(self, request, *args, **kwargs):
+        tokens = ["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbiI6ImM2YzkwZmFiMDAwMGI4ODNlMDNjNTY4NDliZGM4MDI5ODQxMzFlNTEifQ.vZ5UrrfsVs-a-S0u1U33I-HRAXse-e2FUULiDeP82oQ"]
+        all_tokens = FirebaseTokens.objects.filter(created_by=request.user)
+        for each_token in all_tokens:
+            tokens.append(each_token.token)
+        response = sendPush("Hi", "testing, meesage from vamsi", tokens)
+        return Response({"message": "success", "tokens": tokens, "response": str(response)}, 200)
 
 
 class NotificationCreate(generics.CreateAPIView):
@@ -43,7 +43,7 @@ class NotificationCreate(generics.CreateAPIView):
                 notification_instance = serializer.save()
                 notification_id = notification_instance.id
                 if (request.data['all_users'] or request.data['all_business_client']) and (
-                        'user_ids' not in request.data or len(request.data['user_ids'])==0):
+                        'user_ids' not in request.data or len(request.data['user_ids']) == 0):
                     return Response({"message": "created"}, 201)
                 request.data['notification_id'] = notification_id
                 notification_users_serializer = NotificationUsersSerializer(data=request.data)
@@ -149,3 +149,20 @@ class ChangeSetting(APIView):
             serializer.save()
             return Response({"message": "Success"}, 201)
         return Response(serializer.errors, 400)
+
+
+class AddOrUpdateFirebaseToken(generics.ListAPIView):
+
+    def post(self, request, *args, **kwargs):
+        request.data['created_by'] = request.user
+
+        user_token = FirebaseTokens.objects.filter(created_by=request.user)
+
+        if (len(user_token) == 0):
+            serializer = FirebaseTokensSerializer()
+            serializer.create(request.data)
+        else:
+            user_token.update(token=request.data['token'])
+
+        return Response({"message": "Succesfully added"})
+
