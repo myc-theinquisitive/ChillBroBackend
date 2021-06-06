@@ -3,7 +3,8 @@ from .serializers import HireAVehicleSerializer
 from typing import Dict
 from collections import defaultdict
 from .models import HireAVehicle
-from .wrapper import get_vehicle_type_data_by_id, get_vehicle_type_id_wise_details
+from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, get_basic_driver_data_by_id, \
+    get_basic_driver_id_wise_details
 
 
 class HireAVehicleView(ProductInterface):
@@ -49,8 +50,7 @@ class HireAVehicleView(ProductInterface):
         """
         hire_a_vehicle: {
             "product_id": string, # internal data need not be validated
-            "vehicle_type": string,
-            "registration_no": string,
+            "vehicle": string,
             "default_driver": string
         }
         """
@@ -86,8 +86,7 @@ class HireAVehicleView(ProductInterface):
         """
         hire_a_vehicle: {
             "product_id": string, # internal data need not be validated
-            "vehicle_type": string,
-            "registration_no": string,
+            "vehicle": string,
             "default_driver": string
         }
         """
@@ -99,8 +98,10 @@ class HireAVehicleView(ProductInterface):
         self.initialize_product_class(None)
 
         hire_a_vehicle_data = self.hire_a_vehicle_serializer.data
-        vehicle_type_data = get_vehicle_type_data_by_id(hire_a_vehicle_data["vehicle_type"])
-        hire_a_vehicle_data["vehicle_type"] = vehicle_type_data
+        vehicle_data = get_vehicle_data_by_id(hire_a_vehicle_data["vehicle"])
+        hire_a_vehicle_data["vehicle"] = vehicle_data
+        driver_data = get_basic_driver_data_by_id(hire_a_vehicle_data["default_driver"])
+        hire_a_vehicle_data["default_driver"] = driver_data
         return hire_a_vehicle_data
 
     def get_by_ids(self, product_ids):
@@ -109,12 +110,18 @@ class HireAVehicleView(ProductInterface):
         hire_a_vehicle_serializer = HireAVehicleSerializer(hire_a_vehicles, many=True)
         hire_a_vehicles_data = hire_a_vehicle_serializer.data
 
-        vehicle_type_ids = []
+        vehicle_ids = []
         for hire_a_vehicle_data in hire_a_vehicles_data:
-            vehicle_type_ids.append(hire_a_vehicle_data["vehicle_type"])
+            vehicle_ids.append(hire_a_vehicle_data["vehicle"])
 
-        vehicle_type_id_wise_details = get_vehicle_type_id_wise_details(vehicle_type_ids)
+        driver_ids = []
         for hire_a_vehicle_data in hire_a_vehicles_data:
-            hire_a_vehicle_data["vehicle_type"] = vehicle_type_id_wise_details[hire_a_vehicle_data["vehicle_type"]]
+            driver_ids.append(hire_a_vehicle_data["default_driver"])
+
+        vehicle_id_wise_details = get_vehicle_id_wise_details(vehicle_ids)
+        driver_id_wise_details = get_basic_driver_id_wise_details(driver_ids)
+        for hire_a_vehicle_data in hire_a_vehicles_data:
+            hire_a_vehicle_data["vehicle"] = vehicle_id_wise_details[hire_a_vehicle_data["vehicle"]]
+            hire_a_vehicle_data["default_driver"] = driver_id_wise_details[hire_a_vehicle_data["default_driver"]]
 
         return hire_a_vehicles_data

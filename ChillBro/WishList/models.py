@@ -9,6 +9,8 @@ def get_id():
     return str(uuid.uuid4())
 
 
+# TODO: change product to related id, can remove entity id as well
+# TODO: make modifications to add place to wishlist
 class WishList(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=get_id)
     entity_id = models.CharField(max_length=36)

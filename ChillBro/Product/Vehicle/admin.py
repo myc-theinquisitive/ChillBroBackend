@@ -1,6 +1,4 @@
 from django.contrib import admin
-from .models import VehicleType, VehicleCharacteristics, VehicleTypeCharacteristics
+from .models import Vehicle
 
-admin.site.register(VehicleCharacteristics)
-admin.site.register(VehicleType)
-admin.site.register(VehicleTypeCharacteristics)
+admin.site.register(Vehicle)

@@ -1,8 +1,6 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.db.models import Q
-
 from .models import Address
 from .serializers import AddressSerializer, AddressIdListSerializer
 from rest_framework import generics
@@ -21,7 +19,7 @@ class AddressDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 def address_details_for_address_ids(address_ids):
-    addresses = Address.objects.filter(Q(id__in=address_ids))
+    addresses = Address.objects.filter(id__in=address_ids)
     address_serializer = AddressSerializer(addresses, many=True)
     return address_serializer.data
 
@@ -34,6 +32,6 @@ class SpecificAddressList(APIView):
         serializer = AddressIdListSerializer(data=request.data)
         if serializer.is_valid():
             address_details = address_details_for_address_ids(serializer.data["ids"])
-            return Response({"results:":address_details}, 200)
+            return Response({"results:": address_details}, 200)
         else:
-            return Response({"message":"Can't get address details","errors:":serializer.errors}, 400)
+            return Response({"message": "Can't get address details", "errors:": serializer.errors}, 400)

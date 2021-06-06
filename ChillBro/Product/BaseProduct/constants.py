@@ -4,6 +4,8 @@ import enum
 class ProductTypes(enum.Enum):
     Hotel = "HOTEL"
     Rental = "RENTAL"
+    Driver = "DRIVER"
+    Vehicle = "VEHICLE"
     Hire_A_Vehicle = "HIRE_A_VEHICLE"
 
 

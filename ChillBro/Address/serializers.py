@@ -11,6 +11,5 @@ class AddressSerializer(serializers.ModelSerializer):
 
 class AddressIdListSerializer(serializers.Serializer):
     ids = serializers.ListField(
-        child=serializers.IntegerField()
+        child=serializers.CharField(max_length=36)
     )
-

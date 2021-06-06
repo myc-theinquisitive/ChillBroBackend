@@ -6,7 +6,6 @@ from django.db.models import Subquery, OuterRef, FloatField, PositiveIntegerFiel
 from WishList.exportapis import get_wishlist_entity_ids
 from ReviewsRatings.exportapi import get_rating_stats_for_related_ids, \
     get_rating_type_wise_average_rating_for_related_ids, get_latest_ratings_for_related_ids
-from Bookings.exportapi import get_booking_ids_for_entity
 
 
 def post_create_address(address_data):
@@ -108,15 +107,18 @@ def get_entity_id_wise_wishlist_status(user_id, entity_ids):
 
 
 def get_rating_wise_review_details_for_entity(entity_id):
+    from Bookings.exportapi import get_booking_ids_for_entity
     booking_ids = get_booking_ids_for_entity(entity_id)
     return get_rating_stats_for_related_ids(booking_ids)
 
 
 def get_rating_type_wise_average_rating_for_entity(entity_id):
+    from Bookings.exportapi import get_booking_ids_for_entity
     booking_ids = get_booking_ids_for_entity(entity_id)
     return get_rating_type_wise_average_rating_for_related_ids(booking_ids)
 
 
 def get_latest_ratings_for_entity(entity_id):
+    from Bookings.exportapi import get_booking_ids_for_entity
     booking_ids = get_booking_ids_for_entity(entity_id)
     return get_latest_ratings_for_related_ids(booking_ids)

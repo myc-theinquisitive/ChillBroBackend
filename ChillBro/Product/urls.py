@@ -7,8 +7,9 @@ from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDele
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
     CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail
 from .Hotel.views import AmenitiesList
-from .Vehicle.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
+from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail
+from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete
 
 
 urlpatterns = [
@@ -33,6 +34,13 @@ urlpatterns = [
 
     path('vehicle/characteristics/', VehicleCharacteristicsList.as_view()),
     path('vehicle/characteristics/<int:pk>/', VehicleCharacteristicsDetail.as_view()),
+
+    # urls for place
+    path('place/', PlaceList.as_view()),
+    path('place/<str:pk>/', PlaceDetail.as_view()),
+
+    path('place/image/', PlaceImageCreate.as_view()),
+    path('place/image/<int:pk>/', PlaceImageDelete.as_view()),
 
     # urls for all products
     path('product/', ProductList.as_view()),

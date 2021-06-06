@@ -1,5 +1,4 @@
 from django.core.exceptions import ObjectDoesNotExist
-
 from .serializers import AddressSerializer
 from .views import address_details_for_address_ids
 
@@ -7,7 +6,7 @@ from .views import address_details_for_address_ids
 def create_address(address_details):
     valid_serializer = AddressSerializer(data=address_details)
     if valid_serializer.is_valid():
-        serializer = valid_serializer.save()
+        serializer = valid_serializer.create(address_details)
         return {"is_valid": True, "address_id": serializer.id, "errors": None}
     else:
         return {"is_valid": False, "address_id": None, "errors": valid_serializer.errors}

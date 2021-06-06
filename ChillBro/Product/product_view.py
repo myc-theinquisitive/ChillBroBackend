@@ -6,7 +6,9 @@ from Product.BaseProduct.serializers import ProductSerializer, ProductImageSeria
     ProductVerificationSerializer, ProductSizeSerializer
 from Product.Hotel.views import HotelView
 from Product.Rental.views import RentalView
+from Product.Vehicle.views import VehicleView
 from Product.HireAVehicle.views import HireAVehicleView
+from Product.Driver.views import DriverView
 from Product.product_interface import ProductInterface
 from Product.taggable_wrapper import key_value_content_type_model, key_value_tag_model
 from typing import Dict
@@ -39,6 +41,10 @@ class ProductView(ProductInterface):
             return HotelView(), "hotel_room"
         elif product_type == "RENTAL":
             return RentalView(), "rental_product"
+        elif product_type == "DRIVER":
+            return DriverView(), "driver"
+        elif product_type == "VEHICLE":
+            return VehicleView(), "vehicle"
         elif product_type == "HIRE_A_VEHICLE":
             return HireAVehicleView(), "hire_a_vehicle"
         return None, None
@@ -370,7 +376,7 @@ class ProductView(ProductInterface):
         response.pop("updated_at", None)
         response.pop("active_from", None)
         response.pop("activation_status", None)
-        response.pop("slug", None)
+        response.pop("seller_id", None)
         response.pop("quantity", None)
 
         return response
@@ -458,7 +464,7 @@ class ProductView(ProductInterface):
         return product_id_wise_combo_products_dict
 
     def get(self, product_id):
-        self.product_object = Product.objects.select_related("category").get(id=product_id)
+        self.product_object = Product.objects.select_related("category", "category_product").get(id=product_id)
         self.initialize_product_class(None)
 
         product_data = self.product_serializer.data
@@ -482,6 +488,10 @@ class ProductView(ProductInterface):
         product_data["category"] = {
             "id": self.product_object.category.id,
             "name": self.product_object.category.name
+        }
+        product_data["category_product"] = {
+            "id": self.product_object.category_product.id,
+            "name": self.product_object.category_product.product_name
         }
 
         product_specific_data = self.product_specific_view.get(self.product_object.id)
@@ -517,6 +527,10 @@ class ProductView(ProductInterface):
             product_data["category"] = {
                 "id": product.category.id,
                 "name": product.category.name
+            }
+            product_data["category_product"] = {
+                "id": product.category_product.id,
+                "name": product.category_product.product_name
             }
             group_products_by_type[product_data["type"]].append(product_data)
             products_data.append(product_data)
