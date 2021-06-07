@@ -10,12 +10,13 @@ class PlaceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return Place.objects.create(name=validated_data["name"], description=validated_data["description"],
-                                    category_id=validated_data["category"])
+                                    category_id=validated_data["category"], address_id=validated_data["address_id"])
 
     def update(self, instance, validated_data):
         instance.name = validated_data["name"]
         instance.description = validated_data["description"]
         instance.category_id = validated_data["category"]
+        instance.address_id = validated_data["address_id"]
         instance.save()
 
 

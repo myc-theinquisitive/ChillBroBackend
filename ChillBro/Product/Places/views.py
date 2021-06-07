@@ -8,6 +8,22 @@ from collections import defaultdict
 from rest_framework.response import Response
 from ..product_interface import ProductInterface
 from typing import Dict
+from .wrapper import get_address_details_for_address_ids, post_create_address, update_address_for_address_id
+
+
+def add_address_details_to_places(places_list):
+    address_ids = []
+    for place in places_list:
+        address_ids.append(place["address_id"])
+
+    addresses = get_address_details_for_address_ids(address_ids)
+    address_per_address_id = defaultdict(dict)
+    for address in addresses:
+        address_per_address_id[address["id"]] = address
+
+    for place in places_list:
+        address_id = place.pop("address_id", None)
+        place["address"] = address_per_address_id[address_id]
 
 
 class PlaceView(ProductInterface):
@@ -16,21 +32,27 @@ class PlaceView(ProductInterface):
     def __init__(self):
         self.place_serializer = None
         self.place_object = None
+
         self.place_images = []
+        self.address_data = None
 
     # initialize the instance variables before accessing
     def initialize_product_class(self, place_data):
         place_object_defined = self.place_object is not None
         place_data_defined = place_data is not None
 
-        if place_data_defined and "images" in place_data:
-            self.place_images = place_data.pop("images", [])
+        if place_data_defined:
+            if "images" in place_data:
+                self.place_images = place_data.pop("images", [])
+            self.address_data = place_data.pop("address", {})
 
         # for update
         if place_object_defined and place_data_defined:
+            place_data["address_id"] = self.place_object.address_id
             self.place_serializer = PlaceSerializer(self.place_object, data=place_data)
         # for create
         elif place_data_defined:
+            place_data["address_id"] = "Yet To ADD"
             self.place_serializer = PlaceSerializer(data=place_data)
         # for get
         elif place_object_defined:
@@ -55,6 +77,15 @@ class PlaceView(ProductInterface):
             is_valid = False
             errors["images"] = place_image_serializer.errors
 
+        # Creating address here to validate
+        # This should be the last validation
+        address_details = post_create_address(self.address_data)
+        if not address_details['is_valid']:
+            is_valid = False
+            errors["address"] = address_details['errors']
+        else:
+            self.address_data["id"] = address_details['address_id']
+
         return is_valid, errors
 
     def create(self, place_data):
@@ -68,10 +99,24 @@ class PlaceView(ProductInterface):
                         'image': file,
                         'order': int
                     }
-                ]
+                ],
+                "address": {
+                    "pincode": string,
+                    "phone_number": string,
+                    "city": string,
+                    "state": string,
+                    "country": string,
+                    "name": string,
+                    "address_line": string,
+                    "extend_address": string,
+                    "landmark": string,
+                    "latitude": string,
+                    "longitude": string
+                },
             }
         """
 
+        place_data["address_id"] = self.address_data["id"]
         place_object = self.place_serializer.create(place_data)
 
         # Add Images to Place
@@ -107,6 +152,10 @@ class PlaceView(ProductInterface):
             is_valid = False
             errors.update(self.place_serializer.errors)
 
+        address_details = update_address_for_address_id(self.place_object.address_id, self.address_data)
+        if not address_details['is_valid']:
+            is_valid = False
+            errors["address"] = address_details['errors']
         return is_valid, errors
 
     def update(self, place_data):
@@ -115,6 +164,19 @@ class PlaceView(ProductInterface):
                 name: string,
                 description: string,
                 category: id-string,
+                "address": {
+                    "pincode": string,
+                    "phone_number": string,
+                    "city": string,
+                    "state": string,
+                    "country": string,
+                    "name": string,
+                    "address_line": string,
+                    "extend_address": string,
+                    "landmark": string,
+                    "latitude": string,
+                    "longitude": string
+                },
             }
         """
 
@@ -125,6 +187,7 @@ class PlaceView(ProductInterface):
         self.initialize_product_class(None)
 
         place_data = self.place_serializer.data
+        add_address_details_to_places([place_data])
         return place_data
 
     def get_by_ids(self, place_ids):
@@ -132,6 +195,7 @@ class PlaceView(ProductInterface):
 
         place_serializer = PlaceSerializer(places, many=True)
         places_data = place_serializer.data
+        add_address_details_to_places(places_data)
         return places_data
 
 

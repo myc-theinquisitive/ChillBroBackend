@@ -12,6 +12,7 @@ class Place(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
     category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
+    address_id = models.CharField(max_length=36)
 
     def __str__(self):
         return self.name + "-" + self.category.name
