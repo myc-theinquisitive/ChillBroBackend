@@ -1,14 +1,18 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import OuterRef, Subquery, PositiveIntegerField
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from .models import Place, PlaceImage
-from .serializers import PlaceSerializer, PlaceImageSerializer
+from .serializers import PlaceSerializer, PlaceImageSerializer, GetPlacesBySearchFilters
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from collections import defaultdict
 from rest_framework.response import Response
 from ..product_interface import ProductInterface
 from typing import Dict
-from .wrapper import get_address_details_for_address_ids, post_create_address, update_address_for_address_id
+from .wrapper import get_address_details_for_address_ids, post_create_address, update_address_for_address_id, \
+    filter_address_ids_by_city, average_rating_query_for_place, get_place_id_wise_average_rating
+from decimal import Decimal
+from Product.Category.models import Category
 
 
 def add_address_details_to_places(places_list):
@@ -24,6 +28,16 @@ def add_address_details_to_places(places_list):
     for place in places_list:
         address_id = place.pop("address_id", None)
         place["address"] = address_per_address_id[address_id]
+
+
+def add_average_rating_for_places(places_response):
+    place_ids = []
+    for place in places_response:
+        place_ids.append(place["id"])
+
+    place_id_wise_rating = get_place_id_wise_average_rating(place_ids)
+    for place in places_response:
+        place["rating"] = place_id_wise_rating[place["id"]]
 
 
 class PlaceView(ProductInterface):
@@ -188,6 +202,7 @@ class PlaceView(ProductInterface):
 
         place_data = self.place_serializer.data
         add_address_details_to_places([place_data])
+        add_average_rating_for_places([place_data])
         return place_data
 
     def get_by_ids(self, place_ids):
@@ -196,6 +211,7 @@ class PlaceView(ProductInterface):
         place_serializer = PlaceSerializer(places, many=True)
         places_data = place_serializer.data
         add_address_details_to_places(places_data)
+        add_average_rating_for_places(places_data)
         return places_data
 
 
@@ -290,3 +306,91 @@ class PlaceImageDelete(generics.DestroyAPIView):
             return Response({"errors": "Place image does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
 
         return super().delete(request, *args, **kwargs)
+
+
+class GetPlacesByCategory(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = PlaceSerializer
+    place_view = PlaceView()
+
+    @staticmethod
+    def apply_filters(category_ids, filter_data):
+        # applying search and category filter
+        if filter_data["search_text"]:
+            filter_places = Place.objects.search(filter_data["search_text"]).filter(category_id__in=category_ids)
+        else:
+            filter_places = Place.objects.filter(category_id__in=category_ids)
+
+        # applying location Filters
+        location_filter = filter_data["location_filter"]
+        if location_filter["applied"]:
+            places_ids = filter_places.values_list("id", flat=True)
+            address_ids = Place.objects.filter(id__in=places_ids).values_list("address_id", flat=True)
+            city_address_ids = filter_address_ids_by_city(address_ids, location_filter["city"])
+            city_place_ids = Place.objects.filter(
+                address_id__in=city_address_ids, id__in=places_ids).values_list("id", flat=True)
+            filter_places = filter_places.filter(id__in=city_place_ids)
+
+        return filter_places.values_list("id", flat=True)
+
+    @staticmethod
+    def apply_sort_filter(query_set, sort_filter):
+        if sort_filter == "AVERAGE_RATING":
+            ratings_query = average_rating_query_for_place(OuterRef('id'))
+            return query_set.annotate(
+                average_rating=Subquery(
+                    queryset=ratings_query,
+                    output_field=PositiveIntegerField()
+                )
+            ).order_by('-average_rating')
+        return query_set
+
+    @staticmethod
+    def sort_results(places_response, sort_filter):
+        if sort_filter == "AVERAGE_RATING":
+            places_response.sort(
+                key=lambda place_response: Decimal(place_response['rating']['avg_rating']), reverse=True)
+
+    def recursively_get_lower_level_categories(self, category_ids):
+        if not category_ids:
+            return []
+
+        result_category_ids = category_ids
+        next_level_category_ids = Category.objects.filter(parent_category_id__in=category_ids)\
+            .values_list('id', flat=True)
+        next_level_category_ids = list(next_level_category_ids)
+        result_category_ids.extend(next_level_category_ids)
+
+        recursive_category_ids = self.recursively_get_lower_level_categories(next_level_category_ids)
+        result_category_ids.extend(recursive_category_ids)
+
+        return list(set(result_category_ids))
+
+    def get(self, request, *args, **kwargs):
+
+        input_serializer = GetPlacesBySearchFilters(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't get places", "errors": input_serializer.errors}, 400)
+
+        try:
+            category = Category.objects.get(name__icontains=kwargs["slug"])
+        except ObjectDoesNotExist:
+            return Response({"errors": "Invalid Category!!!"}, 400)
+        all_category_ids = self.recursively_get_lower_level_categories([category.id])
+
+        sort_filter = request.data["sort_filter"]
+        place_ids = self.apply_filters(all_category_ids, request.data)
+        self.queryset = Place.objects.filter(id__in=place_ids)
+        self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
+
+        response = super().get(request, args, kwargs)
+        response_data = response.data
+
+        place_ids = []
+        for place in response_data["results"]:
+            place_ids.append(place["id"])
+        response_data["results"] = self.place_view.get_by_ids(place_ids)
+
+        # TODO: add wishlist status
+        self.sort_results(response_data["results"], sort_filter)
+        return response

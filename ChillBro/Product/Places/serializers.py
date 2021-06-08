@@ -43,3 +43,14 @@ class PlaceImageSerializer(serializers.Serializer):
             )
             all_images.append(each_image)
         PlaceImage.objects.bulk_create(all_images)
+
+
+class LocationFilter(serializers.Serializer):
+    applied = serializers.BooleanField(default=False)
+    city = serializers.CharField(max_length=30, allow_null=True, allow_blank=True)
+
+
+class GetPlacesBySearchFilters(serializers.Serializer):
+    search_text = serializers.CharField(allow_null=True, allow_blank=True)
+    sort_filter = serializers.CharField(allow_null=True, allow_blank=True)
+    location_filter = LocationFilter()

@@ -9,7 +9,7 @@ from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDele
 from .Hotel.views import AmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail
-from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete
+from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
 
 
 urlpatterns = [
@@ -37,10 +37,11 @@ urlpatterns = [
 
     # urls for place
     path('place/', PlaceList.as_view()),
-    path('place/<str:pk>/', PlaceDetail.as_view()),
+    path('place/category/<str:slug>/', GetPlacesByCategory.as_view()),
 
     path('place/image/', PlaceImageCreate.as_view()),
     path('place/image/<int:pk>/', PlaceImageDelete.as_view()),
+    path('place/<str:pk>/', PlaceDetail.as_view()),
 
     # urls for all products
     path('product/', ProductList.as_view()),
