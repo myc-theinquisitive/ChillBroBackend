@@ -7,3 +7,4 @@ from .Vehicle.admin import *
 from .HireAVehicle.admin import *
 from .Driver.admin import *
 from .Places.admin import *
+from .TravelPackages.admin import *

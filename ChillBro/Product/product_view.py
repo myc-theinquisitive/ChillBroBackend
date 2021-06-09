@@ -309,7 +309,7 @@ class ProductView(ProductInterface):
                     },
                 ],
                 'delete': ['product_id']
-            }
+            },
             'has_sizes': boolean,
             'sizes': {
                 'add': [

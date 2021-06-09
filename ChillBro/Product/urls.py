@@ -10,6 +10,8 @@ from .Hotel.views import AmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
+from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
+    TravelPackageImageDelete
 
 
 urlpatterns = [
@@ -42,6 +44,12 @@ urlpatterns = [
     path('place/image/', PlaceImageCreate.as_view()),
     path('place/image/<int:pk>/', PlaceImageDelete.as_view()),
     path('place/<str:pk>/', PlaceDetail.as_view()),
+
+    # urls for travel packages
+    path('travel_package/', TravelPackageList.as_view()),
+    path('travel_package/image/', TravelPackageImageCreate.as_view()),
+    path('travel_package/image/<int:pk>/', TravelPackageImageDelete.as_view()),
+    path('travel_package/<str:pk>/', TravelPackageDetail.as_view()),
 
     # urls for all products
     path('product/', ProductList.as_view()),

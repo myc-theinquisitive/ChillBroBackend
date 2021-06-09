@@ -13,6 +13,7 @@ from .wrapper import get_address_details_for_address_ids, post_create_address, u
     filter_address_ids_by_city, average_rating_query_for_place, get_place_id_wise_average_rating
 from decimal import Decimal
 from Product.Category.models import Category
+from django.conf import settings
 
 
 def add_address_details_to_places(places_list):
@@ -196,11 +197,32 @@ class PlaceView(ProductInterface):
 
         self.place_serializer.update(self.place_object, place_data)
 
+    @staticmethod
+    def get_place_id_wise_images(place_ids):
+        places_images = PlaceImage.objects.filter(place_id__in=place_ids)
+
+        place_id_wise_images = defaultdict(list)
+        for place_image in places_images:
+            image_url = place_image.image.url
+            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
+            place_id_wise_images[place_image.place_id].append(
+                {
+                    "id": place_image.id,
+                    "image": image_url,
+                    "order": place_image.order
+                }
+            )
+        return place_id_wise_images
+
     def get(self, place_id):
         self.place_object = Place.objects.get(id=place_id)
         self.initialize_product_class(None)
 
         place_data = self.place_serializer.data
+
+        place_id_wise_images_dict = self.get_place_id_wise_images([self.place_object.id])
+        place_data["images"] = place_id_wise_images_dict[self.place_object.id]
+
         add_address_details_to_places([place_data])
         add_average_rating_for_places([place_data])
         return place_data
@@ -210,6 +232,11 @@ class PlaceView(ProductInterface):
 
         place_serializer = PlaceSerializer(places, many=True)
         places_data = place_serializer.data
+
+        place_id_wise_images_dict = self.get_place_id_wise_images(place_ids)
+        for place_data in places_data:
+            place_data["images"] = place_id_wise_images_dict[place_data["id"]]
+
         add_address_details_to_places(places_data)
         add_average_rating_for_places(places_data)
         return places_data
