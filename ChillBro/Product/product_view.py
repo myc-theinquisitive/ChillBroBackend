@@ -9,6 +9,7 @@ from Product.Rental.views import RentalView
 from Product.Vehicle.views import VehicleView
 from Product.HireAVehicle.views import HireAVehicleView
 from Product.Driver.views import DriverView
+from Product.TravelPackageVehicle.views import TravelPackageVehicleView
 from Product.product_interface import ProductInterface
 from Product.taggable_wrapper import key_value_content_type_model, key_value_tag_model
 from typing import Dict
@@ -47,6 +48,8 @@ class ProductView(ProductInterface):
             return VehicleView(), "vehicle"
         elif product_type == "HIRE_A_VEHICLE":
             return HireAVehicleView(), "hire_a_vehicle"
+        elif product_type == "TRAVEL_PACKAGE_VEHICLE":
+            return TravelPackageVehicleView(), "travel_package_vehicle"
         return None, None
 
     # initialize the instance variables before accessing
@@ -196,9 +199,12 @@ class ProductView(ProductInterface):
             'rental_product': {
             }
             'hire_a_vehicle': {
-                "vehicle_type": string,
-                "registration_no": string,
+                "vehicle": string,
                 "default_driver": string
+            }
+            'travel_package_vehicle': {
+                "vehicle": string,
+                "travel_package": string
             }
         }
         """
@@ -309,7 +315,7 @@ class ProductView(ProductInterface):
                     },
                 ],
                 'delete': ['product_id']
-            }
+            },
             'has_sizes': boolean,
             'sizes': {
                 'add': [
@@ -356,9 +362,12 @@ class ProductView(ProductInterface):
             'rental_product': {
             }
             'hire_a_vehicle': {
-                "vehicle_type": string,
-                "registration_no": string,
+                "vehicle": string,
                 "default_driver": string
+            }
+            'travel_package_vehicle': {
+                "vehicle": string,
+                "travel_package": string
             }
         }
         """
@@ -518,7 +527,6 @@ class ProductView(ProductInterface):
         group_products_by_type = defaultdict(list)
         for product in products:
             product_data = ProductSerializer(product).data
-            product_data = self.update_product_response(product_data)
             product_data["features"] = product_id_wise_features_dict[product_data["id"]]
             product_data["images"] = product_id_wise_images_dict[product_data["id"]]
             product_data["combo_items"] = product_id_wise_combo_products_dict[product_data["id"]]
@@ -533,6 +541,7 @@ class ProductView(ProductInterface):
                 "name": product.category_product.product_name
             }
             group_products_by_type[product_data["type"]].append(product_data)
+            product_data = self.update_product_response(product_data)
             products_data.append(product_data)
 
         response = []

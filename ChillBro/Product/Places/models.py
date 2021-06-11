@@ -1,10 +1,19 @@
 from django.db import models
 import uuid
 from .helpers import upload_image_to_place
+from django.db.models import Q
 
 
 def get_id():
     return str(uuid.uuid4())
+
+
+class PlaceManager(models.Manager):
+
+    def search(self, query):
+        lookups = (Q(name__icontains=query) |
+                   Q(description__icontains=query))
+        return self.filter(lookups).distinct()
 
 
 class Place(models.Model):
@@ -13,6 +22,8 @@ class Place(models.Model):
     description = models.TextField()
     category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
     address_id = models.CharField(max_length=36)
+
+    objects = PlaceManager()
 
     def __str__(self):
         return self.name + "-" + self.category.name
