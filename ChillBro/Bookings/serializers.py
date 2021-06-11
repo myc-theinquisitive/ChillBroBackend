@@ -224,3 +224,8 @@ class BusinessClientBookingApproval(serializers.ModelSerializer):
     class Meta:
         model = Bookings
         fields = ('id','booking_status')
+
+class UserSelectQuotationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bookings
+        fields = ('id','quotation')

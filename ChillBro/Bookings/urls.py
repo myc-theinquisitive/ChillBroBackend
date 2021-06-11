@@ -3,8 +3,8 @@ from .views import ReportCustomerReasonsList, ReportCustomerReasonsDetail, Creat
     CancelBookingView, BookingsStatistics, GetBookingsStatisticsDetails, CancelProductStatusView, GetDateFilters, \
     GetSpecificBookingDetails, GetBookingDetailsView, BookingStart, BookingEnd, GetBookingEndDetailsView, \
     ReportCustomerForBooking, GeneratePDF, GenerateExcel, GetBookingDetailsOfProductId, ProductStatistics, \
-    GetProductAvailability, BusinessClientProductCancellationDetails, BusinessClientBookingApproval
-
+    GetProductAvailability, BusinessClientProductCancellationDetails, BusinessClientBookingApproval, UserSelectQuotation
+from .Quotation.views import *
 
 urlpatterns = [
     path('create_report_customer_reason/', ReportCustomerReasonsList.as_view()),
@@ -29,4 +29,8 @@ urlpatterns = [
     path('product_statistics/<str:product_id>/', ProductStatistics.as_view()),
     path('product_availability/', GetProductAvailability.as_view()),
     path('back_to_online/add/', BusinessClientProductCancellationDetails.as_view()),
+
+    path('business-client-quotation/',BusinessClientQuotationList.as_view()),
+    path('business-client-quotation/<str:pk>/',BusinessClientQuotationDetail.as_view()),
+    path('user-select-quotation/<str:pk>/',UserSelectQuotation.as_view())
 ]

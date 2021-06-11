@@ -5,7 +5,7 @@ from .constants import BookingStatus, EntityType, IdProofType, ProductBookingSta
 from datetime import datetime
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
-
+from .Quotation.models import *
 
 # Create your models here.
 def get_id():
@@ -82,6 +82,8 @@ class Bookings(models.Model):
     entity_id = models.CharField(max_length=36)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+
+    quotation = models.OneToOneField(Quotation,on_delete=models.CASCADE)
 
     objects = BookingsManager()
 
