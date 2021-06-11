@@ -1,4 +1,9 @@
 from collections import defaultdict
+from ..TravelPackageVehicle.export_apis import travel_package_id_wise_vehicles_count
+
+
+def get_travel_package_id_wise_vehicles_count(travel_package_ids):
+    return travel_package_id_wise_vehicles_count(travel_package_ids)
 
 
 def get_place_id_wise_details(place_ids):

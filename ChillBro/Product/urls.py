@@ -12,6 +12,7 @@ from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleChara
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
+from .TravelPackageVehicle.views import TravelPackageVehiclesList
 
 
 urlpatterns = [
@@ -47,6 +48,7 @@ urlpatterns = [
 
     # urls for travel packages
     path('travel_package/', TravelPackageList.as_view()),
+    path('travel_package/<str:travel_package_id>/vehicles/', TravelPackageVehiclesList.as_view()),
     path('travel_package/image/', TravelPackageImageCreate.as_view()),
     path('travel_package/image/<int:pk>/', TravelPackageImageDelete.as_view()),
     path('travel_package/<str:pk>/', TravelPackageDetail.as_view()),

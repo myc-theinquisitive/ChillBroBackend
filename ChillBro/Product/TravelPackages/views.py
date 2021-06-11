@@ -11,7 +11,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .wrapper import get_place_id_wise_details
+from .wrapper import get_travel_package_id_wise_vehicles_count, get_place_id_wise_details
 
 
 class TravelPackageView(ProductInterface):
@@ -283,8 +283,10 @@ class TravelPackageView(ProductInterface):
 
         travel_package_id_wise_images_dict = self.get_travel_package_id_wise_images(travel_package_ids)
         travel_package_id_wise_places_count = self.get_travel_package_id_wise_places_count(travel_package_ids)
+        travel_package_id_wise_vehicles_count = get_travel_package_id_wise_vehicles_count(travel_package_ids)
         for travel_package_data in travel_packages_data:
             travel_package_data["places_count"] = travel_package_id_wise_places_count[travel_package_data["id"]]
+            travel_package_data["vehicles_count"] = travel_package_id_wise_vehicles_count[travel_package_data["id"]]
             travel_package_data["images"] = travel_package_id_wise_images_dict[travel_package_data["id"]]
 
         return travel_packages_data

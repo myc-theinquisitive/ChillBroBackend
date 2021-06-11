@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 import uuid
 from .helpers import image_upload_to_travel_package
+from .validations import is_json
 
 
 def get_id():
@@ -14,6 +15,7 @@ class TravelPackage(models.Model):
     description = models.TextField()
     category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
     category_product = models.ForeignKey('CategoryProduct', on_delete=models.CASCADE, verbose_name="Category Product")
+    tags = models.TextField(validators=[is_json])
 
     duration_in_days = models.PositiveIntegerField(verbose_name="Duration in days",
                                                    validators=[MinValueValidator(0)])

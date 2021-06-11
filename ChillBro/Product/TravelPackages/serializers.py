@@ -1,29 +1,44 @@
 from rest_framework import serializers
 from .models import TravelPackage, PackagePlaces, TravelPackageImage, get_id
+import json
 
 
 class TravelPackageSerializer(serializers.ModelSerializer):
+    tags = serializers.ListField(child=serializers.CharField(max_length=20))
+
     class Meta:
         model = TravelPackage
         fields = '__all__'
 
+    def to_representation(self, instance):
+        data = super(TravelPackageSerializer, self).to_representation(instance)
+        data['tags'] = json.loads(instance.tags)
+        return data
+
     def create(self, validated_data):
         if "id" not in validated_data:
             validated_data["id"] = get_id()
+        if "tags" in validated_data:
+            validated_data["tags"] = json.dumps(validated_data["tags"])
+
         return TravelPackage.objects.create(
             id=validated_data["id"], name=validated_data["name"], description=validated_data["description"],
-            category_id=validated_data["category"],
+            category_id=validated_data["category"], tags=validated_data["tags"],
             category_product_id=validated_data["category_product"],
             duration_in_days=validated_data["duration_in_days"],
             duration_in_nights=validated_data["duration_in_nights"])
 
     def update(self, instance, validated_data):
+        if "tags" in validated_data:
+            validated_data["tags"] = json.dumps(validated_data["tags"])
+
         instance.name = validated_data["name"]
         instance.description = validated_data["description"]
         instance.category_id = validated_data["category"]
         instance.category_product_id = validated_data["category_product"]
         instance.duration_in_days = validated_data["duration_in_days"]
         instance.duration_in_nights = validated_data["duration_in_nights"]
+        instance.tags = validated_data["tags"]
         instance.save()
 
 
