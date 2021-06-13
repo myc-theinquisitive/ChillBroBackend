@@ -13,7 +13,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import SignupCode, EmailChangeCode, PasswordResetCode, OTPCode
-from .models import send_multi_format_email
+from .tasks import send_multi_format_email
 from .serializers import LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, \
     MailSignUpSerializer, PhoneSignUpSerializer
 from .serializers import PasswordResetSerializer
@@ -22,7 +22,6 @@ from .serializers import EmailChangeSerializer
 from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 import jwt
-
 from .wrapper import sendOTP, check_business_client, check_employee, create_wallet
 
 
@@ -55,9 +54,7 @@ class Signup(APIView):
         user.last_name = last_name.title().strip()
         if not must_validate_email:
             user.is_verified = True
-            send_multi_format_email('welcome_email',
-                                    {'email': user.email, },
-                                    target_email=user.email)
+            send_multi_format_email.delay('welcome_email', {'email': user.email, }, target_email=user.email)
         user.save()
 
         create_wallet(user)

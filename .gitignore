@@ -13,3 +13,7 @@ db.sqlite3
 
 # Ignoring static
 static/
+
+# Ignoring celery added files
+celerybeat-schedule
+celerybeat.pid
