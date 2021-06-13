@@ -4,7 +4,7 @@ from typing import Dict
 from collections import defaultdict
 from .models import HireAVehicle
 from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, get_basic_driver_data_by_id, \
-    get_basic_driver_id_wise_details
+    get_basic_driver_id_wise_details, check_driver_exists_by_id, check_vehicle_exists_by_id
 
 
 class HireAVehicleView(ProductInterface):
@@ -38,6 +38,18 @@ class HireAVehicleView(ProductInterface):
 
         # Initializing instance variables
         self.initialize_product_class(hire_a_vehicle_data)
+
+        vehicle = hire_a_vehicle_data["vehicle"]
+        default_driver = hire_a_vehicle_data["default_driver"]
+
+        if not check_driver_exists_by_id(default_driver):
+            is_valid = False
+            errors['default_driver'] = "Default driver does not exist"
+
+        if not check_vehicle_exists_by_id(vehicle):
+            is_valid = False
+            errors['vehicle'] = "Vehicle does not exist"
+            return is_valid, errors
 
         hire_a_vehicle_data_valid = self.hire_a_vehicle_serializer.is_valid()
         if not hire_a_vehicle_data_valid:

@@ -8,6 +8,7 @@ class ProductTypes(enum.Enum):
     Vehicle = "VEHICLE"
     Hire_A_Vehicle = "HIRE_A_VEHICLE"
     Travel_Package_Vehicle = "TRAVEL_PACKAGE_VEHICLE"
+    Self_Rental = "SELF_RENTAL"
 
 
 class ActivationStatus(enum.Enum):

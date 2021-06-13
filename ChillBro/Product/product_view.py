@@ -8,6 +8,7 @@ from Product.Hotel.views import HotelView
 from Product.Rental.views import RentalView
 from Product.Vehicle.views import VehicleView
 from Product.HireAVehicle.views import HireAVehicleView
+from Product.SelfRental.views import SelfRentalView
 from Product.Driver.views import DriverView
 from Product.TravelPackageVehicle.views import TravelPackageVehicleView
 from Product.product_interface import ProductInterface
@@ -50,6 +51,8 @@ class ProductView(ProductInterface):
             return HireAVehicleView(), "hire_a_vehicle"
         elif product_type == "TRAVEL_PACKAGE_VEHICLE":
             return TravelPackageVehicleView(), "travel_package_vehicle"
+        elif product_type == "SELF_RENTAL":
+            return SelfRentalView(), "self_rental"
         return None, None
 
     # initialize the instance variables before accessing
@@ -151,6 +154,7 @@ class ProductView(ProductInterface):
             errors["images"] = product_image_serializer.errors
 
         # Validating product specific data
+        print(self.product_specific_data,'product view')
         if not self.product_specific_view:
             is_valid = False
             errors["type"].append("Invalid Product Type")

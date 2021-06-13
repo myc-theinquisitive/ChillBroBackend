@@ -20,3 +20,7 @@ def get_vehicle_id_wise_details(vehicle_ids):
         vehicle_type_id_wise_details[vehicle["id"]] = vehicle
 
     return vehicle_type_id_wise_details
+
+def check_vehicle_exists_by_id(vehicle_id):
+    from ..Vehicle.export_apis import check_vehicle_exists
+    return check_vehicle_exists(vehicle_id)

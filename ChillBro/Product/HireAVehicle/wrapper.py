@@ -39,3 +39,13 @@ def get_vehicle_id_wise_details(vehicle_ids):
         vehicle_type_id_wise_details[vehicle["product"]] = vehicle
 
     return vehicle_type_id_wise_details
+
+
+def check_driver_exists_by_id(driver_id):
+    from ..Driver.export_apis import check_driver_exists
+    return check_driver_exists(driver_id)
+
+
+def check_vehicle_exists_by_id(vehicle_id):
+    from ..Vehicle.export_apis import check_vehicle_exists
+    return check_vehicle_exists(vehicle_id)
