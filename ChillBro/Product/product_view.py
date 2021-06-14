@@ -173,6 +173,8 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
+            'quantity_unlimited': boolean,
+            'quantity': int,
             'is_combo': boolean,
             'combo_items': [
                 {
@@ -198,6 +200,7 @@ class ProductView(ProductInterface):
             }
             'rental_product': {
             }
+            'has_sub_products': boolean,
             'hire_a_vehicle': {
                 "vehicle": string,
                 "default_driver": string
@@ -306,6 +309,8 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
+            'quantity_unlimited': boolean,
+            'quantity': int,
             'is_combo': boolean,
             'combo_items': {
                 'add': [
@@ -361,6 +366,7 @@ class ProductView(ProductInterface):
             }
             'rental_product': {
             }
+            'has_sub_products': boolean,
             'hire_a_vehicle': {
                 "vehicle": string,
                 "default_driver": string

@@ -38,3 +38,8 @@ class PaymentUser(enum.Enum):
     entity = "ENTITY"
     myc = "MYC"
     customer = "CUSTOMER"
+
+
+class TransactionType(enum.Enum):
+    partial = "PARTIAL"
+    full = "FULL"

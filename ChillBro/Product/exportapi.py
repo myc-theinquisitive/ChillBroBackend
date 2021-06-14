@@ -3,6 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Min
 from .Category.models import Category
 from .BaseProduct.models import Product, ComboProductItems, ProductSize
+from .HireAVehicle.models import HireAVehicle
 from .views import calculate_product_net_price
 from django.db.models import Count
 
@@ -19,11 +20,13 @@ def get_product_id_wise_details(product_ids):
             'product_id': each_product.id,
             'price': each_product.discounted_price,
             'net_value_details': calculate_product_net_price(each_product.price, discount),
+            'quantity_unlimited': each_product.quantity_unlimited,
             'quantity': each_product.quantity,
             'name': each_product.name,
             'type': each_product.type,
             'has_sizes':each_product.has_sizes,
-            'is_combo':each_product.is_combo
+            'is_combo':each_product.is_combo,
+            'has_sub_products':each_product.has_sub_products
         }
         product_sizes_details = {}
         if each_product.has_sizes:
@@ -44,6 +47,12 @@ def get_product_id_wise_details(product_ids):
                 }
                 combo_products[each_combo_product.combo_item.id] = combo_product_data
         product_data['combo_products'] = combo_products
+        sub_products = defaultdict()
+        if each_product.has_sub_products:
+            from .HireAVehicle.export_apis import get_hire_a_vehicle_details
+            sub_products = get_hire_a_vehicle_details([each_product.id])
+
+        product_data['sub_products'] = sub_products
         product_id_wise_details[each_product.id] = product_data
 
     return product_id_wise_details
@@ -51,7 +60,7 @@ def get_product_id_wise_details(product_ids):
 
 def get_entity_id_and_entity_type(product_id):
     try:
-        product = Product.objects.get(product=product_id)
+        product = Product.objects.get(id=product_id)
     except ObjectDoesNotExist:
         return None, None
     return product.seller_id, product.type

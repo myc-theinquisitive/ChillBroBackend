@@ -10,8 +10,8 @@ def check_valid_booking(product_list, start_time, end_time):
 
 
 def get_product_details_with_image(product_ids):
-    from Product.exportapi import product_details_with_image
-    return product_details_with_image(product_ids)
+    from Product.exportapi import product_details
+    return product_details(product_ids)
 
 
 def check_valid_product(product_id):

@@ -1,7 +1,8 @@
 import uuid
 from django.db.models import Q
 from django.db import models
-from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, PaymentMode
+from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, PaymentMode, \
+    TransactionType
 from datetime import datetime
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
@@ -61,6 +62,8 @@ class Bookings(models.Model):
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
     coupon = models.CharField(max_length=36, null=True, blank=True, verbose_name="Coupon Id")
     booking_date = models.DateTimeField(default=datetime.now)
+    transaction_type = models.CharField(max_length=30, null=True, blank=True,
+        choices=[(type_of_transaction.value, type_of_transaction.value) for type_of_transaction in TransactionType])
 
     # Amount details
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -132,6 +135,7 @@ class BookedProducts(models.Model):
     quantity = models.IntegerField()
     size = models.CharField(max_length=10, verbose_name="Size",blank=True, null=True)
     is_combo = models.BooleanField(default=False)
+    has_sub_products = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
     parent_booked_product = models.ForeignKey('self', on_delete=models.CASCADE,
                                             null=True, blank=True, verbose_name="Parent Booked Product Id")

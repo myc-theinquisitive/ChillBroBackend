@@ -73,6 +73,17 @@ class AddProductToCart(APIView):
                     "size": combo_product_details[each_combo_product]
                 }
                 products.append(combo_product)
+        elif product_details[product_id]["has_sub_products"]:
+            products.append({
+                "product_id": product_details[product_id]["sub_products"][product_id]["vehicle_id"],
+                "quantity": 1,
+                "size": ""
+            })
+            products.append({
+                "product_id": product_details[product_id]["sub_products"][product_id]["default_driver_id"],
+                "quantity": 1,
+                "size": ""
+            })
         else:
             products.append({
                 "product_id": product_id,
@@ -123,19 +134,22 @@ class AddProductToCart(APIView):
                     'created_by': request.user
                 }
             )
-        is_combo = False
+        is_combo, has_sub_products = False, False
         if product_details[product_id]["is_combo"]:
             is_combo = True
+        if product_details[product_id]["has_sub_products"]:
+            has_sub_products = True
         cart_product_serializer = CartProductsSerializer()
         cart_product_id = cart_product_serializer.create({
                 "cart": cart,
                 "product_id": request.data['product_id'],
                 "quantity": request.data['quantity'],
                 "size": request.data['size'],
-                "is_combo": is_combo
+                "is_combo": is_combo,
+                "has_sub_products": has_sub_products
             })
 
-        if is_combo:
+        if is_combo or has_sub_products:
             combo_cart_products = []
             for each_combo_product in products:
                 combo_cart_products.append({
@@ -215,7 +229,8 @@ class UpdateCartProductQuantity(APIView):
                 update_cart_products.append({"id":each_product.id,"quantity":request.data['quantity'],"size":size})
             elif each_product.parent_cart_product is not None and each_product.parent_cart_product.product_id == product_id:
                 update_cart_products.append({"id":each_product.id,"quantity":request.data['quantity'] * \
-                                               combo_products_data[each_product.product_id]['quantity'],"size":size})
+                                            combo_products_data[each_product.product_id]['quantity'], \
+                                            "size":combo_product_details[each_product.product_id]})
         bulk_update_serializer = CartProductsSerializer()
         bulk_update_serializer.bulk_update(update_cart_products)
         return Response({"message": "Product Quantity is updated to {} and size is updated to {}".format(quantity, size)}, 200)
@@ -252,7 +267,7 @@ class CartDetails(generics.ListAPIView):
         for each_product in total_carts_products:
             combo_products = []
             if each_product.hidden is False:
-                if each_product.is_combo:
+                if each_product.is_combo or each_product.has_sub_products:
                     combo_products = combo_products_details[each_product.cart_id + "," + each_product.product_id]
                 cart_id_wise_product_details[each_product.cart_id].append(
                     {
@@ -261,9 +276,10 @@ class CartDetails(generics.ListAPIView):
                         'quantity': each_product.quantity,
                         'size': each_product.size,
                         'is_combo': each_product.is_combo,
-                        'combo_products': combo_products,
-                        'product_name': product_id_wise_product_details[each_product.product_id]['name'],
-                        'product_image_url': product_id_wise_product_details[each_product.product_id]['image_url']
+                        'has_sub_products': each_product.has_sub_products,
+                        'combo_products': combo_products
+                        # 'product_name': product_id_wise_product_details[each_product.product_id]['name'],
+                        # 'product_image_url': product_id_wise_product_details[each_product.product_id]['images'][0]
                     }
                 )
 
@@ -429,7 +445,8 @@ def form_each_cart_all_products(cart_items, product_details, total_products_valu
                     "size": each_cart_product.size,
                     "parent_booked_product": each_cart_product.parent_cart_product.product_id,
                     "coupon_value": 0,
-                    "is_combo": False
+                    "is_combo": False,
+                    "has_sub_products": False
                 }
             )
         else:
@@ -445,7 +462,8 @@ def form_each_cart_all_products(cart_items, product_details, total_products_valu
                 "size": each_cart_product.size,
                 "parent_booked_product": None,
                 "coupon_value": coupon_value_for_each_product,
-                "is_combo": each_cart_product.is_combo
+                "is_combo": each_cart_product.is_combo,
+                "has_sub_products": each_cart_product.has_sub_products
             })
 
     return cart_products_for_bookings
