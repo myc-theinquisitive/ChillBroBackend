@@ -154,7 +154,6 @@ class ProductView(ProductInterface):
             errors["images"] = product_image_serializer.errors
 
         # Validating product specific data
-        print(self.product_specific_data,'product view')
         if not self.product_specific_view:
             is_valid = False
             errors["type"].append("Invalid Product Type")

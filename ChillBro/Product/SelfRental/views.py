@@ -3,7 +3,8 @@ from .serializers import SelfRentalSerializer, DistancePriceSerializer
 from typing import Dict
 from collections import defaultdict
 from .models import SelfRental, DistancePrice
-from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, check_vehicle_exists_by_id
+from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, check_vehicle_exists_by_id, \
+    check_distrance_price_self_rental_by_id
 
 
 def get_distance_price_data(self_rental_id):
@@ -49,14 +50,13 @@ class SelfRentalView(ProductInterface):
         # Initializing instance variables
         self.initialize_product_class(self_rental_data)
 
-        print(check_vehicle_exists_by_id(self_rental_data['vehicle']), 'check this one')
-        if not check_vehicle_exists_by_id(self_rental_data['vehicle']):
+        vehicle_data = check_vehicle_exists_by_id(self_rental_data['vehicle'])
+        if not vehicle_data:
             is_valid = False
             errors['vehicle'] = "Vehicle does not exist"
             return is_valid, errors
 
-        vehicle_data = get_vehicle_data_by_id(self_rental_data['vehicle'])
-        if vehicle_data['registration_type'] != "COMMERCIAL":
+        if vehicle_data['registration_type'] != "RENTAL":
             is_valid = False
             errors['registration_type'] = "Only Commercial Vehicle allowed"
 
@@ -130,14 +130,26 @@ class SelfRentalView(ProductInterface):
         if len(set(km_limit_list)) != len(km_limit_list):
             is_valid = False
             errors['km_limit'] = "KM limit values must be unique"
+            return is_valid, errors
+
+        km_limit_errors = []
+        for km_limit in km_limit_list:
+            try:
+                DistancePrice.objects.get(self_rental_id=self.self_rental_object['id'], km_limit=km_limit)
+                km_limit_errors += str(km_limit)
+            except:
+                pass
+
+        if len(km_limit_errors) > 0:
+            is_valid = False
+            errors['km_limit'] = ", ".join(km_limit_errors) + " already exists"
 
         distance_price_ids = list(
             map(lambda x: x['id'], self.distance_price_data['change'] + self.distance_price_data['delete']))
-        distance_price_objects = DistancePrice.objects.filter(id__in=distance_price_ids,
-                                                              self_rental_id=self.self_rental_object['id'])
-        if len(list(distance_price_objects)) != len(distance_price_ids):
+        invalid_distance_price_ids = check_distrance_price_self_rental_by_id(distance_price_ids, self.self_rental_object['id'])
+        if invalid_distance_price_ids[0]:
             is_valid = False
-            errors['distance_price'] = "Id and self_rental does'nt match"
+            errors["invalid distance_price id's"] = invalid_distance_price_ids[1]
 
         self_rental_data_valid = self.self_rental_serializer.is_valid()
         if not self_rental_data_valid:
@@ -156,6 +168,27 @@ class SelfRentalView(ProductInterface):
         self_rental: {
             "product_id": string, # internal data need not be validated
             "vehicle": string,
+            "distance_price" :{
+                "add": [
+                    {
+                        'price': int,
+                        'km_limit': int,
+                        'excess_price': int,
+                    }
+                ],
+                "change": [
+                    {
+                        'id': string,
+                        'price': int,
+                        'km_limit': int,
+                        'excess_price': int,                    }
+                ]
+                "delete": [
+                    {
+                        'id': string
+                    }
+                ]
+            }
         }
         """
 
