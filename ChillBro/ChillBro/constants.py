@@ -6,7 +6,6 @@ class EntityType(enum.Enum):
     TRANSPORT = "TRANSPORT"
     RENTAL = "RENTAL"
     EVENT = "EVENT"
-    HIRE_A_VEHICLE = "HIRE_A_VEHICLE"
 
 
 class EntitySubType(enum.Enum):

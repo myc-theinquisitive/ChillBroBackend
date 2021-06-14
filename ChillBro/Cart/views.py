@@ -74,16 +74,13 @@ class AddProductToCart(APIView):
                 }
                 products.append(combo_product)
         elif product_details[product_id]["has_sub_products"]:
-            products.append({
-                "product_id": product_details[product_id]["sub_products"][product_id]["vehicle_id"],
-                "quantity": 1,
-                "size": ""
-            })
-            products.append({
-                "product_id": product_details[product_id]["sub_products"][product_id]["default_driver_id"],
-                "quantity": 1,
-                "size": ""
-            })
+            sub_products = product_details[product_id]["sub_products"]
+            for each_sub_product in sub_products:
+                products.append({
+                    "product_id": each_sub_product,
+                    "quantity": 1,
+                    "size": ""
+                })
         else:
             products.append({
                 "product_id": product_id,
@@ -277,9 +274,9 @@ class CartDetails(generics.ListAPIView):
                         'size': each_product.size,
                         'is_combo': each_product.is_combo,
                         'has_sub_products': each_product.has_sub_products,
-                        'combo_products': combo_products
-                        # 'product_name': product_id_wise_product_details[each_product.product_id]['name'],
-                        # 'product_image_url': product_id_wise_product_details[each_product.product_id]['images'][0]
+                        'combo_products': combo_products,
+                        'product_name': product_id_wise_product_details[each_product.product_id]['name'],
+                        'product_image_url': product_id_wise_product_details[each_product.product_id]['images'][0]
                     }
                 )
 

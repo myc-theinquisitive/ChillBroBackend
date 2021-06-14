@@ -6,10 +6,13 @@ from .BaseProduct.models import Product, ComboProductItems, ProductSize
 from .HireAVehicle.models import HireAVehicle
 from .views import calculate_product_net_price
 from django.db.models import Count
+from .product_view import ProductView
 
 
 def get_product_id_wise_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
+    sub_products_ids = ProductView().get_sub_products_ids(product_ids)
+
     if not products:
         products = []
 
@@ -49,8 +52,7 @@ def get_product_id_wise_details(product_ids):
         product_data['combo_products'] = combo_products
         sub_products = defaultdict()
         if each_product.has_sub_products:
-            from .HireAVehicle.export_apis import get_hire_a_vehicle_details
-            sub_products = get_hire_a_vehicle_details([each_product.id])
+            sub_products = sub_products_ids[each_product.id]
 
         product_data['sub_products'] = sub_products
         product_id_wise_details[each_product.id] = product_data

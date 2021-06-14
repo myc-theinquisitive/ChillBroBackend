@@ -1,8 +1,8 @@
 import uuid
 from django.db.models import Q
 from django.db import models
-from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, PaymentMode, \
-    TransactionType
+from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, \
+    PaymentModeConstantsOnly
 from datetime import datetime
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
@@ -63,7 +63,7 @@ class Bookings(models.Model):
     coupon = models.CharField(max_length=36, null=True, blank=True, verbose_name="Coupon Id")
     booking_date = models.DateTimeField(default=datetime.now)
     transaction_type = models.CharField(max_length=30, null=True, blank=True,
-        choices=[(type_of_transaction.value, type_of_transaction.value) for type_of_transaction in TransactionType])
+        choices=[(type_of_transaction.value, type_of_transaction.value) for type_of_transaction in PaymentModeConstantsOnly])
 
     # Amount details
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -78,9 +78,6 @@ class Bookings(models.Model):
     payment_status = models.CharField(
         max_length=30, choices=[(pay_status.value, pay_status.value) for pay_status in PaymentStatus],
         default=PaymentStatus.pending.value)
-    payment_mode = models.CharField(
-        max_length=30, choices=[(pay_mode.value, pay_mode.value) for pay_mode in PaymentMode],
-        default=PaymentMode.online.value)
 
     entity_id = models.CharField(max_length=36)
     start_time = models.DateTimeField()

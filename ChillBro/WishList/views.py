@@ -29,7 +29,7 @@ class AddItemToWishList(generics.CreateAPIView):
             if entity_id is None and entity_type is None:
                 return Response({"message": "Can't add the product to wishlist",
                                  "errors": "Invalid Related Id"}, 400)
-            entity_sub_type = None
+            entity_type, entity_sub_type = get_entity_type_and_sub_type_for_entity_id(entity_id)
         elif item_type == ItemType.ENTITY.value:
             entity_type, entity_sub_type = get_entity_type_and_sub_type_for_entity_id(request.data['related_id'])
             if entity_type is None and entity_sub_type is None:

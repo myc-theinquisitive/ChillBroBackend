@@ -636,7 +636,7 @@ class BusinessClientBookingApproval(generics.UpdateAPIView):
         return super().put(request, *args, **kwargs)
 
 
-class GetMoneyDetailsView(APIView):
+class GetBookingCostDetailsView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
@@ -650,11 +650,11 @@ class GetMoneyDetailsView(APIView):
         })
 
 
-class ProceedToTransaction(APIView):
+class ProceedToPayment(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        input_serializer = MakeTransactionSerializer(data=request.data)
+        input_serializer = ProceedToPaymentSerializer(data=request.data)
         if input_serializer.is_valid():
             transaction_type = request.data['transaction_type']
             booking_id = request.data['booking_id']
@@ -664,7 +664,7 @@ class ProceedToTransaction(APIView):
             except ObjectDoesNotExist:
                 return Response({"message": "Can't get booking details", "error": "Invalid Booking id"}, 400)
 
-            if transaction_type == TransactionType.partial.value:
+            if transaction_type == PaymentModeConstantsOnly.partial.value:
                 if transaction_money != booking.total_money - booking.total_net_value:
                     return Response({"message": "Can't create transaction", "errors": "Invalid transaction"},400)
                 booking.transaction_type = transaction_type
@@ -688,7 +688,7 @@ class ProceedToTransaction(APIView):
                     }
                 )
 
-            elif transaction_type == TransactionType.full.value:
+            elif transaction_type == PaymentModeConstantsOnly.full.value:
                 if transaction_money != booking.total_money:
                     return Response({"message": "Can't create transaction", "errors": "Invalid transaction"},400)
                 booking.transaction_type = transaction_type

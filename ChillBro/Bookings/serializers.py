@@ -228,7 +228,7 @@ class BusinessClientBookingApproval(serializers.ModelSerializer):
         fields = ('id','booking_status')
 
 
-class MakeTransactionSerializer(serializers.Serializer):
+class ProceedToPaymentSerializer(serializers.Serializer):
     transaction_type = serializers.CharField(required=True)
     booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
     transaction_money = serializers.DecimalField(decimal_places=2, max_digits=20)

@@ -131,10 +131,8 @@ class HireAVehicleView(ProductInterface):
         hire_a_vehicles_data = defaultdict(list)
 
         for each_hire_a_vehicle in hire_a_vehicles:
-            hire_a_vehicles_data[each_hire_a_vehicle.product_id] = {
-                'vehicle_id': each_hire_a_vehicle.vehicle_id,
-                'default_driver_id': each_hire_a_vehicle.default_driver_id
-            }
+            hire_a_vehicles_data[each_hire_a_vehicle.product_id] = \
+                [ each_hire_a_vehicle.vehicle_id, each_hire_a_vehicle.default_driver_id ]
 
         return hire_a_vehicles_data
 
