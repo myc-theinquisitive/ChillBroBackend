@@ -19,11 +19,13 @@ class SelfRentalSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return SelfRental.objects.create(
-            product_id=validated_data["product"], vehicle_id=validated_data["vehicle"])
+            product_id=validated_data["product"], vehicle_id=validated_data["vehicle"],
+            excess_price_per_hour=validated_data['excess_price_per_hour'])
 
     def update(self, instance, validated_data):
         instance.product_id = validated_data["product"]
         instance.vehicle_id = validated_data["vehicle"]
+        instance.excess_price_per_hour = validated_data["excess_price_per_hour"]
         instance.save()
 
 
@@ -41,14 +43,12 @@ class DistancePriceSerializer(serializers.ModelSerializer):
             price=validated_data["price"],
             km_limit=validated_data["km_limit"],
             excess_price=validated_data["excess_price"],
-            excess_price_per_hour=validated_data["excess_price_per_hour"],
             is_infinity=validated_data["is_infinity"],
         )
 
     def update(self, instance, validated_data):
         instance.self_rental_id = validated_data["self_rental"]
         instance.excess_price = validated_data["excess_price"]
-        instance.excess_price_per_hour = validated_data["excess_price_per_hour"]
         instance.price = validated_data["price"]
         instance.km_limit = validated_data["km_limit"]
         instance.is_infinity = validated_data['is_infinity']
@@ -64,7 +64,6 @@ class DistancePriceSerializer(serializers.ModelSerializer):
                 price=distance_price["price"],
                 km_limit=distance_price["km_limit"],
                 excess_price=distance_price["excess_price"],
-                excess_price_per_hour=distance_price["excess_price_per_hour"],
                 is_infinity=distance_price["is_infinity"]
             )
             distance_prices.append(distance_price_object)
@@ -77,10 +76,9 @@ class DistancePriceSerializer(serializers.ModelSerializer):
             vehicle_type_characteristic = DistancePrice(
                 id=distance_price["id"], price=distance_price["price"],
                 excess_price=distance_price["excess_price"],
-                excess_price_per_hour=distance_price["excess_price_per_hour"]
             )
             distance_prices.append(vehicle_type_characteristic)
-        DistancePrice.objects.bulk_update(distance_prices, ['price', 'excess_price','excess_price_per_hour'])
+        DistancePrice.objects.bulk_update(distance_prices, ['price', 'excess_price', 'excess_price_per_hour'])
 
     @staticmethod
     def bulk_delete(distance_price_data):
