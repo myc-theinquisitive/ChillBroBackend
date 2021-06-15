@@ -1,10 +1,9 @@
 from Product.product_interface import ProductInterface
 from .serializers import SelfRentalSerializer, DistancePriceSerializer
 from typing import Dict
-from collections import defaultdict
 from .models import SelfRental, DistancePrice
 from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, check_vehicle_exists_by_id
-
+from collections import defaultdict
 
 def check_distance_price_self_rental_by_id(distance_price_ids, self_rental_id):
     from .models import DistancePrice
@@ -16,11 +15,12 @@ def check_distance_price_self_rental_by_id(distance_price_ids, self_rental_id):
     return True, []
 
 
-def get_distance_price_data(self_rental_id):
-    distance_price = DistancePrice.objects.filter(self_rental_id=self_rental_id)
+def get_distance_price_data(self_rental_ids):
+    distance_price = DistancePrice.objects.filter(self_rental_id__in=self_rental_ids)
 
     distance_price_serializer = DistancePriceSerializer(distance_price, many=True)
     return distance_price_serializer.data
+
 
 
 class SelfRentalView(ProductInterface):
@@ -225,8 +225,13 @@ class SelfRentalView(ProductInterface):
         self_rental_serializer = SelfRentalSerializer(self_rentals, many=True)
         self_rentals_data = self_rental_serializer.data
 
-        for self_rental in self_rentals_data:
-            self_rental["distance_price"] = get_distance_price_data(self_rental['id'])
+        self_rental_ids = list(map(lambda x: x['id'], self_rentals_data))
+
+        all_distance_prices = get_distance_price_data(self_rental_ids)
+
+        distance_price_dict = defaultdict([])
+        for distance_price in all_distance_prices:
+            distance_price_dict[distance_price['self_rental']].append(distance_price)
 
         vehicle_ids = []
         for self_rental_data in self_rentals_data:
@@ -235,5 +240,6 @@ class SelfRentalView(ProductInterface):
         vehicle_id_wise_details = get_vehicle_id_wise_details(vehicle_ids)
         for self_rental_data in self_rentals_data:
             self_rental_data["vehicle"] = vehicle_id_wise_details[self_rental_data["vehicle"]]
+            self_rental_data['distance_price'] = distance_price_dict[self_rental_data['id']]
 
         return self_rentals_data
