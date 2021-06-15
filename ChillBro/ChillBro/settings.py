@@ -259,13 +259,12 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'UserApp.MyUser'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # Constants
-
 DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
-
 IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
 
 
