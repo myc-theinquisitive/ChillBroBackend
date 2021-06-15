@@ -35,6 +35,7 @@ class ProductSerializer(serializers.ModelSerializer):
             validated_data["quantity_unlimited"] = False
 
     def create(self, validated_data):
+
         self.add_default_values(validated_data)
         if "id" not in validated_data:
             validated_data["id"] = get_id()
