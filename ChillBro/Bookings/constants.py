@@ -35,6 +35,6 @@ class PaymentUser(enum.Enum):
     customer = "CUSTOMER"
 
 
-class PaymentModeConstantsOnly(enum.Enum):
+class PaymentMode(enum.Enum):
     partial = "PARTIAL"
     full = "FULL"

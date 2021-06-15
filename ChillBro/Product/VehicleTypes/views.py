@@ -349,3 +349,6 @@ class VehicleTypeDetail(generics.RetrieveUpdateDestroyAPIView):
         self.vehicle_type_view.update(request_data)
         return Response({"message": "Vehicle Type updated successfully"},
                         status=status.HTTP_200_OK)
+
+    def get_sub_products_ids(self, product_ids):
+        return {}

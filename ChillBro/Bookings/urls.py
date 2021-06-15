@@ -20,7 +20,7 @@ urlpatterns = [
     path('business_client/<str:booking_id>/', GetSpecificBookingDetails.as_view()),
     path('business_client/approval/<str:booking_id>/', BusinessClientBookingApproval.as_view()),
     path('get_booking_money_details/<str:booking_id>/', GetBookingCostDetailsView.as_view()),
-    path('proceed_to_transaction/',ProceedToPayment.as_view()),
+    path('proceed_to_payment/',ProceedToPayment.as_view()),
     path('details/', GetBookingDetailsView.as_view()),
     path('start/', BookingStart.as_view()),
     path('end/', BookingEnd.as_view()),

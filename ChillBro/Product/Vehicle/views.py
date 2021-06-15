@@ -115,3 +115,6 @@ class VehicleView(ProductInterface):
             vehicle_data["vehicle_type"] = vehicle_type_id_wise_details[vehicle_data["vehicle_type"]]
 
         return vehicles_data
+
+    def get_sub_products_ids(self, product_ids):
+        return {}

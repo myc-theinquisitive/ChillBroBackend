@@ -182,3 +182,6 @@ class DriverView(ProductInterface):
 
         add_address_details_to_drivers(drivers_data)
         return drivers_data
+
+    def get_sub_products_ids(self, product_ids):
+        return {}

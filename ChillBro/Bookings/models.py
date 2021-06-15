@@ -2,7 +2,7 @@ import uuid
 from django.db.models import Q
 from django.db import models
 from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, \
-    PaymentModeConstantsOnly
+    PaymentMode
 from datetime import datetime
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
@@ -62,8 +62,8 @@ class Bookings(models.Model):
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
     coupon = models.CharField(max_length=36, null=True, blank=True, verbose_name="Coupon Id")
     booking_date = models.DateTimeField(default=datetime.now)
-    transaction_type = models.CharField(max_length=30, null=True, blank=True,
-        choices=[(type_of_transaction.value, type_of_transaction.value) for type_of_transaction in PaymentModeConstantsOnly])
+    payment_mode = models.CharField(max_length=30, null=True, blank=True,
+        choices=[(type_of_transaction.value, type_of_transaction.value) for type_of_transaction in PaymentMode])
 
     # Amount details
     total_money = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)

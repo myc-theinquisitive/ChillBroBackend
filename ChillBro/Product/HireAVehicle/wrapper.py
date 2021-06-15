@@ -15,7 +15,6 @@ def get_basic_driver_id_wise_details(driver_ids):
     drivers_data = get_basic_driver_data_by_ids(driver_ids)
     driver_type_id_wise_details = defaultdict(dict)
     for driver in drivers_data:
-        print(driver)
         driver_type_id_wise_details[driver["driver_id"]] = driver
 
     return driver_type_id_wise_details

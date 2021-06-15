@@ -656,7 +656,7 @@ class ProceedToPayment(APIView):
     def post(self, request, *args, **kwargs):
         input_serializer = ProceedToPaymentSerializer(data=request.data)
         if input_serializer.is_valid():
-            transaction_type = request.data['transaction_type']
+            payment_mode = request.data['payment_mode']
             booking_id = request.data['booking_id']
             transaction_money = request.data['transaction_money']
             try:
@@ -664,12 +664,12 @@ class ProceedToPayment(APIView):
             except ObjectDoesNotExist:
                 return Response({"message": "Can't get booking details", "error": "Invalid Booking id"}, 400)
 
-            if transaction_type == PaymentModeConstantsOnly.partial.value:
+            if payment_mode == PaymentMode.partial.value:
                 if transaction_money != booking.total_money - booking.total_net_value:
                     return Response({"message": "Can't create transaction", "errors": "Invalid transaction"},400)
-                booking.transaction_type = transaction_type
+                booking.payment_mode = payment_mode
                 booking.save()
-                #Doubt: have to check total money partition and respective paid persons are crt or not
+
                 create_booking_transaction(
                     {
                         'booking_id': booking.id, 'entity_id': booking.entity_id,
@@ -688,10 +688,10 @@ class ProceedToPayment(APIView):
                     }
                 )
 
-            elif transaction_type == PaymentModeConstantsOnly.full.value:
+            elif payment_mode == PaymentMode.full.value:
                 if transaction_money != booking.total_money:
                     return Response({"message": "Can't create transaction", "errors": "Invalid transaction"},400)
-                booking.transaction_type = transaction_type
+                booking.transaction_type = payment_mode
                 booking.save()
 
                 create_booking_transaction(
