@@ -213,7 +213,7 @@ class SelfRentalView(ProductInterface):
 
         self_rental_data = self.self_rental_serializer.data
         vehicle_data = get_vehicle_data_by_id(self_rental_data["vehicle"])
-        self_rental_data["distance_price"] = get_distance_price_data(self.self_rental_object.id)
+        self_rental_data["distance_price"] = get_distance_price_data([self.self_rental_object.id])
 
         self_rental_data["vehicle"] = vehicle_data
 
@@ -229,9 +229,9 @@ class SelfRentalView(ProductInterface):
 
         all_distance_prices = get_distance_price_data(self_rental_ids)
 
-        distance_price_dict = defaultdict([])
+        self_rental_id_wise_distance_prices = defaultdict([])
         for distance_price in all_distance_prices:
-            distance_price_dict[distance_price['self_rental']].append(distance_price)
+            self_rental_id_wise_distance_prices[distance_price['self_rental']].append(distance_price)
 
         vehicle_ids = []
         for self_rental_data in self_rentals_data:
@@ -240,6 +240,6 @@ class SelfRentalView(ProductInterface):
         vehicle_id_wise_details = get_vehicle_id_wise_details(vehicle_ids)
         for self_rental_data in self_rentals_data:
             self_rental_data["vehicle"] = vehicle_id_wise_details[self_rental_data["vehicle"]]
-            self_rental_data['distance_price'] = distance_price_dict[self_rental_data['id']]
+            self_rental_data['distance_price'] = self_rental_id_wise_distance_prices[self_rental_data['id']]
 
         return self_rentals_data

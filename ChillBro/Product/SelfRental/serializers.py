@@ -15,7 +15,6 @@ class SelfRentalSerializer(serializers.ModelSerializer):
         data = super(SelfRentalSerializer, self).to_representation(instance)
         data['product'] = instance.product_id
         data['vehicle'] = instance.vehicle_id
-        data['excess_price_per_hour'] = instance.excess_price_per_hour
         return data
 
     def create(self, validated_data):
