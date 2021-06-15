@@ -1,19 +1,18 @@
 import binascii
 import os
 import random
-
 from django.conf import settings
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
-from django.core.mail.message import EmailMultiAlternatives
 from django.db import models
-from django.template.loader import render_to_string
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.translation import ugettext_lazy as _
 from django.core.mail import send_mail
 from django.core.validators import MinLengthValidator
 from .validations import validate_phone
+from .tasks import send_multi_format_email
+
 
 # Make part of the model eventually, so it can be edited
 EXPIRY_PERIOD = 3    # days
@@ -150,23 +149,6 @@ class EmailChangeCodeManager(models.Manager):
         return EXPIRY_PERIOD
 
 
-def send_multi_format_email(template_prefix, template_ctxt, target_email):
-    subject_file = 'authentication/%s_subject.txt' % template_prefix
-    txt_file = 'authentication/%s.txt' % template_prefix
-    html_file = 'authentication/%s.html' % template_prefix
-
-    subject = render_to_string(subject_file).strip()
-    from_email = settings.EMAIL_FROM
-    to = target_email
-    bcc_email = settings.EMAIL_BCC
-    text_content = render_to_string(txt_file, template_ctxt)
-    html_content = render_to_string(html_file, template_ctxt)
-    msg = EmailMultiAlternatives(subject, text_content, from_email, [to],
-                                 bcc=[bcc_email])
-    msg.attach_alternative(html_content, 'text/html')
-    msg.send()
-
-
 class AbstractBaseCode(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     code = models.CharField(_('code'), max_length=40, primary_key=True)
@@ -182,7 +164,7 @@ class AbstractBaseCode(models.Model):
             'last_name': self.user.last_name,
             'code': self.code
         }
-        send_multi_format_email(prefix, ctxt, target_email=self.user.email)
+        send_multi_format_email.delay(prefix, ctxt, target_email=self.user.email)
 
     def __str__(self):
         return self.code
@@ -221,7 +203,7 @@ class EmailChangeCode(AbstractBaseCode):
             'code': self.code
         }
 
-        send_multi_format_email(prefix, ctxt, target_email=self.email)
+        send_multi_format_email.delay(prefix, ctxt, target_email=self.email)
 
 def random_string():
     return str(random.randint(100000, 999999))

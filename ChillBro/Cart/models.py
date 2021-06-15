@@ -29,6 +29,7 @@ class CartProducts(models.Model):
     product_id = models.CharField(max_length=36)
     quantity = models.IntegerField()
     size = models.CharField(max_length=10, verbose_name="Size")
+    has_sub_products = models.BooleanField(default=False)
     is_combo = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
     parent_cart_product = models.ForeignKey('self', on_delete=models.CASCADE,

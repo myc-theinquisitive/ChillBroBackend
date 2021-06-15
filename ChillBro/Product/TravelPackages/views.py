@@ -291,6 +291,9 @@ class TravelPackageView(ProductInterface):
 
         return travel_packages_data
 
+    def get_sub_products_ids(self, product_ids):
+        return {}
+
 
 class TravelPackageList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)

@@ -25,6 +25,7 @@ class BookedProductsSerializer(serializers.ModelSerializer):
                 net_value=product["net_value"],
                 size = product["size"],
                 is_combo = product["is_combo"],
+                has_sub_products = product["has_sub_products"],
                 hidden = product["hidden"],
                 parent_booked_product = product["parent_booked_product"],
                 coupon_value = product["coupon_value"]
@@ -220,12 +221,20 @@ class ProductAvailabilitySerializer(serializers.Serializer):
     start_time = serializers.DateTimeField()
     end_time = serializers.DateTimeField()
 
+
 class BusinessClientBookingApproval(serializers.ModelSerializer):
     class Meta:
         model = Bookings
         fields = ('id','booking_status')
 
+
 class UserSelectQuotationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookings
         fields = ('id','quotation')
+
+
+class ProceedToPaymentSerializer(serializers.Serializer):
+    payment_mode = serializers.CharField(required=True)
+    booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    transaction_money = serializers.DecimalField(decimal_places=2, max_digits=20)

@@ -3,8 +3,10 @@ from .views import ReportCustomerReasonsList, ReportCustomerReasonsDetail, Creat
     CancelBookingView, BookingsStatistics, GetBookingsStatisticsDetails, CancelProductStatusView, GetDateFilters, \
     GetSpecificBookingDetails, GetBookingDetailsView, BookingStart, BookingEnd, GetBookingEndDetailsView, \
     ReportCustomerForBooking, GeneratePDF, GenerateExcel, GetBookingDetailsOfProductId, ProductStatistics, \
-    GetProductAvailability, BusinessClientProductCancellationDetails, BusinessClientBookingApproval, UserSelectQuotation
+    GetProductAvailability, BusinessClientProductCancellationDetails, BusinessClientBookingApproval, \
+    UserSelectQuotation, ProceedToPayment, GetBookingCostDetailsView
 from .Quotation.views import *
+
 
 urlpatterns = [
     path('create_report_customer_reason/', ReportCustomerReasonsList.as_view()),
@@ -18,6 +20,8 @@ urlpatterns = [
     path('date_filters/', GetDateFilters.as_view()),
     path('business_client/<str:booking_id>/', GetSpecificBookingDetails.as_view()),
     path('business_client/approval/<str:booking_id>/', BusinessClientBookingApproval.as_view()),
+    path('get_booking_money_details/<str:booking_id>/', GetBookingCostDetailsView.as_view()),
+    path('proceed_to_payment/',ProceedToPayment.as_view()),
     path('details/', GetBookingDetailsView.as_view()),
     path('start/', BookingStart.as_view()),
     path('end/', BookingEnd.as_view()),

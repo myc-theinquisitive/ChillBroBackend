@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from Product.exportapi import get_entity_id_and_entity_type
 from Coupons.exportapi import coupon_value
 from Bookings.exportapi import create_multiple_bookings
@@ -10,8 +12,12 @@ def check_valid_booking(product_list, start_time, end_time):
 
 
 def get_product_details_with_image(product_ids):
-    from Product.exportapi import product_details_with_image
-    return product_details_with_image(product_ids)
+    from Product.exportapi import product_details
+    all_product_details = defaultdict()
+    products = product_details(product_ids)
+    for each_product in products:
+        all_product_details[each_product["id"]] = each_product
+    return all_product_details
 
 
 def check_valid_product(product_id):

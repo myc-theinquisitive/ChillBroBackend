@@ -137,3 +137,18 @@ class HireAVehicleView(ProductInterface):
             hire_a_vehicle_data["default_driver"] = driver_id_wise_details[hire_a_vehicle_data["default_driver"]]
 
         return hire_a_vehicles_data
+
+    def get_sub_products_ids(self, product_ids):
+        hire_a_vehicles = HireAVehicle.objects.filter(product_id__in=product_ids)
+        hire_a_vehicles_data = defaultdict(list)
+
+        for each_hire_a_vehicle in hire_a_vehicles:
+            hire_a_vehicles_data[each_hire_a_vehicle.product_id] = \
+                [ each_hire_a_vehicle.vehicle_id, each_hire_a_vehicle.default_driver_id ]
+
+        return hire_a_vehicles_data
+
+
+
+
+
