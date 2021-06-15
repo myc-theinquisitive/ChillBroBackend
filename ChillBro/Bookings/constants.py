@@ -18,11 +18,6 @@ class PaymentStatus(enum.Enum):
     not_required = "NOT_REQUIRED"
 
 
-class PaymentMode(enum.Enum):
-    cod = "COD"
-    online = "ONLINE"
-
-
 class ProductBookingStatus(enum.Enum):
     booked = "BOOKED"
     cancelled = "CANCELLED"
@@ -38,3 +33,8 @@ class PaymentUser(enum.Enum):
     entity = "ENTITY"
     myc = "MYC"
     customer = "CUSTOMER"
+
+
+class PaymentMode(enum.Enum):
+    partial = "PARTIAL"
+    full = "FULL"

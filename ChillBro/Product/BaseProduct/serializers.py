@@ -29,6 +29,10 @@ class ProductSerializer(serializers.ModelSerializer):
             validated_data["price_type"] = PriceTypes.DAY.value
         if "category_product" not in validated_data:
             validated_data["category_product"] = None
+        if "has_sub_products" not in validated_data:
+            validated_data["has_sub_products"] = False
+        if "quantity_unlimited" not in validated_data:
+            validated_data["quantity_unlimited"] = False
 
     def create(self, validated_data):
         self.add_default_values(validated_data)
@@ -39,8 +43,9 @@ class ProductSerializer(serializers.ModelSerializer):
             id=validated_data["id"], name=validated_data["name"], description=validated_data["description"],
             type=validated_data["type"], category_id=validated_data["category"], price=validated_data["price"],
             discounted_price=validated_data["discounted_price"], featured=validated_data["featured"],
-            quantity=validated_data["quantity"], is_combo=validated_data["is_combo"],
-            has_sizes=validated_data["has_sizes"], price_type=validated_data["price_type"],
+            quantity_unlimited=validated_data["quantity_unlimited"], quantity=validated_data["quantity"],
+            is_combo=validated_data["is_combo"], has_sizes=validated_data["has_sizes"],
+            has_sub_products=validated_data["has_sub_products"], price_type=validated_data["price_type"],
             seller_id=validated_data["seller_id"], category_product_id=validated_data["category_product"])
 
         if "tags" in validated_data:
@@ -90,6 +95,8 @@ class ProductSerializer(serializers.ModelSerializer):
         instance.is_combo = validated_data["is_combo"]
         instance.has_sizes = validated_data["has_sizes"]
         instance.price_type = validated_data["price_type"]
+        instance.has_sub_products = validated_data["has_sub_products"]
+        instance.quantity_unlimited = validated_data["quantity_unlimited"]
 
         if "tags" in validated_data:
             instance.tags.set(*validated_data["tags"])

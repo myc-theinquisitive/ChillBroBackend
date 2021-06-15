@@ -173,6 +173,8 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
+            'quantity_unlimited': boolean,
+            'quantity': int,
             'is_combo': boolean,
             'combo_items': [
                 {
@@ -198,6 +200,7 @@ class ProductView(ProductInterface):
             }
             'rental_product': {
             }
+            'has_sub_products': boolean,
             'hire_a_vehicle': {
                 "vehicle": string,
                 "default_driver": string
@@ -306,6 +309,8 @@ class ProductView(ProductInterface):
             'price': decimal,
             'discounted_price': decimal,
             'featured': boolean,
+            'quantity_unlimited': boolean,
+            'quantity': int,
             'is_combo': boolean,
             'combo_items': {
                 'add': [
@@ -361,6 +366,7 @@ class ProductView(ProductInterface):
             }
             'rental_product': {
             }
+            'has_sub_products': boolean,
             'hire_a_vehicle': {
                 "vehicle": string,
                 "default_driver": string
@@ -625,3 +631,20 @@ class ProductView(ProductInterface):
             }
             products_data.append(product_details)
         return products_data
+
+    def get_sub_products_ids(self, product_ids):
+        products = Product.objects.filter(id__in=product_ids)
+
+        group_products_by_type = defaultdict(list)
+        for product in products:
+            group_products_by_type[product.type].append(product.id)
+
+        all_sub_products_ids = defaultdict(list)
+        for type in group_products_by_type:
+            product_specific_view, product_key = self.get_view_and_key_by_type(type)
+
+            sub_products_ids_of_specific_data = product_specific_view.get_sub_products_ids(group_products_by_type[type])
+            all_sub_products_ids.update(sub_products_ids_of_specific_data)
+
+        return all_sub_products_ids
+

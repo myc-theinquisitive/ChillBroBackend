@@ -5,3 +5,4 @@ import enum
 class ItemType(enum.Enum):
     PRODUCT = "PRODUCT"
     ENTITY = "ENTITY"
+    PLACE = "PLACE"

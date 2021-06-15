@@ -184,3 +184,6 @@ class TravelPackageVehiclesList(APIView):
             "results": self.group_vehicle_details_by_vehicle_type(product_details)
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
+    def get_sub_products_ids(self, product_ids):
+        return {}
