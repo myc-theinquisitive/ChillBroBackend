@@ -21,6 +21,10 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
     IsEmployee, IsBookingBusinessClient, IsBusinessClientEntityById, IsEmployeeEntityById, IsBookingEmployee, \
     IsBusinessClientEntities, IsEmployeeEntities
 import threading
+from .tasks import cancel_booking_if_not_accepted_by_business_client
+from datetime import datetime, timedelta
+import pytz
+
 
 # Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
@@ -616,6 +620,7 @@ class GetSpecificBookingDetails(APIView):
         serializer['products'] = products
         serializer['outlet_details'] = get_entity_details([booking.entity_id])
         serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.id)
+        serializer['transaction_details'] = get_transaction_details_by_booking_id(booking.id)
         serializer['customer_review'] = get_business_client_review_by_booking_id(booking.id)
         return Response(serializer, 200)
 
@@ -1187,6 +1192,11 @@ def create_single_booking(booking_object, product_values):
             each_booked_product['parent_booked_product'] = booked_combo_products[each_booked_product['parent_booked_product']]
 
     booked_product_serializer_object.bulk_create(product_list)
+
+    current_time = datetime.utcnow()
+    current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
+    cancel_booking_if_not_accepted_by_business_client.apply_async(
+        (booking.id, ), eta=current_time + timedelta(seconds=60))
 
     return True, {}
 

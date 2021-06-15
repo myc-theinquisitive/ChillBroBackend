@@ -5,6 +5,7 @@ from ChillBro.constants import EntityType, DateFilters
 class BookingStatus(enum.Enum):
     yet_to_approve = "YET_TO_APPROVE"
     business_client_rejected = "BUSINESS_CLIENT_REJECTED"
+    business_client_not_acted = "BUSINESS_CLIENT_NOT_ACTED"
     pending = "PENDING"
     ongoing = "ONGOING"
     cancelled = "CANCELLED"

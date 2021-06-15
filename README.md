@@ -17,6 +17,9 @@ activate
 pip install -r requirements.txt
 
 
+### Run celery
+celery -A ChillBro worker -B -l INFO
+
 
 #API's 
 
