@@ -16,12 +16,14 @@ class VehicleSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+
         return Vehicle.objects.create(
             product_id=validated_data["product"], vehicle_type_id=validated_data["vehicle_type"],
-            registration_no=validated_data["registration_no"])
+            registration_no=validated_data["registration_no"],registration_type=validated_data['registration_type'])
 
     def update(self, instance, validated_data):
         instance.product_id = validated_data["product"]
         instance.vehicle_type_id = validated_data["vehicle_type"],
         instance.registration_no = validated_data["registration_no"]
+        instance.registration_type = validated_data["registration_type"]
         instance.save()

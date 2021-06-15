@@ -228,6 +228,12 @@ class BusinessClientBookingApproval(serializers.ModelSerializer):
         fields = ('id','booking_status')
 
 
+class UserSelectQuotationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bookings
+        fields = ('id','quotation')
+
+
 class ProceedToPaymentSerializer(serializers.Serializer):
     payment_mode = serializers.CharField(required=True)
     booking_id = serializers.CharField(required=True, min_length=36, max_length=36)

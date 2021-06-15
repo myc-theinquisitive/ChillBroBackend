@@ -6,7 +6,7 @@ from .constants import BookingStatus, EntityType, IdProofType, ProductBookingSta
 from datetime import datetime
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
-
+from .Quotation.models import *
 
 # Create your models here.
 def get_id():

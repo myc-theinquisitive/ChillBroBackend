@@ -1221,3 +1221,8 @@ def combine_products(all_cart_products):
         final_products.append(form_together[each_product])
 
     return final_products
+
+
+class UserSelectQuotation(generics.UpdateAPIView):
+    serializer_class = UserSelectQuotationSerializer
+    queryset = Bookings.objects.all()

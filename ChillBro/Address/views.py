@@ -35,3 +35,13 @@ class SpecificAddressList(APIView):
             return Response({"results:": address_details}, 200)
         else:
             return Response({"message": "Can't get address details", "errors:": serializer.errors}, 400)
+
+
+def get_distance(source,destination):
+    source_address = Address.objects.get(id=source)
+    source_points = (source_address.longitute,source_address.longitute)
+    destination_address = Address.objects.get(id=destination)
+    destination_points = (destination_address.longitute,destination_address.longitute)
+
+
+# def get_multiple_distances():
