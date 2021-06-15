@@ -83,8 +83,6 @@ class Bookings(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
 
-    quotation = models.OneToOneField(Quotation,on_delete=models.CASCADE)
-
     objects = BookingsManager()
 
     def __str__(self):

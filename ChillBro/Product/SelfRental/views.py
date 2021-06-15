@@ -3,8 +3,17 @@ from .serializers import SelfRentalSerializer, DistancePriceSerializer
 from typing import Dict
 from collections import defaultdict
 from .models import SelfRental, DistancePrice
-from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, check_vehicle_exists_by_id, \
-    check_distrance_price_self_rental_by_id
+from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, check_vehicle_exists_by_id
+
+
+def check_distance_price_self_rental_by_id(distance_price_ids, self_rental_id):
+    from .models import DistancePrice
+    distance_price_objects = DistancePrice.objects.filter(id__in=distance_price_ids,
+                                                          self_rental_id=self_rental_id).values_list('id')
+    if len(list(distance_price_objects)) != len(distance_price_ids):
+        invalid_ids = set(distance_price_ids) - set(distance_price_objects)
+        return False, list(invalid_ids)
+    return True, []
 
 
 def get_distance_price_data(self_rental_id):
@@ -88,6 +97,7 @@ class SelfRentalView(ProductInterface):
                         'price': int,
                         'km_limit': int,
                         'excess_price':int,
+                        'excess_price_per_hour': int,
                         is_infinity: Boolean
                     }
                 ]
@@ -132,21 +142,17 @@ class SelfRentalView(ProductInterface):
             errors['km_limit'] = "KM limit values must be unique"
             return is_valid, errors
 
-        km_limit_errors = []
-        for km_limit in km_limit_list:
-            try:
-                DistancePrice.objects.get(self_rental_id=self.self_rental_object['id'], km_limit=km_limit)
-                km_limit_errors += str(km_limit)
-            except:
-                pass
+        km_limit_errors = DistancePrice.objects.filter(self_rental_id=self.self_rental_object['id'],
+                                                       km_limit__in=km_limit_list).values_list('km_limit')
 
         if len(km_limit_errors) > 0:
             is_valid = False
-            errors['km_limit'] = ", ".join(km_limit_errors) + " already exists"
+            errors['km_limit already exists'] = km_limit_errors
 
         distance_price_ids = list(
             map(lambda x: x['id'], self.distance_price_data['change'] + self.distance_price_data['delete']))
-        invalid_distance_price_ids = check_distrance_price_self_rental_by_id(distance_price_ids, self.self_rental_object['id'])
+        invalid_distance_price_ids = check_distance_price_self_rental_by_id(distance_price_ids,
+                                                                            self.self_rental_object['id'])
         if invalid_distance_price_ids[0]:
             is_valid = False
             errors["invalid distance_price id's"] = invalid_distance_price_ids[1]
@@ -174,6 +180,7 @@ class SelfRentalView(ProductInterface):
                         'price': int,
                         'km_limit': int,
                         'excess_price': int,
+                        'excess_price_per_hour': int,
                     }
                 ],
                 "change": [
@@ -181,7 +188,9 @@ class SelfRentalView(ProductInterface):
                         'id': string,
                         'price': int,
                         'km_limit': int,
-                        'excess_price': int,                    }
+                        'excess_price': int,
+                        'excess_price_per_hour': int,
+                   }
                 ]
                 "delete": [
                     {
