@@ -10,6 +10,7 @@ from Product.Vehicle.views import VehicleView
 from Product.HireAVehicle.views import HireAVehicleView
 from Product.Driver.views import DriverView
 from Product.TravelPackageVehicle.views import TravelPackageVehicleView
+from Product.TravelAgency.views import TravelAgencyView
 from Product.product_interface import ProductInterface
 from Product.taggable_wrapper import key_value_content_type_model, key_value_tag_model
 from typing import Dict
@@ -50,6 +51,8 @@ class ProductView(ProductInterface):
             return HireAVehicleView(), "hire_a_vehicle"
         elif product_type == "TRAVEL_PACKAGE_VEHICLE":
             return TravelPackageVehicleView(), "travel_package_vehicle"
+        elif product_type == "TRAVEL_AGENCY":
+            return TravelAgencyView(), "travel_agency"
         return None, None
 
     # initialize the instance variables before accessing
@@ -498,10 +501,17 @@ class ProductView(ProductInterface):
             "id": self.product_object.category.id,
             "name": self.product_object.category.name
         }
-        product_data["category_product"] = {
-            "id": self.product_object.category_product.id,
-            "name": self.product_object.category_product.product_name
-        }
+
+        if self.product_object.category_product:
+            product_data["category_product"] = {
+                "id": self.product_object.category_product.id,
+                "name": self.product_object.category_product.product_name
+            }
+        else:
+            product_data["category_product"] = {
+                "id": "",
+                "name": ""
+            }
 
         product_specific_data = self.product_specific_view.get(self.product_object.id)
         product_specific_data.pop("product", None)
