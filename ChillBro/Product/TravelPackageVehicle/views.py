@@ -186,4 +186,7 @@ class TravelPackageVehiclesList(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     def get_sub_products_ids(self, product_ids):
+        return {}, {}
+
+    def get_transport_price_data(self, product_ids, product_ids_with_duration):
         return {}

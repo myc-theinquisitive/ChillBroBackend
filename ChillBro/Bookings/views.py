@@ -1,4 +1,5 @@
 from datetime import timedelta
+from math import ceil
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Sum, Count
@@ -8,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import *
 from .helpers import *
-from .constants import BookingStatus, DateFilters, ProductBookingStatus, PaymentUser
+from .constants import BookingStatus, DateFilters, ProductBookingStatus, PaymentUser, ProductTypes, DurationType
 from collections import defaultdict
 # libraries for generating pdf
 from io import BytesIO
@@ -30,7 +31,8 @@ import pytz
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_discounted_value, \
     get_transaction_details_by_booking_id, business_client_review_on_customer, \
-    get_product_details, get_entity_details, get_business_client_review_by_booking_id
+    get_product_details, get_entity_details, get_business_client_review_by_booking_id, \
+    get_transport_price_data, calculate_product_net_price
 
 _booking_lock = threading.Lock()
 
@@ -827,13 +829,72 @@ class BookingEnd(APIView):
 class GetBookingEndDetailsView(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         booking = Bookings.objects.get(id=kwargs['booking_id'])
         self.check_object_permissions(request, booking)
         try:
             check_in_object = CheckInDetails.objects.get(booking_id=kwargs['booking_id'])
         except ObjectDoesNotExist:
             return Response({"message": "Can't get booking details", "error": "Invalid booking id"}, 400)
+
+        booked_products = BookedProducts.objects.select_related('booking').filter(booking_id=kwargs['booking_id'])
+        product_ids = []
+        booked_products_details = defaultdict()
+        for each_booked_product in booked_products:
+            if each_booked_product.parent_booked_product is None:
+                product_ids.append(each_booked_product.product_id)
+                booked_products_details[each_booked_product.product_id] = each_booked_product
+
+        products_details = get_product_id_wise_product_details(product_ids)
+
+        booked_products_sub_products_ids = []
+        for each_product in products_details:
+            if products_details[each_product["has_sub_products"]]:
+                booked_products_sub_products_ids.append(booked_products_details[each_product].id)
+
+        booked_products_extra_details = BookedProductExtraDetails.objects \
+            .filter(booked_product__in = booked_products_sub_products_ids)
+        all_booked_products_extra_details = defaultdict()
+        for each_booked_product in booked_products_extra_details:
+            all_booked_products_extra_details[each_booked_product.booked_product_id] = each_booked_product
+
+        excess_price_details_dict = defaultdict()
+
+        for each_product in booked_products:
+            if products_details[each_product.product_id]['has_sub_products']:
+                current_time = datetime.now()
+                end_time = each_product.booking.end_time
+                start_time = each_product.booking.start_time
+                if current_time > end_time:
+                    total_hours = end_time - start_time
+                    difference_date = current_time - end_time
+                    excess_duration = ceil((difference_date.total_seconds() // 60) / 60)
+                    excess_km = request.data['excess_duration']
+                    days = total_hours // 24
+                    hours = total_hours % 24
+
+                    day_data = all_booked_products_extra_details[each_product.id][DurationType.day.value]
+                    hour_data = all_booked_products_extra_details[each_product.id][DurationType.hour.value]
+                    excess_km_price = excess_duration_price = 0
+                    if excess_km > 0:
+                        if days == 0:
+                            excess_km_price = hour_data.excess_km_price * excess_km
+                        else:
+                            excess_km_price = day_data.excess_km_price * excess_km
+
+                    if excess_duration > 0:
+                        excess_days = excess_duration // 24
+                        excess_hours = excess_duration % 24
+
+                        excess_duration_price = day_data.excess_duration_price * excess_days + \
+                                                hour_data.excess_duration_price * excess_hours
+
+                    total_excess_price = excess_km_price + excess_duration_price
+                    excess_price_details_dict[each_product.product_id] = {
+                        "total_excess_price": total_excess_price,
+                        "excess_km_price": excess_km_price,
+                        "excess_duration_price": excess_duration_price
+                    }
 
         response_data = {
             'is_caution_deposit_collected': True,
@@ -847,6 +908,7 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
             image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
             other_images.append(image_url)
         response_data['other_images'] = other_images
+        response_data['excess_price_details'] = excess_price_details_dict
 
         return Response(response_data, 200)
 
@@ -1110,11 +1172,32 @@ def create_single_booking(booking_object, product_values):
 
     product_list = booking_object.pop('products', None)
 
+    transport_related_ids_with_duration = defaultdict(dict)
+    transport_related_ids = defaultdict(list)
+    total_hours = 0
+    for product in product_list:
+        if product_values[product['product_id']]['type'] == ProductTypes.Hire_A_Vehicle.value:
+            start_time_date_object = datetime.strptime(booking_object['start_time'], get_date_format())
+            end_time_date_object = datetime.strptime(booking_object['end_time'], get_date_format())
+            difference_date = (end_time_date_object - start_time_date_object)
+
+            total_hours = ceil((difference_date.total_seconds() // 60) / 60)
+            transport_related_ids_with_duration[product_values[product['product_id']]['type']] \
+                .update({product['product_id']:{"duration":total_hours, "trip_type":product['trip_type'], \
+                "excess_duration": 0, "excess_km": 0}})
+            transport_related_ids[product_values[product['product_id']]['type']] \
+                .append(product['product_id'])
+
+    transport_related_ids_price_data = get_transport_price_data(transport_related_ids, transport_related_ids_with_duration)
+
     total_money = 0.0
     total_coupon_discount = 0.0
     for product in product_list:
         if product['parent_booked_product'] is None:
-            total_money += float(product_values[product['product_id']]['price'] * product['quantity'])
+            if len(product['trip_type']) > 0:
+                total_money += float(transport_related_ids_price_data[product['product_id']]["total_price"])
+            else:
+                total_money += float(product_values[product['product_id']]['price'] * product['quantity'])
             total_coupon_discount += float(product['coupon_value'])
 
     booking_object['total_money'] = total_money
@@ -1126,7 +1209,7 @@ def create_single_booking(booking_object, product_values):
     product_list_copy = product_list[::]
     for product in product_list_copy:
         net_value = product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
-        if product['is_combo']  :
+        if product['is_combo']:
             combo_product = product
             product_list.remove(product)
             combo_product['hidden'] = False
@@ -1139,8 +1222,11 @@ def create_single_booking(booking_object, product_values):
             product_list.remove(product)
             sub_product['hidden'] = False
             sub_product["product_value"] = product_values[sub_product['product_id']]['price'] * sub_product['quantity']
-            sub_product['net_value'] = net_value
-            total_net_value += net_value
+            net_value = \
+                calculate_product_net_price(transport_related_ids_price_data[product['product_id']]["total_price"],\
+                                            product_values[sub_product['product_id']]['discount'])
+            sub_product['net_value'] = net_value["net_price"]
+            total_net_value += net_value["net_price"]
             sub_products_parent_products.append(sub_product)
         elif product['parent_booked_product'] is None:
             product['hidden'] = False
@@ -1186,6 +1272,26 @@ def create_single_booking(booking_object, product_values):
         })
         booked_combo_products[each_sub_product['product_id']] = sub_product
 
+        days = total_hours // 24
+        if days == 0:
+            duration_type = "HOUR"
+        else:
+            duration_type = "DAY"
+        extra_details = BookedProductExtraDetailsSerializer()
+        extra_details.create({
+            'booked_product':sub_product,
+            'trip_type': each_sub_product['trip_type'],
+            'pickup_location':each_sub_product['pickup_location'],
+            'drop_location': each_sub_product['drop_location'],
+            'km_limit': product_values[each_sub_product['product_id']]['sub_product_data'][duration_type]['km_limit'],
+            'km_price': product_values[each_sub_product['product_id']]['sub_product_data'][duration_type]['km_price'],
+            'excess_km_price':product_values[each_sub_product['product_id']]['sub_product_data'][duration_type]['excess_km_price'],
+            'excess_duration_price': product_values[each_sub_product['product_id']]['sub_product_data'][duration_type]['excess_duration_price'],
+            'is_infinity': product_values[each_sub_product['product_id']]['sub_product_data'][duration_type]['is_infinity'],
+            'single_trip_return_value_per_km': product_values[each_sub_product['product_id']]['sub_product_data'][duration_type]['single_trip_return_value_per_km']
+        })
+
+
     for each_booked_product in product_list:
         each_booked_product['booking'] = booking
         if each_booked_product['parent_booked_product'] is not None:
@@ -1193,10 +1299,10 @@ def create_single_booking(booking_object, product_values):
 
     booked_product_serializer_object.bulk_create(product_list)
 
-    current_time = datetime.utcnow()
-    current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
-    cancel_booking_if_not_accepted_by_business_client.apply_async(
-        (booking.id, ), eta=current_time + timedelta(seconds=60))
+    # current_time = datetime.utcnow()
+    # current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
+    # cancel_booking_if_not_accepted_by_business_client.apply_async(
+    #     (booking.id, ), eta=current_time + timedelta(seconds=60))
 
     return True, {}
 

@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
-from .constants import EntityType
+from ChillBro.constants import EntityType, EntitySubType
+from .constants import TripType
 from .helpers import get_user_model
 # Create your models here.
 
@@ -40,5 +41,14 @@ class CartProducts(models.Model):
 
     class Meta:
         unique_together = (("cart", "product_id","hidden","parent_cart_product"),)
+
+
+class CartProductExtraDetails(models.Model):
+    cart_product = models.ForeignKey('CartProducts', on_delete=models.CASCADE)
+    trip_type = models.CharField(max_length=30,
+        choices=[(trip_type.value,trip_type.value) for trip_type in TripType], null=True, blank=True)
+    pickup_location = models.CharField(max_length=36, blank=True, null=True)
+    drop_location = models.CharField(max_length=36, blank=True, null=True)
+
 
 

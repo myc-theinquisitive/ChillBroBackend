@@ -5,6 +5,7 @@ from .models import SelfRental, DistancePrice
 from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, check_vehicle_exists_by_id
 from collections import defaultdict
 
+
 def check_distance_price_self_rental_by_id(distance_price_ids, self_rental_id):
     from .models import DistancePrice
     distance_price_objects = DistancePrice.objects.filter(id__in=distance_price_ids,
@@ -20,7 +21,6 @@ def get_distance_price_data(self_rental_ids):
 
     distance_price_serializer = DistancePriceSerializer(distance_price, many=True)
     return distance_price_serializer.data
-
 
 
 class SelfRentalView(ProductInterface):
@@ -243,3 +243,6 @@ class SelfRentalView(ProductInterface):
             self_rental_data['distance_price'] = self_rental_id_wise_distance_prices[self_rental_data['id']]
 
         return self_rentals_data
+
+    def get_sub_products_ids(self, product_ids):
+        return {}, {}

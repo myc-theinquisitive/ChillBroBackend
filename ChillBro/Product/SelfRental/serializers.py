@@ -37,6 +37,11 @@ class DistancePriceSerializer(serializers.ModelSerializer):
         model = DistancePrice
         fields = '__all__'
 
+    def to_representation(self, instance):
+        data = super(DistancePriceSerializer, self).to_representation(instance)
+        data['self_rental'] = instance.self_rental_id
+        return data
+
     def create(self, validated_data):
         return DistancePrice.objects.create(
             self_rental=validated_data["self_rental"],
@@ -55,8 +60,7 @@ class DistancePriceSerializer(serializers.ModelSerializer):
         instance.save()
 
     @staticmethod
-    def bulk_create(validated_data):
-        print(validated_data, 'validated data')
+    def bulk_create(self, validated_data):
         distance_prices = []
         for distance_price in validated_data:
             distance_price_object = DistancePrice(
@@ -70,7 +74,7 @@ class DistancePriceSerializer(serializers.ModelSerializer):
         DistancePrice.objects.bulk_create(distance_prices)
 
     @staticmethod
-    def bulk_update(validated_data):
+    def bulk_update(self, validated_data):
         distance_prices = []
         for distance_price in validated_data:
             vehicle_type_characteristic = DistancePrice(
@@ -81,7 +85,7 @@ class DistancePriceSerializer(serializers.ModelSerializer):
         DistancePrice.objects.bulk_update(distance_prices, ['price', 'excess_price', 'excess_price_per_hour'])
 
     @staticmethod
-    def bulk_delete(distance_price_data):
+    def bulk_delete(self, distance_price_data):
         distance_prices = []
         for distance_price in distance_price_data:
             distance_prices.append(distance_price["id"])

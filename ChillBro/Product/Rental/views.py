@@ -115,4 +115,4 @@ class RentalView(ProductInterface):
         return rentals_data
 
     def get_sub_products_ids(self, product_ids):
-        return {}
+        return {}, {}

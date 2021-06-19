@@ -51,3 +51,14 @@ def get_product_id_wise_product_details(product_ids):
     
 def get_entity_details(entity_ids):
     return get_entity_details_for_entity_ids(entity_ids)
+
+
+def get_transport_price_data(transport_related_ids, transport_ids_with_duration):
+    from Product.exportapi import transport_price_data
+    return transport_price_data(transport_related_ids, transport_ids_with_duration)
+
+
+def calculate_product_net_price(product_price, discount):
+    from Product.exportapi import calculate_product_net_price_value
+    return calculate_product_net_price_value(product_price, discount)
+

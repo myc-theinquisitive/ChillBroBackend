@@ -2,7 +2,7 @@ import uuid
 from django.db.models import Q
 from django.db import models
 from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, \
-    PaymentMode
+    PaymentMode, TripType
 from datetime import datetime
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
@@ -152,6 +152,21 @@ class BookedProducts(models.Model):
 
     def __str__(self):
         return "Booked Product - {0}, {1}".format(self.booking_id, self.product_id)
+
+
+class BookedProductExtraDetails(models.Model):
+    booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
+    trip_type = models.CharField(max_length=30,
+                                 choices=[(trip_type.value, trip_type.value) for trip_type in TripType], null=True,
+                                 blank=True)
+    pickup_location = models.CharField(max_length=36, blank=True, null=True)
+    drop_location = models.CharField(max_length=36, blank=True, null=True)
+    km_limit = models.PositiveIntegerField()
+    km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    is_infinity = models.BooleanField(default=False)
+    single_trip_return_value_per_km = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
 
 class CheckInDetailsManager(models.Manager):

@@ -33,6 +33,12 @@ class BookedProductsSerializer(serializers.ModelSerializer):
             new_products.append(add_booking_product)
         return BookedProducts.objects.bulk_create(new_products)
 
+    
+class BookedProductExtraDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookedProductExtraDetails
+        fields = '__all__'
+
 
 class CheckInDetailsSerializer(serializers.ModelSerializer):
     class Meta:

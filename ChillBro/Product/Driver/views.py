@@ -184,4 +184,7 @@ class DriverView(ProductInterface):
         return drivers_data
 
     def get_sub_products_ids(self, product_ids):
+        return {}, {}
+
+    def get_transport_price_data(self, product_ids, product_ids_with_duration):
         return {}

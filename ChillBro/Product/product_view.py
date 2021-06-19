@@ -643,11 +643,25 @@ class ProductView(ProductInterface):
             group_products_by_type[product.type].append(product.id)
 
         all_sub_products_ids = defaultdict(list)
+        all_sub_products_data = defaultdict(list)
         for type in group_products_by_type:
             product_specific_view, product_key = self.get_view_and_key_by_type(type)
 
-            sub_products_ids_of_specific_data = product_specific_view.get_sub_products_ids(group_products_by_type[type])
-            all_sub_products_ids.update(sub_products_ids_of_specific_data)
+            sub_products_ids_of_specific_type, sub_products_data_of_specific_type = product_specific_view \
+                .get_sub_products_ids(group_products_by_type[type])
+            all_sub_products_ids.update(sub_products_ids_of_specific_type)
+            all_sub_products_data.update(sub_products_data_of_specific_type)
 
-        return all_sub_products_ids
+        return all_sub_products_ids, all_sub_products_data
+
+    def get_transport_price_data(self, transport_ids_by_type, transport_ids_with_duration):
+        all_products_prices = {}
+        for type in transport_ids_with_duration:
+            product_specific_view, product_key = self.get_view_and_key_by_type(type)
+
+            product_price_data = product_specific_view.get_transport_price_data(transport_ids_by_type[type], \
+                                                                                transport_ids_with_duration[type] )
+            all_products_prices.update(product_price_data)
+
+        return all_products_prices
 

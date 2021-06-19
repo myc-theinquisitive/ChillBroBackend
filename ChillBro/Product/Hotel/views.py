@@ -295,4 +295,4 @@ class HotelView(ProductInterface):
         return hotel_rooms_data
 
     def get_sub_products_ids(self, product_ids):
-        return {}
+        return {}, {}

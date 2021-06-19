@@ -11,7 +11,7 @@ from .product_view import ProductView
 
 def get_product_id_wise_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
-    sub_products_ids = ProductView().get_sub_products_ids(product_ids)
+    sub_products_ids, sub_products_data = ProductView().get_sub_products_ids(product_ids)
 
     if not products:
         products = []
@@ -23,6 +23,7 @@ def get_product_id_wise_details(product_ids):
             'product_id': each_product.id,
             'price': each_product.discounted_price,
             'net_value_details': calculate_product_net_price(each_product.price, discount),
+            'discount': discount,
             'quantity_unlimited': each_product.quantity_unlimited,
             'quantity': each_product.quantity,
             'name': each_product.name,
@@ -51,10 +52,13 @@ def get_product_id_wise_details(product_ids):
                 combo_products[each_combo_product.combo_item.id] = combo_product_data
         product_data['combo_products'] = combo_products
         sub_products = defaultdict()
+        sub_product_data = defaultdict()
         if each_product.has_sub_products:
             sub_products = sub_products_ids[each_product.id]
+            sub_product_data = sub_products_data[each_product.id]
 
         product_data['sub_products'] = sub_products
+        product_data['sub_product_data'] = sub_product_data
         product_id_wise_details[each_product.id] = product_data
 
     return product_id_wise_details
@@ -62,6 +66,7 @@ def get_product_id_wise_details(product_ids):
 
 def get_entity_id_and_entity_type(product_id):
     try:
+        print(product_id,"product_id")
         product = Product.objects.get(id=product_id)
     except ObjectDoesNotExist:
         return None, None
@@ -100,3 +105,13 @@ def seller_products_starting_price_query(seller_id):
 def get_sellers_product_stating_price(seller_ids):
     return Product.objects.filter(seller_id__in=seller_ids).values('seller_id') \
         .annotate(starting_price=Min('discounted_price')).values('seller_id', 'starting_price')
+
+
+def transport_price_data(transport_related_ids, transport_ids_with_duration):
+    from .views import ProductView
+    product_view = ProductView()
+    return product_view.get_transport_price_data(transport_related_ids, transport_ids_with_duration)
+
+
+def calculate_product_net_price_value(total_price, discount):
+    return calculate_product_net_price(total_price, discount)

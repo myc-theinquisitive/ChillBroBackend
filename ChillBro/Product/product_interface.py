@@ -27,6 +27,4 @@ class ProductInterface(abc.ABC):
     def get_by_ids(self, product_ids):
         pass
 
-    @abc.abstractmethod
-    def get_sub_products_ids(self,product_ids):
-        pass
+

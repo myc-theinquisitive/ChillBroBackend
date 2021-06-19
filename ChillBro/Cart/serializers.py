@@ -40,6 +40,12 @@ class CartProductsSerializer(serializers.ModelSerializer):
         return CartProducts.objects.bulk_update(cart_products,['quantity','size'])
 
 
+class CartProductExtraDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartProductExtraDetails
+        fields = '__all__'
+
+
 class AddProductToCartSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
     quantity = serializers.IntegerField(required=True)
