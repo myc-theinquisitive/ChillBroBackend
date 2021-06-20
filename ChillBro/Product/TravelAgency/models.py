@@ -28,7 +28,7 @@ class TravelAgency(models.Model):
     tags = models.TextField(validators=[is_json])
 
     def __str__(self):
-        return "Travel Agency: {0}".format(self.name)
+        return "Travel Agency: {0}".format(self.product.name)
 
 
 class TravelAgencyPlaces(models.Model):
@@ -41,7 +41,7 @@ class TravelAgencyPlaces(models.Model):
         unique_together = ('travel_agency', 'place', 'order',)
 
     def __str__(self):
-        return "Agency Place - {0}, {1}".format(self.travel_agency.name, self.place.name)
+        return "Agency Place - {0}, {1}".format(self.travel_agency.product.name, self.place.name)
 
 
 class TravelAgencyImage(models.Model):

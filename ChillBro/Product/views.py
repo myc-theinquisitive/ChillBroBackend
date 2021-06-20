@@ -113,10 +113,16 @@ class ProductList(APIView):
     product_view = ProductView()
 
     def post(self, request):
+
+        request.data['created_by'] = request.user.id
+        print(request.data, ' request data make own trip ')
+
         is_valid, errors = self.product_view.validate_create_data(request.data)
         if not is_valid:
             return Response(errors, 400)
 
+        # print(request.data['make_your_own_trip'],' request data make own trip ')
+        # request.data['make_your_own_trip']['created_by'] = request.user.id
         response_data = self.product_view.create(request.data)
         return Response(data=response_data, status=201)
 
@@ -233,7 +239,7 @@ class GetProductsByCategory(generics.ListAPIView):
             return []
 
         result_category_ids = category_ids
-        next_level_category_ids = Category.objects.filter(parent_category_id__in=category_ids)\
+        next_level_category_ids = Category.objects.filter(parent_category_id__in=category_ids) \
             .values_list('id', flat=True)
         next_level_category_ids = list(next_level_category_ids)
         result_category_ids.extend(next_level_category_ids)

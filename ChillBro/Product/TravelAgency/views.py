@@ -31,7 +31,7 @@ class TravelAgencyView(ProductInterface):
     def initialize_product_class(self, travel_agency_data):
         travel_agency_object_defined = self.travel_agency_object is not None
         travel_agency_data_defined = travel_agency_data is not None
-        print(travel_agency_data, 'travel agency data')
+
         if travel_agency_data_defined:
             if "images" in travel_agency_data:
                 self.travel_agency_images = travel_agency_data.pop("images", [])
@@ -228,7 +228,6 @@ class TravelAgencyView(ProductInterface):
         if "delete" in self.characteristics_data:
             delete_characteristics = self.characteristics_data["delete"]
             TravelAgencyCharacteristicsSerializer.bulk_delete(self.travel_agency_object.id, delete_characteristics)
-
 
 
     @staticmethod
