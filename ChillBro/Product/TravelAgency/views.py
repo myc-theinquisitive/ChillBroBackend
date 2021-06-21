@@ -13,7 +13,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .wrapper import get_place_id_wise_details
+from .wrapper import get_place_id_wise_details, check_valid_place_ids
 
 
 class TravelAgencyView(ProductInterface):
@@ -85,6 +85,12 @@ class TravelAgencyView(ProductInterface):
             is_valid = False
             errors["characteristics"] = agency_characteristics_serializer.errors
 
+        place_ids = list(map(lambda  x: x['place'],self.places_data))
+        is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+
+        if not is_place_ids_valid:
+            is_valid = False
+            errors['incorrect place ids'] = invalid_place_ids
         return is_valid, errors
 
     def create(self, travel_agency_data):
@@ -103,8 +109,7 @@ class TravelAgencyView(ProductInterface):
                 ],
                 characteristics:[
                     {
-                        "NAME": STRING,
-                        "ICON_URL":STRING
+                        "travel_characteristics": string
                     }
                 ]
                 images: [
@@ -165,11 +170,12 @@ class TravelAgencyView(ProductInterface):
                     place_ids.append(travel_agency_place["place"])
 
                 # TODO: validate place ids
-                # invalid_product_ids = get_invalid_product_ids(product_ids)
-                invalid_place_ids = []
-                if len(invalid_place_ids) != 0:
+
+                is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+
+                if not is_place_ids_valid:
                     is_valid = False
-                    errors["places"].append("Some of the places are not valid")
+                    errors['incorrect place ids'] = invalid_place_ids
             # No validations required for delete
 
         return is_valid, errors
@@ -189,6 +195,16 @@ class TravelAgencyView(ProductInterface):
                     },
                 ],
                 'delete': ['place_id']
+            }
+            "characteristics": {
+                "add":[
+                    {
+                        "travel_characteristics": string
+                    }
+                ],
+                "delete":[
+                    characteristics_ids
+                ]
             }
         }
         """
@@ -213,7 +229,6 @@ class TravelAgencyView(ProductInterface):
             delete_places = self.places_data["delete"]
             TravelAgencyPlacesSerializer.bulk_delete(self.travel_agency_object.id, delete_places)
 
-
         travel_agency_characteristics_add_dicts = []
         if "add" in self.characteristics_data:
             for characteristic_dict in self.characteristics_data["add"]:
@@ -228,7 +243,6 @@ class TravelAgencyView(ProductInterface):
         if "delete" in self.characteristics_data:
             delete_characteristics = self.characteristics_data["delete"]
             TravelAgencyCharacteristicsSerializer.bulk_delete(self.travel_agency_object.id, delete_characteristics)
-
 
     @staticmethod
     def get_travel_agency_id_wise_places_details(travel_agency_ids):
@@ -275,6 +289,7 @@ class TravelAgencyView(ProductInterface):
             .values('travel_agency').annotate(count=Count('id')).values('travel_agency_id', 'count')
 
         travel_agency_id_wise_places_count = defaultdict(int)
+
         for travel_agency_place_count in travel_agency_places_count:
             travel_agency_id_wise_places_count[travel_agency_place_count["travel_agency_id"]] = \
                 travel_agency_place_count["count"]
@@ -283,17 +298,16 @@ class TravelAgencyView(ProductInterface):
 
     @staticmethod
     def get_travel_agency_id_wise_characteristics(travel_agency_ids):
-        travel_agency_characteristics = TravelAgencyCharacteristics.objects.filter(travel_agency__in=travel_agency_ids)
+        travel_agency_characteristics = TravelAgencyCharacteristics.objects.filter(
+            travel_agency__in=travel_agency_ids).select_related('travel_characteristics')
 
         travel_agency_wise_characteristics = defaultdict(list)
         for travel_agency_characteristic in travel_agency_characteristics:
-            travel_characteristic = TravelCharacteristics.objects.get(
-                id=travel_agency_characteristic.travel_characteristics_id)
-            icon_url = travel_characteristic.icon_url.url
+            icon_url = travel_agency_characteristic.travel_characteristics.icon_url.url
             icon_url = icon_url.replace(settings.IMAGE_REPLACED_STRING, "")
             travel_agency_wise_characteristics[travel_agency_characteristic.travel_agency_id].append(
                 {
-                    "name": travel_characteristic.name,
+                    "name": travel_agency_characteristic.travel_characteristics.name,
                     "icon_url": icon_url
                 }
             )
@@ -314,7 +328,8 @@ class TravelAgencyView(ProductInterface):
         travel_agency_id_wise_images_dict = self.get_travel_agency_id_wise_images([self.travel_agency_object.id])
         travel_agency_data["images"] = travel_agency_id_wise_images_dict[self.travel_agency_object.id]
 
-        travel_agency_id_wise_characteristics_dict = self.get_travel_agency_id_wise_characteristics([self.travel_agency_object.id])
+        travel_agency_id_wise_characteristics_dict = self.get_travel_agency_id_wise_characteristics(
+            [self.travel_agency_object.id])
         travel_agency_data["characteristics"] = travel_agency_id_wise_characteristics_dict[self.travel_agency_object.id]
 
         return travel_agency_data
@@ -326,16 +341,13 @@ class TravelAgencyView(ProductInterface):
         travel_agencys_data = travel_agency_serializer.data
 
         travel_agency_id_wise_images_dict = self.get_travel_agency_id_wise_images(travel_agency_ids)
-        travel_agency_id_wise_places_count = self.get_travel_agency_id_wise_places_count(travel_agency_ids)
         travel_agency_id_wise_places = self.get_travel_agency_id_wise_places_details(travel_agency_ids)
         travel_agency_id_wise_characteristics_dict = self.get_travel_agency_id_wise_characteristics(travel_agency_ids)
 
         for travel_agency_data in travel_agencys_data:
-            travel_agency_data["places_count"] = travel_agency_id_wise_places_count[travel_agency_data["id"]]
             travel_agency_data["images"] = travel_agency_id_wise_images_dict[travel_agency_data["id"]]
             travel_agency_data['places'] = travel_agency_id_wise_places[travel_agency_data["id"]]
             travel_agency_data['characteristics'] = travel_agency_id_wise_characteristics_dict[travel_agency_data["id"]]
-
 
         return travel_agencys_data
 
@@ -350,3 +362,35 @@ class TravelCharacteristicsDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsSuperAdminOrMYCEmployee,)
     queryset = TravelCharacteristics.objects.all()
     serializer_class = TravelCharacteristicsSerializer
+
+
+class TravelAgencyImageCreate(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
+    queryset = TravelAgencyImage.objects.all()
+    serializer_class = TravelAgencyImageSerializer
+
+    def post(self, request, *args, **kwargs):
+        try:
+            travel_package = TravelAgency.objects.get(id=request.data['travel_package'])
+        except ObjectDoesNotExist:
+            return Response({"errors": "Travel Agency does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        serializer.create(request.data)
+        return Response({"message": "Travel Agency Image added successfully"}, status=status.HTTP_201_CREATED)
+
+
+class TravelAgencyImageDelete(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
+    queryset = TravelAgencyImage.objects.all()
+    serializer_class = TravelAgencyImageSerializer
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            travel_package_image = TravelAgencyImage.objects.get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            return Response({"errors": "Travel Agency image does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().delete(request, *args, **kwargs)

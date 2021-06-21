@@ -11,7 +11,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .wrapper import get_travel_package_id_wise_vehicles_count, get_place_id_wise_details
+from .wrapper import get_travel_package_id_wise_vehicles_count, get_place_id_wise_details, check_valid_place_ids
 
 
 class TravelPackageView(ProductInterface):
@@ -66,6 +66,13 @@ class TravelPackageView(ProductInterface):
             is_valid = False
             errors["places"] = package_places_serializer.errors
         # TODO: validate place ids
+
+        place_ids = list(map(lambda  x: x['place'],self.places_data))
+        is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+
+        if not is_place_ids_valid:
+            is_valid = False
+            errors['incorrect place ids'] = invalid_place_ids
 
         # Validating images
         travel_package_image_serializer = TravelPackageImageSerializer(data=self.travel_package_images, many=True)
@@ -143,11 +150,13 @@ class TravelPackageView(ProductInterface):
                     place_ids.append(travel_package_place["place"])
 
                 # TODO: validate place ids
-                # invalid_product_ids = get_invalid_product_ids(product_ids)
-                invalid_place_ids = []
-                if len(invalid_place_ids) != 0:
+
+                is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+
+                if not is_place_ids_valid:
                     is_valid = False
-                    errors["places"].append("Some of the places are not valid")
+                    errors['incorrect place ids'] = invalid_place_ids
+
             # No validations required for delete
 
         return is_valid, errors

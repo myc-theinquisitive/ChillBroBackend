@@ -97,7 +97,6 @@ class ProductView(ProductInterface):
             self.product_serializer = ProductSerializer()
 
     def validate_create_data(self, product_data: Dict) -> (bool, Dict):
-        print(product_data,' product data in product view')
         from .views import get_invalid_product_ids
 
         is_valid = True
@@ -220,7 +219,6 @@ class ProductView(ProductInterface):
         }
         """
 
-        print(product_data, 'product dataa')
         base_product = self.product_serializer.create(product_data)
         self.product_specific_data["product"] = base_product.id
 

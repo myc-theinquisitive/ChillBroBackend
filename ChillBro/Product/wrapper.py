@@ -19,8 +19,7 @@ def is_entity_id_valid(entity_id):
 
 
 def get_seller_id_wise_seller_details(seller_ids):
-    # if MYC_ID in seller_ids:
-    #
+
     sellers_details = get_entity_details_for_entity_ids(seller_ids)
     seller_id_wise_seller_details = defaultdict(dict)
     for seller_details in sellers_details:

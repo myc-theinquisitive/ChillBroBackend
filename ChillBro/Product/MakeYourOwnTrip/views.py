@@ -3,7 +3,7 @@ from .serializers import MakeYourOwnTripSerializer, MakeYourOwnTripPlacesSeriali
 from typing import Dict
 from collections import defaultdict
 from .models import MakeYourOwnTrip, MakeYourOwnTripPlaces
-from .wrapper import get_place_id_wise_details
+from .wrapper import get_place_id_wise_details, check_valid_place_ids
 
 
 class MakeYourOwnTripView(ProductInterface):
@@ -13,7 +13,7 @@ class MakeYourOwnTripView(ProductInterface):
         self.make_your_own_trip_serializer = None
         self.make_your_own_trip_object = None
 
-        self.places_data = {}
+        self.places_data = []
 
     # initialize the instance variables before accessing
     def initialize_product_class(self, make_your_own_trip_data):
@@ -58,6 +58,13 @@ class MakeYourOwnTripView(ProductInterface):
             is_valid = False
             errors["places"] = make_your_own_trip_places_serializer.errors
 
+        place_ids = list(map(lambda  x: x['place'],self.places_data))
+        is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+
+        if not is_place_ids_valid:
+            is_valid = False
+            errors['incorrect place ids'] = invalid_place_ids
+
         return is_valid, errors
 
     def create(self, make_your_own_trip_data):
@@ -65,9 +72,9 @@ class MakeYourOwnTripView(ProductInterface):
         make_your_own_trip: {
             "product_id": string, # internal data need not be validated
             "created_by" : string
-            "places": {
+            "places": [
                 place: string
-            }
+            ]
         }
         """
 
@@ -109,11 +116,11 @@ class MakeYourOwnTripView(ProductInterface):
                     place_ids.append(make_your_own_trip_place["place"])
 
                 # TODO: validate place ids
-                # invalid_product_ids = get_invalid_product_ids(product_ids)
-                invalid_place_ids = []
-                if len(invalid_place_ids) != 0:
+                is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+
+                if not is_place_ids_valid:
                     is_valid = False
-                    errors["places"].append("Some of the places are not valid")
+                    errors['incorrect place ids'] = invalid_place_ids
 
         return is_valid, errors
 
@@ -158,9 +165,7 @@ class MakeYourOwnTripView(ProductInterface):
         make_your_own_trip_id_wise_places = defaultdict(list)
         for make_your_own_trip_place in make_your_own_trip_places:
             make_your_own_trip_id_wise_places[make_your_own_trip_place.make_your_own_trip_id].append(
-                {
-                    "place": place_id_wise_details[make_your_own_trip_place.place_id],
-                }
+                place_id_wise_details[make_your_own_trip_place.place_id],
             )
 
         return make_your_own_trip_id_wise_places
