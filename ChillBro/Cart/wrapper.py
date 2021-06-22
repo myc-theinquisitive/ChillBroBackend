@@ -47,3 +47,13 @@ def get_entity_type_and_sub_type_for_entity_id(entity_id):
 
 def post_create_address(address_data):
     return create_address(address_data)
+
+
+def check_valid_duration(product_ids, start_time, end_time):
+    from Product.exportapi import check_valid_duration_for_products
+    return check_valid_duration_for_products(product_ids, start_time, end_time)
+
+
+def get_product_price_values(group_product_ids_by_type, group_product_details_by_type):
+    from Product.exportapi import get_product_values
+    return get_product_values(group_product_ids_by_type, group_product_details_by_type)

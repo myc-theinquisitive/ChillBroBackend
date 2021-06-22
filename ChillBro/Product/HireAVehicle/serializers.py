@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HireAVehicle, HireAVehicleDistancePrice
+from .models import HireAVehicle, HireAVehicleDistancePrice, HireAVehicleDurationDetails
 
 
 class HireAVehicleSerializer(serializers.ModelSerializer):
@@ -44,23 +44,32 @@ class HireAVehicleDistancePriceSerializer(serializers.ModelSerializer):
         data['hire_a_vehicle'] = instance.hire_a_vehicle_id
         return data
 
-    def bulk_create(self, validated_data):
-        print(validated_data,"validated data")
-        distance_prices = []
-        for distance_price in validated_data:
-            distance_price_object = HireAVehicleDistancePrice(
-                hire_a_vehicle=distance_price["hire_a_vehicle"],
-                duration_type=distance_price["duration_type"],
-                km_limit=distance_price["km_limit"],
-                km_price=distance_price["km_price"],
-                excess_km_price=distance_price["excess_km_price"],
-                excess_duration_price = distance_price["excess_duration_price"],
-                is_infinity=distance_price["is_infinity"],
-                single_trip_return_value_per_km=distance_price["single_trip_return_value_per_km"],
-                min_time_duration=distance_price["min_time_duration"],
-                max_time_duration=distance_price["max_time_duration"]
-            )
-            distance_prices.append(distance_price_object)
-        print(distance_prices,"distance prices")
-        some = HireAVehicleDistancePrice.objects.bulk_create(distance_prices)
-        print(some,"final")
+    def create(self, validated_data):
+        return HireAVehicleDistancePrice.objects.create(
+            hour_price = validated_data["hour_price"], day_price = validated_data["day_price"],\
+            excess_km_price=validated_data["excess_km_price"], is_km_infinity=validated_data["is_km_infinity"],\
+            km_hour_limit=validated_data["km_hour_limit"], km_day_limit=validated_data["km_day_limit"],\
+            excess_hour_duration_price=validated_data["excess_hour_duration_price"], \
+            excess_day_duration_price=validated_data["excess_day_duration_price"], \
+            single_trip_return_value_per_km=validated_data["single_trip_return_value_per_km"],\
+            hire_a_vehicle=validated_data["hire_a_vehicle"])
+
+
+class HireAVehicleDurationDetailsSerializer(serializers.ModelSerializer):
+    # overriding validation
+    hire_a_vehicle = serializers.CharField(max_length=36, default="")
+
+    class Meta:
+        model = HireAVehicleDurationDetails
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        data = super(HireAVehicleDurationDetailsSerializer, self).to_representation(instance)
+        data['hire_a_vehicle'] = instance.hire_a_vehicle_id
+        return data
+
+    def create(self, validated_data):
+        return HireAVehicleDurationDetails.objects.create(
+            min_hour_duration=validated_data["min_hour_duration"],max_hour_duration=validated_data["max_hour_duration"],\
+            min_day_duration=validated_data["min_day_duration"],max_day_duration=validated_data["max_day_duration"],\
+            hire_a_vehicle=validated_data["hire_a_vehicle"])

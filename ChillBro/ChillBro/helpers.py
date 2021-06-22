@@ -1,4 +1,5 @@
 from datetime import date, timedelta, datetime
+from django.conf import settings
 
 
 def get_today_day():
@@ -59,3 +60,7 @@ def get_previous_time_period(date_filter):
         month = today - timedelta(get_today_date())
         previous_month = month - timedelta(days_in_months[today.month] + 1)
         return previous_month, month
+
+
+def get_date_format():
+    return settings.DATE_FORMAT if hasattr(settings, 'DATE_FORMAT') else "%Y-%m-%dT%H:%M:%S"

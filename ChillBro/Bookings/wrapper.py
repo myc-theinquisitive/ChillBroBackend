@@ -6,11 +6,6 @@ from Coupons.exportapi import coupon_value
 from Entity.export_apis import get_entity_details_for_entity_ids
 
 
-def get_discounted_value(coupon_id, user, entity_ids, product_ids, product_type, total_money):
-    # Product types are same as entity types
-    return coupon_value(coupon_id, user, entity_ids, product_ids, [product_type], total_money)
-
-
 def business_client_review_on_customer(review, rating, booking_id, created_by):
     data = {'related_id': booking_id, 'comment': review, 'rating': int(rating), 'created_by': created_by}
     return insert_business_client_review_for_customer(data)
@@ -53,12 +48,6 @@ def get_entity_details(entity_ids):
     return get_entity_details_for_entity_ids(entity_ids)
 
 
-def get_transport_price_data(transport_related_ids, transport_ids_with_duration):
-    from Product.exportapi import transport_price_data
-    return transport_price_data(transport_related_ids, transport_ids_with_duration)
-
-
-def calculate_product_net_price(product_price, discount):
-    from Product.exportapi import calculate_product_net_price_value
-    return calculate_product_net_price_value(product_price, discount)
-
+def get_product_prices_by_duration(products):
+    from Product.exportapi import get_product_final_prices
+    return get_product_final_prices(products)

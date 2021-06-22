@@ -643,25 +643,95 @@ class ProductView(ProductInterface):
             group_products_by_type[product.type].append(product.id)
 
         all_sub_products_ids = defaultdict(list)
-        all_sub_products_data = defaultdict(list)
         for type in group_products_by_type:
             product_specific_view, product_key = self.get_view_and_key_by_type(type)
 
-            sub_products_ids_of_specific_type, sub_products_data_of_specific_type = product_specific_view \
-                .get_sub_products_ids(group_products_by_type[type])
+            sub_products_ids_of_specific_type = product_specific_view.get_sub_products_ids(group_products_by_type[type])
             all_sub_products_ids.update(sub_products_ids_of_specific_type)
-            all_sub_products_data.update(sub_products_data_of_specific_type)
 
-        return all_sub_products_ids, all_sub_products_data
+        return all_sub_products_ids
 
-    def get_transport_price_data(self, transport_ids_by_type, transport_ids_with_duration):
+    def get_price_data(self, product_ids):
+        products = Product.objects.filter(id__in=product_ids)
+
+        group_products_by_type = defaultdict(list)
+        for product in products:
+            group_products_by_type[product.type].append(product.id)
+
+        products_price_data = defaultdict()
+        for type in group_products_by_type:
+            product_specific_view, product_key = self.get_view_and_key_by_type(type)
+
+            price_data_of_specific_type = product_specific_view.get_price_data(group_products_by_type[type])
+            products_price_data.update(price_data_of_specific_type)
+
+        return products_price_data
+
+    def get_duration_data(self, product_ids):
+        products = Product.objects.filter(id__in=product_ids)
+
+        group_products_by_type = defaultdict(list)
+        for product in products:
+            group_products_by_type[product.type].append(product.id)
+
+        all_duration_data = defaultdict()
+        for type in group_products_by_type:
+            product_specific_view, product_key = self.get_view_and_key_by_type(type)
+
+            duration_data_of_specific_type = product_specific_view.get_duration_data(group_products_by_type[type])
+            all_duration_data.update(duration_data_of_specific_type)
+
+        return all_duration_data
+
+    def calculate_starting_prices(self, transport_ids_by_type, transport_ids_with_duration):
         all_products_prices = {}
         for type in transport_ids_with_duration:
             product_specific_view, product_key = self.get_view_and_key_by_type(type)
 
-            product_price_data = product_specific_view.get_transport_price_data(transport_ids_by_type[type], \
+            product_price_data = product_specific_view.calculate_starting_prices(transport_ids_by_type[type], \
                                                                                 transport_ids_with_duration[type] )
             all_products_prices.update(product_price_data)
 
         return all_products_prices
+
+    def calculate_final_prices(self, products):
+        product_ids = products.keys()
+        all_products = Product.objects.filter(id__in=product_ids)
+
+        group_products_by_type = defaultdict(list)
+        for product in all_products:
+            group_products_by_type[product.type].append(products[product.id])
+
+        all_products_final_prices = defaultdict()
+        for type in group_products_by_type:
+            product_specific_view, product_key = self.get_view_and_key_by_type(type)
+
+            products_final_prices = product_specific_view.calculate_final_prices(products)
+
+            all_products_final_prices.update(products_final_prices)
+
+        return all_products_final_prices
+
+
+    def check_valid_duration(self, product_ids, start_time, end_time):
+        products = Product.objects.filter(id__in=product_ids)
+
+        group_products_by_type = defaultdict(list)
+        for product in products:
+            group_products_by_type[product.type].append(product.id)
+
+        overall_is_valid = True
+        overall_errors = defaultdict(list)
+        for type in group_products_by_type:
+            product_specific_view, product_key = self.get_view_and_key_by_type(type)
+
+            is_valid, errors = product_specific_view.check_valid_duration(group_products_by_type[type], start_time, end_time)
+            if not is_valid:
+                overall_is_valid = is_valid
+                overall_errors[type] = errors
+
+        return overall_is_valid, overall_errors
+
+
+
 

@@ -154,19 +154,25 @@ class BookedProducts(models.Model):
         return "Booked Product - {0}, {1}".format(self.booking_id, self.product_id)
 
 
-class BookedProductExtraDetails(models.Model):
+class TransportBookingDetails(models.Model):
     booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
     trip_type = models.CharField(max_length=30,
                                  choices=[(trip_type.value, trip_type.value) for trip_type in TripType], null=True,
                                  blank=True)
     pickup_location = models.CharField(max_length=36, blank=True, null=True)
     drop_location = models.CharField(max_length=36, blank=True, null=True)
-    km_limit = models.PositiveIntegerField()
-    km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    km_hour_limit = models.PositiveIntegerField(default=0)
+    km_day_limit = models.PositiveIntegerField(default=0)
+    km_hour_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    km_day_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    excess_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    is_infinity = models.BooleanField(default=False)
+    excess_hour_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_day_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    is_kms_infinity = models.BooleanField(default=False)
     single_trip_return_value_per_km = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    booking_starting_vehicle_km_value = models.PositiveIntegerField(default=0)
+    booking_ending_vehicle_km_value = models.PositiveIntegerField(default=0)
+    km_limit_choosen = models.PositiveIntegerField(default=0)
 
 
 class CheckInDetailsManager(models.Manager):

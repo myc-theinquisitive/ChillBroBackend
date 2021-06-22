@@ -1,5 +1,6 @@
 import enum
-from ChillBro.constants import EntityType, DateFilters
+from ChillBro.constants import EntityType, DateFilters, ProductTypes, TripType, DurationType, \
+    COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, FIXED_FEE_PERCENT, GST_PERCENT
 
 
 class BookingStatus(enum.Enum):
@@ -41,22 +42,3 @@ class PaymentMode(enum.Enum):
     full = "FULL"
 
 
-class ProductTypes(enum.Enum):
-    Hotel = "HOTEL"
-    Rental = "RENTAL"
-    Driver = "DRIVER"
-    Vehicle = "VEHICLE"
-    Hire_A_Vehicle = "HIRE_A_VEHICLE"
-    Travel_Package_Vehicle = "TRAVEL_PACKAGE_VEHICLE"
-    Self_Rental = "SELF_RENTAL"
-
-
-class TripType(enum.Enum):
-    round = "ROUND"
-    single = "SINGLE"
-
-
-class DurationType(enum.Enum):
-    hour = "HOUR"
-    day = "DAY"
-    week = "WEEK"

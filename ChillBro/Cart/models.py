@@ -43,12 +43,13 @@ class CartProducts(models.Model):
         unique_together = (("cart", "product_id","hidden","parent_cart_product"),)
 
 
-class CartProductExtraDetails(models.Model):
+class TransportDetails(models.Model):
     cart_product = models.ForeignKey('CartProducts', on_delete=models.CASCADE)
     trip_type = models.CharField(max_length=30,
         choices=[(trip_type.value,trip_type.value) for trip_type in TripType], null=True, blank=True)
     pickup_location = models.CharField(max_length=36, blank=True, null=True)
     drop_location = models.CharField(max_length=36, blank=True, null=True)
+    km_limit_choosen = models.PositiveIntegerField(default=0)
 
 
 

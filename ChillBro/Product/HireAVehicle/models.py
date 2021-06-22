@@ -15,20 +15,25 @@ class HireAVehicle(models.Model):
 
 
 class HireAVehicleDistancePrice(models.Model):
-    duration_type = models.CharField(max_length=30, \
-                        choices=[(duration_type.value, duration_type.value) for duration_type in DurationType], \
-                        default = DurationType.hour.value)
-    km_limit = models.PositiveIntegerField()
-    km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    hour_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    day_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    excess_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    is_infinity = models.BooleanField(default=False)
+    km_hour_limit = models.PositiveIntegerField()
+    km_day_limit = models.PositiveIntegerField()
+    excess_hour_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_day_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    is_km_infinity = models.BooleanField(default=False)
     single_trip_return_value_per_km = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    min_time_duration = models.PositiveIntegerField(default=1)
-    max_time_duration = models.PositiveIntegerField(default=30)
     hire_a_vehicle = models.ForeignKey('HireAVehicle', on_delete=models.CASCADE)
 
-    class Meta:
-        unique_together = ('hire_a_vehicle', 'duration_type')
+
+class HireAVehicleDurationDetails(models.Model):
+    min_hour_duration = models.PositiveIntegerField(default=1)
+    max_hour_duration = models.PositiveIntegerField(default=24)
+    min_day_duration = models.PositiveIntegerField(default=1)
+    max_day_duration = models.PositiveIntegerField(default=31)
+    hire_a_vehicle = models.ForeignKey('HireAVehicle', on_delete=models.CASCADE)
+
+
 
 

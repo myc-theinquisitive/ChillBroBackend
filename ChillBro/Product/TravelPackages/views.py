@@ -292,11 +292,24 @@ class TravelPackageView(ProductInterface):
         return travel_packages_data
 
     def get_sub_products_ids(self, product_ids):
-        return {}, {}
-
-    def get_transport_price_data(self, product_ids, product_ids_with_duration):
         return {}
 
+    def get_price_data(self, product_ids):
+        return {}
+
+    def get_duration_data(self, product_ids):
+        return {}
+
+    def calculate_starting_prices(self, product_ids, product_ids_with_duration):
+        return {}
+
+    def calculate_final_prices(self, products):
+        return {}
+
+    def check_valid_duration(self, product_ids, start_time, end_time):
+        is_valid = True
+        errors = defaultdict(list)
+        return is_valid, errors
 
 class TravelPackageList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)

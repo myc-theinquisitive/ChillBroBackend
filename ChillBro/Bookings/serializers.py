@@ -34,9 +34,9 @@ class BookedProductsSerializer(serializers.ModelSerializer):
         return BookedProducts.objects.bulk_create(new_products)
 
     
-class BookedProductExtraDetailsSerializer(serializers.ModelSerializer):
+class TransportBookingDetailsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BookedProductExtraDetails
+        model = TransportBookingDetails
         fields = '__all__'
 
 
@@ -44,6 +44,15 @@ class CheckInDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CheckInDetails
         fields = '__all__'
+
+    def create(self, validated_data):
+         return CheckInDetails.objects.create(
+            booking = validated_data['booking'],
+            is_caution_deposit_collected= validated_data['is_caution_deposit_collected'],
+            caution_amount = validated_data['caution_amount'],
+            id_proof_type = validated_data['id_proof_type'],
+            id_image = validated_data['id_image']
+        )
 
 
 class CheckOutDetailsSerializer(serializers.ModelSerializer):

@@ -40,9 +40,9 @@ class CartProductsSerializer(serializers.ModelSerializer):
         return CartProducts.objects.bulk_update(cart_products,['quantity','size'])
 
 
-class CartProductExtraDetailsSerializer(serializers.ModelSerializer):
+class TransportDetailsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CartProductExtraDetails
+        model = TransportDetails
         fields = '__all__'
 
 

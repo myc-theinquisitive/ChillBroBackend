@@ -16,7 +16,7 @@ class SelfRental(models.Model):
         return "Product: {0}".format(self.product.name)
 
 
-class DistancePrice(models.Model):
+class SelfRentalDistancePrice(models.Model):
     price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     km_limit = models.PositiveIntegerField()
     excess_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -25,3 +25,12 @@ class DistancePrice(models.Model):
 
     class Meta:
         unique_together = ('self_rental', 'km_limit')
+
+
+class SelfRentalDurationDetails(models.Model):
+    min_hour_duration = models.PositiveIntegerField(default=1)
+    max_hour_duration = models.PositiveIntegerField(default=24)
+    min_day_duration = models.PositiveIntegerField(default=1)
+    max_day_duration = models.PositiveIntegerField(default=31)
+    self_rental = models.ForeignKey('SelfRental', on_delete=models.CASCADE)
+
