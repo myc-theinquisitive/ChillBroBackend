@@ -55,13 +55,16 @@ class TravelAgencyPlacesSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return TravelAgencyPlaces.objects.create(
             travel_agency_id=validated_data["travel_agency"], place_id=validated_data["place"],
-            order=validated_data["order"], type=validated_data["type"])
+            order=validated_data["order"], type=validated_data["type"],
+            day_number=validated_data['day_number']
+        )
 
     def update(self, instance, validated_data):
         instance.travel_agency_id = validated_data["travel_agency"]
         instance.place_id = validated_data["place"],
         instance.order = validated_data["order"]
         instance.type = validated_data["type"]
+        instance.day_number = validated_data["day_number"]
         instance.save()
 
     @staticmethod
@@ -72,7 +75,8 @@ class TravelAgencyPlacesSerializer(serializers.ModelSerializer):
                 travel_agency_id=agency_place['travel_agency'],
                 place_id=agency_place['place'],
                 type=agency_place['type'],
-                order=agency_place['order']
+                order=agency_place['order'],
+                day_number = agency_place['day_number']
             )
             all_agency_places.append(agency_place_obj)
         TravelAgencyPlaces.objects.bulk_create(all_agency_places)

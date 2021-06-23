@@ -59,13 +59,17 @@ class PackagePlacesSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return PackagePlaces.objects.create(
             travel_package_id=validated_data["travel_package"], place_id=validated_data["place"],
-            order=validated_data["order"], in_return=validated_data["in_return"])
+            order=validated_data["order"], in_return=validated_data["in_return"],
+            duration_to_reach=validated_data["duration_to_reach"], spending_time=validated_data["spending_time"]
+        )
 
     def update(self, instance, validated_data):
         instance.travel_package_id = validated_data["travel_package"]
         instance.place_id = validated_data["place"],
         instance.order = validated_data["order"]
         instance.in_return = validated_data["in_return"]
+        instance.duration_to_reach = validated_data["duration_to_reach"]
+        instance.spending_time = validated_data["spending_time"]
         instance.save()
 
     @staticmethod
@@ -76,7 +80,9 @@ class PackagePlacesSerializer(serializers.ModelSerializer):
                 travel_package_id=package_place['travel_package'],
                 place_id=package_place['place'],
                 in_return=package_place['in_return'],
-                order=package_place['order']
+                order=package_place['order'],
+                duration_to_reach=package_place['duration_to_reach'],
+                spending_time=package_place['spending_time']
             )
             all_package_places.append(package_place_obj)
         PackagePlaces.objects.bulk_create(all_package_places)

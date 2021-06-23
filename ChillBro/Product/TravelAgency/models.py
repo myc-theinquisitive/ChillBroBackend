@@ -35,6 +35,7 @@ class TravelAgencyPlaces(models.Model):
     travel_agency = models.ForeignKey("TravelAgency", on_delete=models.CASCADE, verbose_name="Travel Agency")
     type = models.CharField(max_length=20, choices=[(type.name, type.value) for type in PlaceTypes])
     place = models.ForeignKey("Place", on_delete=models.CASCADE, verbose_name="Agency Place")
+    day_number = models.IntegerField(verbose_name='Day Number')
     order = models.IntegerField()
 
     class Meta:

@@ -9,7 +9,6 @@ def get_id():
 class MakeYourOwnTrip(models.Model):
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
-    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     product = models.OneToOneField("Product", on_delete=models.CASCADE, verbose_name="Product")
 
     def __str__(self):

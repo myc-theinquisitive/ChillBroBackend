@@ -11,7 +11,8 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .wrapper import get_travel_package_id_wise_vehicles_count, get_place_id_wise_details, check_valid_place_ids
+from .wrapper import get_travel_package_id_wise_vehicles_count, get_place_id_wise_details, validate_place_ids
+from datetime import timedelta, datetime
 
 
 class TravelPackageView(ProductInterface):
@@ -67,8 +68,8 @@ class TravelPackageView(ProductInterface):
             errors["places"] = package_places_serializer.errors
         # TODO: validate place ids
 
-        place_ids = list(map(lambda  x: x['place'],self.places_data))
-        is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+        place_ids = list(map(lambda x: x['place'], self.places_data))
+        is_place_ids_valid, invalid_place_ids = validate_place_ids(place_ids)
 
         if not is_place_ids_valid:
             is_valid = False
@@ -95,7 +96,9 @@ class TravelPackageView(ProductInterface):
                 {
                     'place': string,
                     'order': int,
-                    'in_return': bool
+                    'in_return': bool,
+                    "spending_time": int,
+                    "duration_to_reach": int
                 }
             ]
             images: [
@@ -151,7 +154,7 @@ class TravelPackageView(ProductInterface):
 
                 # TODO: validate place ids
 
-                is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+                is_place_ids_valid, invalid_place_ids = validate_place_ids(place_ids)
 
                 if not is_place_ids_valid:
                     is_valid = False
@@ -175,7 +178,9 @@ class TravelPackageView(ProductInterface):
                     {
                         'place': string,
                         'order': int,
-                        'in_return': bool
+                        'in_return': bool,
+                    "spending_time": int,
+                    "duration_to_reach": int
                     },
                 ],
                 'delete': ['place_id']
@@ -193,7 +198,9 @@ class TravelPackageView(ProductInterface):
                     "travel_package": self.travel_package_object.id,
                     "place": place_dict["place"],
                     "in_return": place_dict["in_return"],
-                    "order": place_dict["order"]
+                    "order": place_dict["order"],
+                    "spending_time": place_dict["spending_time"],
+                    "duration_to_reach": place_dict["duration_to_reach"]
                 }
                 travel_package_places_add_dicts.append(travel_package_place_dict)
             PackagePlacesSerializer.bulk_create(travel_package_places_add_dicts)
@@ -204,7 +211,8 @@ class TravelPackageView(ProductInterface):
             PackagePlacesSerializer.bulk_delete(self.travel_package_object.id, delete_places)
 
     @staticmethod
-    def get_travel_package_id_wise_places_details(travel_package_ids):
+    def get_travel_package_id_wise_places_details(travel_package_ids, time):
+
         travel_package_places = PackagePlaces.objects.filter(travel_package_id__in=travel_package_ids)
 
         place_ids = []
@@ -215,12 +223,19 @@ class TravelPackageView(ProductInterface):
 
         travel_package_id_wise_forward_places = defaultdict(list)
         travel_package_id_wise_return_places = defaultdict(list)
+
         for travel_package_place in travel_package_places:
+            arrival_time = time + timedelta(minutes=travel_package_place.duration_to_reach)
+            departure_time = arrival_time + timedelta(minutes=travel_package_place.spending_time)
             if travel_package_place.in_return:
                 travel_package_id_wise_return_places[travel_package_place.travel_package_id].append(
                     {
                         "place": place_id_wise_details[travel_package_place.place_id],
                         "order": travel_package_place.order,
+                        "duration_to_reach": travel_package_place.duration_to_reach,
+                        "spending_time": travel_package_place.spending_time,
+                        "arrival_time": arrival_time,
+                        "departure_time": departure_time,
                     }
                 )
             else:
@@ -228,8 +243,13 @@ class TravelPackageView(ProductInterface):
                     {
                         "place": place_id_wise_details[travel_package_place.place_id],
                         "order": travel_package_place.order,
+                        "duration_to_reach": travel_package_place.duration_to_reach,
+                        "spending_time": travel_package_place.spending_time,
+                        "arrival_time": arrival_time,
+                        "departure_time": departure_time,
                     }
                 )
+            time = departure_time
 
         return travel_package_id_wise_forward_places, travel_package_id_wise_return_places
 
@@ -252,7 +272,7 @@ class TravelPackageView(ProductInterface):
 
     @staticmethod
     def get_travel_package_id_wise_places_count(travel_package_ids):
-        travel_package_places_count = PackagePlaces.objects.filter(travel_package_id__in=travel_package_ids)\
+        travel_package_places_count = PackagePlaces.objects.filter(travel_package_id__in=travel_package_ids) \
             .values('travel_package').annotate(count=Count('id')).values('travel_package_id', 'count')
 
         travel_package_id_wise_places_count = defaultdict(int)
@@ -262,14 +282,15 @@ class TravelPackageView(ProductInterface):
 
         return travel_package_id_wise_places_count
 
-    def get(self, travel_package_id):
+    def get(self, travel_package_id, time):
         self.travel_package_object = TravelPackage.objects.get(id=travel_package_id)
         self.initialize_product_class(None)
 
         travel_package_data = self.travel_package_serializer.data
 
-        travel_package_id_wise_forward_places, travel_package_id_wise_return_places\
-            = self.get_travel_package_id_wise_places_details([self.travel_package_object.id])
+        travel_package_id_wise_forward_places, travel_package_id_wise_return_places \
+            = self.get_travel_package_id_wise_places_details([self.travel_package_object.id],
+                                                             time=time)
 
         forward_places = travel_package_id_wise_forward_places[self.travel_package_object.id]
         return_places = travel_package_id_wise_return_places[self.travel_package_object.id]
@@ -340,9 +361,12 @@ class TravelPackageDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            response_data = self.travel_package_view.get(kwargs["pk"])
+            time = datetime.strptime(request.data['start_time'], settings.DATE_FORMAT)
+            response_data = self.travel_package_view.get(kwargs["pk"], time)
         except ObjectDoesNotExist:
             return Response({"errors": "Travel Package does not Exist!!!"}, 400)
+        except ValueError:
+            return Response({"errors":"invalid start time","message":"required format "+settings.DATE_FORMAT})
 
         return Response(data=response_data, status=status.HTTP_200_OK)
 

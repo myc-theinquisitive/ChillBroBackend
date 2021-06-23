@@ -13,7 +13,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .wrapper import get_place_id_wise_details, check_valid_place_ids
+from .wrapper import get_place_id_wise_details, validate_place_ids
 
 
 class TravelAgencyView(ProductInterface):
@@ -70,7 +70,6 @@ class TravelAgencyView(ProductInterface):
         if not agency_places_serializer.is_valid():
             is_valid = False
             errors["places"] = agency_places_serializer.errors
-        # TODO: validate place ids
 
         # Validating images
         travel_agency_image_serializer = TravelAgencyImageSerializer(data=self.travel_agency_images, many=True)
@@ -85,8 +84,8 @@ class TravelAgencyView(ProductInterface):
             is_valid = False
             errors["characteristics"] = agency_characteristics_serializer.errors
 
-        place_ids = list(map(lambda  x: x['place'],self.places_data))
-        is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+        place_ids = list(map(lambda x: x['place'], self.places_data))
+        is_place_ids_valid, invalid_place_ids = validate_place_ids(place_ids)
 
         if not is_place_ids_valid:
             is_valid = False
@@ -104,12 +103,13 @@ class TravelAgencyView(ProductInterface):
                     {
                         'place': string,
                         'order': int,
-                        'type': string
+                        'type': string,
+                        'day_number': int
                     }
                 ],
                 characteristics:[
                     {
-                        "travel_characteristics": string
+                        "travel_characteristic_id": id(string)
                     }
                 ]
                 images: [
@@ -169,14 +169,19 @@ class TravelAgencyView(ProductInterface):
                 for travel_agency_place in self.places_data["add"]:
                     place_ids.append(travel_agency_place["place"])
 
-                # TODO: validate place ids
-
-                is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+                is_place_ids_valid, invalid_place_ids = validate_place_ids(place_ids)
 
                 if not is_place_ids_valid:
                     is_valid = False
                     errors['incorrect place ids'] = invalid_place_ids
             # No validations required for delete
+
+        agency_characteristics_serializer = TravelAgencyCharacteristicsSerializer(data=self.characteristics_data['add'],
+                                                                                  many=True)
+        if not agency_characteristics_serializer.is_valid():
+            is_valid = False
+            errors["characteristics"] = agency_characteristics_serializer.errors
+
 
         return is_valid, errors
 
@@ -191,7 +196,8 @@ class TravelAgencyView(ProductInterface):
                     {
                         'place': string,
                         'order': int,
-                        'type': string
+                        'type': string,
+                        'day_number': int
                     },
                 ],
                 'delete': ['place_id']
@@ -199,7 +205,7 @@ class TravelAgencyView(ProductInterface):
             "characteristics": {
                 "add":[
                     {
-                        "travel_characteristics": string
+                        "travel_characteristics": id(string)
                     }
                 ],
                 "delete":[
@@ -215,13 +221,8 @@ class TravelAgencyView(ProductInterface):
         travel_agency_places_add_dicts = []
         if "add" in self.places_data:
             for place_dict in self.places_data["add"]:
-                travel_agency_place_dict = {
-                    "travel_agency": self.travel_agency_object.id,
-                    "place": place_dict["place"],
-                    "type": place_dict["type"],
-                    "order": place_dict["order"]
-                }
-                travel_agency_places_add_dicts.append(travel_agency_place_dict)
+                place_dict["travel_agency"] = self.travel_agency_object.id
+                travel_agency_places_add_dicts.append(place_dict)
             TravelAgencyPlacesSerializer.bulk_create(travel_agency_places_add_dicts)
 
         # Deleting Places for Travel Agency
@@ -254,13 +255,22 @@ class TravelAgencyView(ProductInterface):
 
         place_id_wise_details = get_place_id_wise_details(place_ids)
 
-        travel_agency_id_wise_places = defaultdict(list)
+        day_wise_places = defaultdict(list)
         for travel_agency_place in travel_agency_places:
-            travel_agency_id_wise_places[travel_agency_place.travel_agency_id].append(
+            day_wise_places[(travel_agency_place.travel_agency_id, travel_agency_place.day_number)].append(
                 {
                     "place": place_id_wise_details[travel_agency_place.place_id],
                     "order": travel_agency_place.order,
                     "type": travel_agency_place.type
+                }
+            )
+
+        travel_agency_id_wise_places = defaultdict(list)
+        for key in day_wise_places:
+            travel_agency_id_wise_places[key[0]].append(
+                {
+                    "day_number": key[1],
+                    "places": day_wise_places[key]
                 }
             )
 
@@ -341,12 +351,12 @@ class TravelAgencyView(ProductInterface):
         travel_agencys_data = travel_agency_serializer.data
 
         travel_agency_id_wise_images_dict = self.get_travel_agency_id_wise_images(travel_agency_ids)
-        travel_agency_id_wise_places = self.get_travel_agency_id_wise_places_details(travel_agency_ids)
+        travel_agency_id_wise_places_count = self.get_travel_agency_id_wise_places_count(travel_agency_ids)
         travel_agency_id_wise_characteristics_dict = self.get_travel_agency_id_wise_characteristics(travel_agency_ids)
 
         for travel_agency_data in travel_agencys_data:
             travel_agency_data["images"] = travel_agency_id_wise_images_dict[travel_agency_data["id"]]
-            travel_agency_data['places'] = travel_agency_id_wise_places[travel_agency_data["id"]]
+            travel_agency_data['places_count'] = travel_agency_id_wise_places_count[travel_agency_data["id"]]
             travel_agency_data['characteristics'] = travel_agency_id_wise_characteristics_dict[travel_agency_data["id"]]
 
         return travel_agencys_data

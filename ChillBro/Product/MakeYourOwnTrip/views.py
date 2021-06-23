@@ -3,7 +3,7 @@ from .serializers import MakeYourOwnTripSerializer, MakeYourOwnTripPlacesSeriali
 from typing import Dict
 from collections import defaultdict
 from .models import MakeYourOwnTrip, MakeYourOwnTripPlaces
-from .wrapper import get_place_id_wise_details, check_valid_place_ids
+from .wrapper import get_place_id_wise_details, validate_place_ids
 
 
 class MakeYourOwnTripView(ProductInterface):
@@ -39,7 +39,6 @@ class MakeYourOwnTripView(ProductInterface):
             self.make_your_own_trip_serializer = MakeYourOwnTripSerializer()
 
     def validate_create_data(self, make_your_own_trip_data: Dict) -> (bool, Dict):
-        print(make_your_own_trip_data, 'inside data of make my trip')
 
         is_valid = True
         errors = defaultdict(list)
@@ -59,7 +58,7 @@ class MakeYourOwnTripView(ProductInterface):
             errors["places"] = make_your_own_trip_places_serializer.errors
 
         place_ids = list(map(lambda  x: x['place'],self.places_data))
-        is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+        is_place_ids_valid, invalid_place_ids = validate_place_ids(place_ids)
 
         if not is_place_ids_valid:
             is_valid = False
@@ -115,8 +114,7 @@ class MakeYourOwnTripView(ProductInterface):
                 for make_your_own_trip_place in self.places_data["add"]:
                     place_ids.append(make_your_own_trip_place["place"])
 
-                # TODO: validate place ids
-                is_place_ids_valid, invalid_place_ids = check_valid_place_ids(place_ids)
+                is_place_ids_valid, invalid_place_ids = validate_place_ids(place_ids)
 
                 if not is_place_ids_valid:
                     is_valid = False

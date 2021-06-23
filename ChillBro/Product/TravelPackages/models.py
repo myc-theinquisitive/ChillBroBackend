@@ -31,6 +31,8 @@ class PackagePlaces(models.Model):
     place = models.ForeignKey("Place", on_delete=models.CASCADE, verbose_name="Package Place")
     order = models.IntegerField()
     in_return = models.BooleanField(default=False)
+    duration_to_reach = models.IntegerField()
+    spending_time = models.IntegerField()
 
     class Meta:
         unique_together = ('travel_package', 'place', 'order',)
