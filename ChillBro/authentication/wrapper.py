@@ -2,10 +2,9 @@ import json
 import requests
 from Wallet.models import Wallet
 from django.core.serializers.json import DjangoJSONEncoder
-
-
 # API class from https://pypi.python.org/pypi/tmdbsimple
 from UserApp.exportapi import check_valid_business_client, check_valid_employee
+
 
 class API(object):
     headers = {

@@ -1,3 +1,4 @@
+import json
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Subquery, OuterRef, PositiveIntegerField
 from rest_framework.permissions import IsAuthenticated
@@ -20,6 +21,11 @@ from .helpers import get_date_format, get_status
 from decimal import Decimal
 from rest_framework.response import Response
 from .Category.models import Category
+from django.core.cache import cache
+from django.conf import settings
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
+
+CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
 
 def get_invalid_product_ids(product_ids):
@@ -247,33 +253,40 @@ class GetProductsByCategory(generics.ListAPIView):
         return list(set(result_category_ids))
 
     def get(self, request, *args, **kwargs):
-
         input_serializer = GetProductsBySearchFilters(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't get products", "errors": input_serializer.errors}, 400)
 
-        try:
-            category = Category.objects.get(name__icontains=kwargs["slug"])
-        except ObjectDoesNotExist:
-            return Response({"errors": "Invalid Category!!!"}, 400)
-        all_category_ids = self.recursively_get_lower_level_categories([category.id])
+        # adding inputs other than request body data
+        request.data["category"] = kwargs["slug"]
+        request.data["page"] = request.query_params.get('page')
+        cache_key = json.dumps(request.data)
+        if cache_key in cache:
+            response_data = cache.get(cache_key)
+        else:
+            try:
+                category = Category.objects.get(name__icontains=kwargs["slug"])
+            except ObjectDoesNotExist:
+                return Response({"errors": "Invalid Category!!!"}, 400)
+            all_category_ids = self.recursively_get_lower_level_categories([category.id])
 
-        sort_filter = request.data["sort_filter"]
-        product_ids = self.apply_filters(all_category_ids, request.data)
-        self.queryset = Product.objects.filter(id__in=product_ids)
-        self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
+            sort_filter = request.data["sort_filter"]
+            product_ids = self.apply_filters(all_category_ids, request.data)
+            self.queryset = Product.objects.filter(id__in=product_ids)
+            self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
 
-        response = super().get(request, args, kwargs)
-        response_data = response.data
+            response = super().get(request, args, kwargs)
+            response_data = response.data
 
-        product_ids = []
-        for product in response_data["results"]:
-            product_ids.append(product["id"])
-        response_data["results"] = self.product_view.get_by_ids(product_ids)
+            product_ids = []
+            for product in response_data["results"]:
+                product_ids.append(product["id"])
+            response_data["results"] = self.product_view.get_by_ids(product_ids)
+            self.sort_results(response_data["results"], sort_filter)
+            cache.set(cache_key, response_data, timeout=CACHE_TTL)
 
         add_wishlist_status_for_products(request.user.id, response_data["results"])
-        self.sort_results(response_data["results"], sort_filter)
-        return response
+        return Response(response_data)
 
 
 class SearchProducts(generics.ListAPIView):

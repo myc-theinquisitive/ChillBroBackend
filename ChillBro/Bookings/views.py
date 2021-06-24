@@ -1126,7 +1126,7 @@ def create_single_booking(booking_object, product_values):
     product_list_copy = product_list[::]
     for product in product_list_copy:
         net_value = product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
-        if product['is_combo']  :
+        if product['is_combo']:
             combo_product = product
             product_list.remove(product)
             combo_product['hidden'] = False

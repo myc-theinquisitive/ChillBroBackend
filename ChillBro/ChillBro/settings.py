@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'Wallet',
     'Notifications',
     'HelpCenter',
+    'channels',
 ]
 
 
@@ -259,13 +260,12 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'UserApp.MyUser'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # Constants
-
 DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
-
 IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
 
 
@@ -292,3 +292,24 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = "Asia/Kolkata"
 CELERY_IMPORTS = ('authentication.tasks', 'Bookings.tasks',)
+
+CHANNEL_LAYERS = {
+    'default': {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        # 'CONFIG': {
+        #     "hosts": [("127.0.0.1", 6379)],
+        # },
+    },
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+ASGI_APPLICATION = 'ChillBro.routing.application'

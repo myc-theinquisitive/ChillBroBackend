@@ -287,6 +287,9 @@ class VehicleTypeView(ProductInterface):
 
         return vehicle_types_data
 
+    def get_sub_products_ids(self, product_ids):
+        return {}
+
 
 class VehicleTypeList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
@@ -349,6 +352,3 @@ class VehicleTypeDetail(generics.RetrieveUpdateDestroyAPIView):
         self.vehicle_type_view.update(request_data)
         return Response({"message": "Vehicle Type updated successfully"},
                         status=status.HTTP_200_OK)
-
-    def get_sub_products_ids(self, product_ids):
-        return {}
