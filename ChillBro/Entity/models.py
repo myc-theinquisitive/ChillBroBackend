@@ -1,6 +1,5 @@
 from django.db import models
 from django.db.models import Q
-
 from .constants import Status, EntityType, BankAccountTypes, ActivationStatus, EntitySubType
 import uuid
 from django.core.validators import MinLengthValidator

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+
+<script>
+const ws = new WebSocket("ws://localhost:8000/ws/booking/instance/")
+
+ws.onopen = function(){
+ws.send(JSON.stringify({
+    pk: "d58d69d0-7fa0-4c7c-8299-09806c6ae572",
+    action:"subscribe_instance",
+    request_id: new Date().getTime(),
+}));
+};
+
+ws.onmessage = function(e){
+    console.log(e)
+}
+
+ws.onclose = function(e) {
+    console.error('Web socket closed unexpectedly');
+};
+</script>
+
+<h1>This is a Heading</h1>
+<p>This is a paragraph line.</p>
+
+</body>
+</html>

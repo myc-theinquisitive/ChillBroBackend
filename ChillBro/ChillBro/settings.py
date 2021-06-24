@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'Wallet',
     'Notifications',
     'HelpCenter',
+    'channels',
 ]
 
 
@@ -291,3 +292,24 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = "Asia/Kolkata"
 CELERY_IMPORTS = ('authentication.tasks', 'Bookings.tasks',)
+
+CHANNEL_LAYERS = {
+    'default': {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        # 'CONFIG': {
+        #     "hosts": [("127.0.0.1", 6379)],
+        # },
+    },
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+ASGI_APPLICATION = 'ChillBro.routing.application'

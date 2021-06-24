@@ -1,7 +1,15 @@
-from django.urls import re_path
-from ChillBro.Bookings.consumers import *
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+
+import Bookings.routing
+import Notifications.routing
 
 
-websocket_urlpatterns = [
-    re_path(r"^ws/booking/instance/$", BookingInstanceConsumer.as_asgi()),
-]
+application = ProtocolTypeRouter({
+    'websocket': AuthMiddlewareStack(
+        URLRouter(
+            Bookings.routing.websocket_urlpatterns +
+            Notifications.routing.websocket_urlpatterns
+        )
+    )
+})
