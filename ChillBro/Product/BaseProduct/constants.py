@@ -10,6 +10,7 @@ class ProductTypes(enum.Enum):
     Travel_Package_Vehicle = "TRAVEL_PACKAGE_VEHICLE"
     Travel_Agency = "TRAVEL_AGENCY"
     Make_Your_Own_Trip = "MAKE_YOUR_OWN_TRIP"
+    Self_Rental = "SELF_RENTAL"
 
 
 class ActivationStatus(enum.Enum):

@@ -13,10 +13,9 @@ def get_basic_driver_data_by_ids(driver_ids):
 
 def get_basic_driver_id_wise_details(driver_ids):
     drivers_data = get_basic_driver_data_by_ids(driver_ids)
-
     driver_type_id_wise_details = defaultdict(dict)
     for driver in drivers_data:
-        driver_type_id_wise_details[driver["id"]] = driver
+        driver_type_id_wise_details[driver["driver_id"]] = driver
 
     return driver_type_id_wise_details
 
@@ -39,3 +38,13 @@ def get_vehicle_id_wise_details(vehicle_ids):
         vehicle_type_id_wise_details[vehicle["product"]] = vehicle
 
     return vehicle_type_id_wise_details
+
+
+def check_driver_exists_by_id(driver_id):
+    from ..Driver.export_apis import check_driver_exists
+    return check_driver_exists(driver_id)
+
+
+def check_vehicle_exists_by_id(vehicle_id):
+    from ..Vehicle.export_apis import check_vehicle_exists
+    return check_vehicle_exists(vehicle_id)

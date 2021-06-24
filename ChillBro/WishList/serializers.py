@@ -8,12 +8,9 @@ class WishListSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class AddProductToWishListSerializer(serializers.Serializer):
-    product_id = serializers.CharField(required=True, min_length=36, max_length=36)
-
-
-class AddEntityToWishListSerializer(serializers.Serializer):
-    entity_id = serializers.CharField(required=True, min_length=36, max_length=36)
+class AddItemToWishListSerializer(serializers.Serializer):
+    related_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    item_type = serializers.CharField(required=True)
 
 
 class UserWishListDetailsSerializer(serializers.Serializer):

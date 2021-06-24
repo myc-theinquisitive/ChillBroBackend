@@ -129,7 +129,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = False
+USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -139,7 +139,7 @@ STATIC_URL = '/static/'
 
 IS_SERVER = False
 
-if(IS_SERVER):
+if IS_SERVER:
     DEBUG = True
 
     FILE_UPLOAD_PERMISSIONS = 0o644
@@ -230,7 +230,11 @@ else:
             'django.db.backends': {
                 'level': 'DEBUG',
                 'handlers': ['console'],
-            }
+            },
+            'celery': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+            },
         }
     }
 
@@ -280,3 +284,11 @@ EMAIL_USE_SSL = False
 
 TAGGIT_CASE_INSENSITIVE = True
 MYC_ID = "MYC"
+
+BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = "Asia/Kolkata"
+CELERY_IMPORTS = ('authentication.tasks', 'Bookings.tasks',)

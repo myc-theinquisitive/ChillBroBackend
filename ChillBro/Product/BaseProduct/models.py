@@ -61,8 +61,10 @@ class Product(models.Model):
     featured = models.BooleanField(default=False)
     tags = get_taggable_manager()
     has_sizes = models.BooleanField(default=False)
+    has_sub_products = models.BooleanField(default=False)
 
     # if there are no sizes use this quantity field else check quantity from the product size model
+    quantity_unlimited = models.BooleanField(default=False)
     quantity = models.PositiveIntegerField(default=0)
 
     # For combo products

@@ -293,3 +293,6 @@ class HotelView(ProductInterface):
             hotel_room_data["available_amenities"] = hotel_room_wise_available_amenities_dict[hotel_room_data["id"]]
 
         return hotel_rooms_data
+
+    def get_sub_products_ids(self, product_ids):
+        return {}
