@@ -4,6 +4,7 @@ from typing import Dict
 from collections import defaultdict
 from .models import MakeYourOwnTrip, MakeYourOwnTripPlaces
 from .wrapper import get_place_id_wise_details, validate_place_ids
+from django.db.models import Count
 
 
 class MakeYourOwnTripView(ProductInterface):
@@ -106,7 +107,7 @@ class MakeYourOwnTripView(ProductInterface):
         if not make_your_own_trip_data_valid:
             is_valid = False
             errors.update(self.make_your_own_trip_serializer.errors)
-        
+
         # validate places for travel agency
         if self.places_data:
             if "add" in self.places_data:
@@ -168,6 +169,18 @@ class MakeYourOwnTripView(ProductInterface):
 
         return make_your_own_trip_id_wise_places
 
+    @staticmethod
+    def get_make_your_own_trip_id_wise_places_count(make_your_own_trip_ids):
+        make_your_own_trip_places_count = MakeYourOwnTripPlaces.objects.filter(make_your_own_trip_id__in=make_your_own_trip_ids) \
+            .values('make_your_own_trip').annotate(count=Count('id')).values('make_your_own_trip_id', 'count')
+
+        make_your_own_trip_id_wise_places_count = defaultdict(int)
+        for make_your_own_trip_place_count in make_your_own_trip_places_count:
+            make_your_own_trip_id_wise_places_count[make_your_own_trip_place_count["make_your_own_trip_id"]] = \
+                make_your_own_trip_place_count["count"]
+
+        return make_your_own_trip_id_wise_places_count
+
     def get(self, product_id):
         self.make_your_own_trip_object = MakeYourOwnTrip.objects.get(product_id=product_id)
         self.initialize_product_class(None)
@@ -189,10 +202,10 @@ class MakeYourOwnTripView(ProductInterface):
         make_your_own_trips_data = make_your_own_trip_serializer.data
 
         make_your_own_trip_ids = MakeYourOwnTrip.objects.filter(product_id__in=product_ids).values_list('id')
-        make_your_own_trip_id_wise_places = self.get_make_your_own_trip_id_wise_places_details(make_your_own_trip_ids)
+        make_your_own_trip_id_wise_places_count = self.get_make_your_own_trip_id_wise_places_count(make_your_own_trip_ids)
 
         for make_your_own_trip_data in make_your_own_trips_data:
-            make_your_own_trip_data['places'] = make_your_own_trip_id_wise_places[make_your_own_trip_data["id"]]
+            make_your_own_trip_data['places_count'] = make_your_own_trip_id_wise_places_count[make_your_own_trip_data["id"]]
 
 
         return make_your_own_trips_data

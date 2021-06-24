@@ -36,6 +36,7 @@ class PackagePlaces(models.Model):
 
     class Meta:
         unique_together = ('travel_package', 'place', 'order',)
+        ordering = ('order',)
 
     def __str__(self):
         return "Package Place - {0}, {1}".format(self.travel_package.name, self.place.name)

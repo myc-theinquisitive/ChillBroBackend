@@ -179,8 +179,8 @@ class TravelPackageView(ProductInterface):
                         'place': string,
                         'order': int,
                         'in_return': bool,
-                    "spending_time": int,
-                    "duration_to_reach": int
+                        "spending_time": int,
+                        "duration_to_reach": int
                     },
                 ],
                 'delete': ['place_id']
@@ -211,7 +211,7 @@ class TravelPackageView(ProductInterface):
             PackagePlacesSerializer.bulk_delete(self.travel_package_object.id, delete_places)
 
     @staticmethod
-    def get_travel_package_id_wise_places_details(travel_package_ids, time):
+    def get_travel_package_id_wise_places_details(travel_package_ids, start_time):
 
         travel_package_places = PackagePlaces.objects.filter(travel_package_id__in=travel_package_ids)
 
@@ -225,7 +225,7 @@ class TravelPackageView(ProductInterface):
         travel_package_id_wise_return_places = defaultdict(list)
 
         for travel_package_place in travel_package_places:
-            arrival_time = time + timedelta(minutes=travel_package_place.duration_to_reach)
+            arrival_time = start_time + timedelta(minutes=travel_package_place.duration_to_reach)
             departure_time = arrival_time + timedelta(minutes=travel_package_place.spending_time)
             if travel_package_place.in_return:
                 travel_package_id_wise_return_places[travel_package_place.travel_package_id].append(
@@ -249,7 +249,7 @@ class TravelPackageView(ProductInterface):
                         "departure_time": departure_time,
                     }
                 )
-            time = departure_time
+            start_time = departure_time
 
         return travel_package_id_wise_forward_places, travel_package_id_wise_return_places
 
@@ -282,15 +282,14 @@ class TravelPackageView(ProductInterface):
 
         return travel_package_id_wise_places_count
 
-    def get(self, travel_package_id, time):
+    def get(self, travel_package_id, start_time):
         self.travel_package_object = TravelPackage.objects.get(id=travel_package_id)
         self.initialize_product_class(None)
 
         travel_package_data = self.travel_package_serializer.data
 
         travel_package_id_wise_forward_places, travel_package_id_wise_return_places \
-            = self.get_travel_package_id_wise_places_details([self.travel_package_object.id],
-                                                             time=time)
+            = self.get_travel_package_id_wise_places_details([self.travel_package_object.id], start_time)
 
         forward_places = travel_package_id_wise_forward_places[self.travel_package_object.id]
         return_places = travel_package_id_wise_return_places[self.travel_package_object.id]
@@ -361,8 +360,8 @@ class TravelPackageDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            time = datetime.strptime(request.data['start_time'], settings.DATE_FORMAT)
-            response_data = self.travel_package_view.get(kwargs["pk"], time)
+            start_time = datetime.strptime(request.data['start_time'], settings.DATE_FORMAT)
+            response_data = self.travel_package_view.get(kwargs["pk"], start_time)
         except ObjectDoesNotExist:
             return Response({"errors": "Travel Package does not Exist!!!"}, 400)
         except ValueError:

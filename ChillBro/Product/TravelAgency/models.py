@@ -20,7 +20,6 @@ class TravelCharacteristics(models.Model):
 
 class TravelAgency(models.Model):
     product = models.OneToOneField("Product", on_delete=models.CASCADE, verbose_name="Product")
-    id = models.CharField(max_length=36, primary_key=True, default=get_id)
     duration_in_days = models.PositiveIntegerField(verbose_name="Duration in days",
                                                    validators=[MinValueValidator(0)])
     duration_in_nights = models.PositiveIntegerField(verbose_name="Duration in nights",
