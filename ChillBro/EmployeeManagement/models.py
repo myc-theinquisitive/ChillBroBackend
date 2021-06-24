@@ -11,11 +11,11 @@ def get_id():
 
 
 class MYCEmployee(models.Model):
-    employee = models.OneToOneField('Employee', on_delete=models.CASCADE, verbose_name="Employee")
+    employee = models.CharField(max_length=36, unique=True, verbose_name="Employee")
     department = models.CharField(
         max_length=50, choices=[(department.value, department.value) for department in Department],
         verbose_name="Department")
-    reporting_manager = models.ForeignKey('Employee', on_delete=models.CASCADE, verbose_name="Reporting Manager")
+    reporting_manager = models.CharField(max_length=36, verbose_name="Reporting Manager")
     joining_date = models.DateTimeField(verbose_name="Joining Date")
     salary_details = models.OneToOneField(
         "SalaryAccount", on_delete=models.CASCADE, verbose_name="Salary Details", null=True, blank=True)
