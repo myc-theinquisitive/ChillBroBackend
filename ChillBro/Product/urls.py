@@ -13,7 +13,7 @@ from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDe
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
 from .TravelPackageVehicle.views import TravelPackageVehiclesList
-
+from  .TravelAgency.views import TravelCharacteristicsList,TravelCharacteristicsDetail
 
 urlpatterns = [
 
@@ -52,6 +52,10 @@ urlpatterns = [
     path('travel_package/image/', TravelPackageImageCreate.as_view()),
     path('travel_package/image/<int:pk>/', TravelPackageImageDelete.as_view()),
     path('travel_package/<str:pk>/', TravelPackageDetail.as_view()),
+
+    # urls for travel agency characteristics
+    path('travel_agency/characteristics/',TravelCharacteristicsList.as_view()),
+    path('travel_agency/characteristics/<str:id>/', TravelCharacteristicsDetail.as_view()),
 
     # urls for all products
     path('product/', ProductList.as_view()),

@@ -11,6 +11,8 @@ from Product.HireAVehicle.views import HireAVehicleView
 from Product.SelfRental.views import SelfRentalView
 from Product.Driver.views import DriverView
 from Product.TravelPackageVehicle.views import TravelPackageVehicleView
+from Product.TravelAgency.views import TravelAgencyView
+from Product.MakeYourOwnTrip.views import MakeYourOwnTripView
 from Product.product_interface import ProductInterface
 from Product.taggable_wrapper import key_value_content_type_model, key_value_tag_model
 from typing import Dict
@@ -51,6 +53,10 @@ class ProductView(ProductInterface):
             return HireAVehicleView(), "hire_a_vehicle"
         elif product_type == "TRAVEL_PACKAGE_VEHICLE":
             return TravelPackageVehicleView(), "travel_package_vehicle"
+        elif product_type == "TRAVEL_AGENCY":
+            return TravelAgencyView(), "travel_agency"
+        elif product_type == "MAKE_YOUR_OWN_TRIP":
+            return MakeYourOwnTripView(), "make_your_own_trip"
         elif product_type == "SELF_RENTAL":
             return SelfRentalView(), "self_rental"
         return None, None
@@ -68,12 +74,16 @@ class ProductView(ProductInterface):
         elif product_data_defined and "type" in product_data:
             product_type = product_data["type"]
             self.product_images = product_data.pop("images", [])
+            if product_type == "MAKE_YOUR_OWN_TRIP":
+                product_data['seller_id'] = settings.MYC_ID
         else:
             product_type = None
 
         self.product_specific_view, self.product_specific_key = self.get_view_and_key_by_type(product_type)
+
         if product_data:
             self.product_specific_data = product_data.pop(self.product_specific_key, None)
+            self.product_specific_data['created_by'] = product_data['created_by']
 
         # for update
         if product_object_defined and product_data_defined:
@@ -507,10 +517,17 @@ class ProductView(ProductInterface):
             "id": self.product_object.category.id,
             "name": self.product_object.category.name
         }
-        product_data["category_product"] = {
-            "id": self.product_object.category_product.id,
-            "name": self.product_object.category_product.product_name
-        }
+
+        if self.product_object.category_product:
+            product_data["category_product"] = {
+                "id": self.product_object.category_product.id,
+                "name": self.product_object.category_product.product_name
+            }
+        else:
+            product_data["category_product"] = {
+                "id": "",
+                "name": ""
+            }
 
         product_specific_data = self.product_specific_view.get(self.product_object.id)
         product_specific_data.pop("product", None)
@@ -578,7 +595,7 @@ class ProductView(ProductInterface):
 
     @staticmethod
     def get_product_id_wise_total_quantity_with_sizes(product_ids):
-        products_size_quantity = ProductSize.objects.filter(product_id__in=product_ids).values('product_id')\
+        products_size_quantity = ProductSize.objects.filter(product_id__in=product_ids).values('product_id') \
             .annotate(total_quantity=Sum('quantity')).values('product_id', 'total_quantity').order_by()
 
         product_id_wise_total_quantity_with_sizes = defaultdict(int)
