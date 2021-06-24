@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'Notifications',
     'HelpCenter',
     'channels',
+    'EmployeeManagement',
 ]
 
 
