@@ -15,6 +15,7 @@ def get_id():
 
 class BookingsManager(models.Manager):
 
+    # TODO: add booking status cancelled condition and booking time less than that approval time for business client
     def active(self):
         return self.filter(~Q(payment_status=PaymentStatus.failed.value))
 
@@ -134,8 +135,8 @@ class BookedProducts(models.Model):
     is_combo = models.BooleanField(default=False)
     has_sub_products = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
-    parent_booked_product = models.ForeignKey('self', on_delete=models.CASCADE,
-                                            null=True, blank=True, verbose_name="Parent Booked Product Id")
+    parent_booked_product = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True, verbose_name="Parent Booked Product Id")
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     coupon_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -148,12 +149,14 @@ class BookedProducts(models.Model):
     objects = BookedProductManager()
 
     class Meta:
-        unique_together = (("booking", "product_id","hidden","parent_booked_product"),)
+        unique_together = (("booking", "product_id", "hidden", "parent_booked_product"),)
 
     def __str__(self):
         return "Booked Product - {0}, {1}".format(self.booking_id, self.product_id)
 
 
+# TODO: move trip type, pickup location, drop location, starting_km_value, ending km value
+#  and km limit choosen into a separate table
 class TransportBookingDistanceDetails(models.Model):
     booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
     trip_type = models.CharField(max_length=30,
@@ -315,9 +318,11 @@ class ReportCustomerReasons(models.Model):
 class BusinessClientProductCancellation(models.Model):
     booking = models.ForeignKey('Bookings', on_delete=models.CASCADE)
     product_id = models.CharField(max_length=36)
+    # TODO: make reason as text field, and move this to CancelledDetails table
     reason = models.CharField(max_length=1000)
     user_model = get_user_model()
     cancelled_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
+    # TODO: remove time as it is stored in cancellation table
     time = models.DateTimeField(default=datetime.now)
 
     def __str__(self):

@@ -248,7 +248,7 @@ class HireAVehicleView(ProductInterface):
 
         for each_hire_a_vehicle in hire_a_vehicles:
             hire_a_vehicles_sub_products_ids[each_hire_a_vehicle.product_id] = \
-                [ each_hire_a_vehicle.vehicle_id, each_hire_a_vehicle.default_driver_id ]
+                [each_hire_a_vehicle.vehicle_id, each_hire_a_vehicle.default_driver_id]
 
         return hire_a_vehicles_sub_products_ids
 
@@ -261,8 +261,8 @@ class HireAVehicleView(ProductInterface):
         for each_hire_a_vehicle in hire_a_vehicles:
             hire_a_vehicles_distance_price_ids.append(each_hire_a_vehicle.distance_price.id)
 
-        hire_a_vehicle_distance_price_data = HireAVehicleDistancePrice.objects \
-                                                .filter(id__in = hire_a_vehicles_distance_price_ids)
+        hire_a_vehicle_distance_price_data = HireAVehicleDistancePrice.objects\
+            .filter(id__in=hire_a_vehicles_distance_price_ids)
         hire_a_vehicle_distance_price_serializer = \
             HireAVehicleDistancePriceSerializer(hire_a_vehicle_distance_price_data, many=True)
 

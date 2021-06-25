@@ -1,4 +1,3 @@
-from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
@@ -12,8 +11,6 @@ from .wrapper import check_valid_booking, get_product_details_with_image, check_
 from .helpers import get_date_format
 from collections import defaultdict
 from .constants import ProductTypes
-
-# Create your views here.
 
 
 def is_product_valid(product_details, product_id, quantity, size, combo_product_details):
