@@ -680,6 +680,7 @@ class ProductView(ProductInterface):
 
         return all_products_final_prices
 
+    # TODO: Add this to product interface
     def check_valid_duration(self, product_ids, start_time, end_time):
         products = Product.objects.filter(id__in=product_ids)
 

@@ -26,5 +26,3 @@ class ProductInterface(abc.ABC):
     @abc.abstractmethod
     def get_by_ids(self, product_ids):
         pass
-
-

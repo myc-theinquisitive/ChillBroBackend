@@ -37,7 +37,7 @@ class CartProductsSerializer(serializers.ModelSerializer):
                 size=each_cart_product['size']
             )
             cart_products.append(update_cart_product_quantity)
-        return CartProducts.objects.bulk_update(cart_products,['quantity','size'])
+        return CartProducts.objects.bulk_update(cart_products, ['quantity', 'size'])
 
 
 class TransportDetailsSerializer(serializers.ModelSerializer):
@@ -51,7 +51,8 @@ class AddProductToCartSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(required=True)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
-
+    # TODO: add validation for transport details and other inputs for add to cart
+    #transport_details = TransportDetailsSerializer(allow_null=True)
 
 class CheckoutCartSerializer(serializers.Serializer):
     entity_type = serializers.CharField(required=True)

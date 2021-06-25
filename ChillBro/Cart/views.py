@@ -22,11 +22,12 @@ def is_product_valid(product_details, product_id, quantity, size, combo_product_
     if quantity < 1:
         is_valid = False
         errors[product_id].append("Quantity must be greater than zero")
+
     if product_details[product_id]['has_sizes']:
         product_sizes_details = product_details[product_id]['size_products']
         try:
             products_quantity = product_sizes_details[size]
-        except:
+        except KeyError:
             is_valid = False
             errors[product_id].append("Invalid Size")
 
@@ -38,8 +39,8 @@ def is_product_valid(product_details, product_id, quantity, size, combo_product_
 
         for each_combo_product in combo_product_details:
             try:
-                products_quantity = combo_products_data[each_combo_product]
-            except:
+                product = combo_products_data[each_combo_product]
+            except KeyError:
                 is_valid = False
                 errors[product_id].append("Invalid combo product data")
 
@@ -53,6 +54,7 @@ class AddProductToCart(APIView):
         input_serializer = AddProductToCartSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't add product to cart", "errors": input_serializer.errors}, 400)
+
         product_id = request.data['product_id']
         quantity = request.data['quantity']
         size = request.data['size']
@@ -70,6 +72,7 @@ class AddProductToCart(APIView):
         if not is_valid:
             return Response({"message": "Can't add product to cart", "errors": errors})
 
+        # TODO: Remove this check for type
         if product_details[product_id]['type'] == ProductTypes.Hire_A_Vehicle.value:
             is_valid, errors = check_valid_duration([product_id], request.data['start_time'], request.data['end_time'])
             if not is_valid:
@@ -77,7 +80,6 @@ class AddProductToCart(APIView):
 
         if product_details[product_id]["is_combo"]:
             combo_products_data = product_details[product_id]['combo_products']
-
             for each_combo_product in combo_products_data:
                 combo_product = {
                     "product_id": each_combo_product,
@@ -85,9 +87,11 @@ class AddProductToCart(APIView):
                     "size": combo_product_details[each_combo_product]
                 }
                 products.append(combo_product)
+
         elif product_details[product_id]["has_sub_products"]:
             sub_products = product_details[product_id]["sub_products"]
             for each_sub_product in sub_products:
+                # TODO: get quantity and size details from products app
                 products.append({
                     "product_id": each_sub_product,
                     "quantity": quantity,
@@ -100,6 +104,7 @@ class AddProductToCart(APIView):
                 "size": request.data['size']
             })
 
+        cart = None
         try:
             cart = Cart.objects.get(entity_id=entity_id, entity_type=entity_type, start_time=request.data['start_time'],
                                     end_time=request.data['end_time'], created_by=request.user)
@@ -110,13 +115,15 @@ class AddProductToCart(APIView):
         if not is_cart_exist:
             is_valid, errors = check_valid_booking(products, request.data['start_time'], request.data['end_time'])
         else:
-            cart_products = CartProducts.objects.filter(cart_id=cart, product_id=product_id)
+            cart_products = CartProducts.objects.filter(cart=cart, product_id=product_id)
             all_cart_products = []
 
             for each_product in cart_products:
+                # TODO: Remove this check for product id
                 if each_product.product_id == product_id:
                     if each_product.parent_cart_product_id is None:
                         return Response({"message": "Product already exists in cart", "cart_id": cart.id}, 200)
+                    # TODO: remove this if as check is not required
                     if not each_product.is_combo:
                         all_cart_products.append({
                             "product_id": each_product.product_id,
@@ -140,11 +147,11 @@ class AddProductToCart(APIView):
                     'created_by': request.user
                 }
             )
-        is_combo, has_sub_products = False, False
-        if product_details[product_id]["is_combo"]:
-            is_combo = True
-        if product_details[product_id]["has_sub_products"]:
-            has_sub_products = True
+
+        # TODO: Move product creation part to a separate function
+        is_combo = product_details[product_id]["is_combo"]
+        has_sub_products = product_details[product_id]["has_sub_products"]
+
         cart_product_serializer = CartProductsSerializer()
         cart_product_id = cart_product_serializer.create({
             "cart": cart,
@@ -154,6 +161,8 @@ class AddProductToCart(APIView):
             "is_combo": is_combo,
             "has_sub_products": has_sub_products
         })
+
+        # TODO: remove this check and create if transport details key is present in request.data
         if product_details[product_id]['type'] == ProductTypes.Hire_A_Vehicle.value:
             cart_product_extra_details_serializer = TransportDetailsSerializer()
             cart_product_extra_details_serializer.create({
@@ -180,6 +189,7 @@ class AddProductToCart(APIView):
         return Response({"message": "Product added to cart successfully", "cart_id": cart.id}, 200)
 
 
+# TODO: Handle sub product different sizes booking in add to cart and update to cart
 class UpdateCartProductQuantity(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -192,8 +202,8 @@ class UpdateCartProductQuantity(APIView):
         combo_product_details = request.data['combo_product_details']
         products = []
 
-        cart_products = CartProducts.objects.select_related('cart') \
-                            .filter(cart=request.data['cart'], product_id=product_id)
+        cart_products = CartProducts.objects.select_related('cart')\
+            .filter(cart=request.data['cart'], product_id=product_id)
         if len(cart_products) == 0:
             return Response({"message": "Can't update the product quantity",
                              "errors": "invalid cart id or product id"}, 400)
@@ -202,14 +212,20 @@ class UpdateCartProductQuantity(APIView):
         if not is_valid:
             return Response({"message": "Can't add product to cart", "errors": errors})
 
+        # For finding the actual product that is to be updated
+        cart_product = None
         for each_cart_product in cart_products:
             if each_cart_product.parent_cart_product is None:
                 cart_product = each_cart_product
                 break
 
+        # If trying to update hidden product
+        if cart_product is None:
+            return Response({"message": "Can't update the product quantity",
+                             "errors": "invalid cart id or product id"}, 400)
+
         if product_details[product_id]["is_combo"]:
             combo_products_data = product_details[product_id]['combo_products']
-
             for each_combo_product in combo_products_data:
                 combo_product = {
                     "product_id": each_combo_product,
@@ -217,14 +233,17 @@ class UpdateCartProductQuantity(APIView):
                     "size": combo_product_details[each_combo_product]
                 }
                 products.append(combo_product)
+
         elif product_details[product_id]["has_sub_products"]:
             sub_products = product_details[product_id]["sub_products"]
             for each_sub_product in sub_products:
+                # TODO: get quantity and size from products app as in create
                 products.append({
                     "product_id": each_sub_product,
                     "quantity": quantity,
                     "size": ""
                 })
+
         else:
             products.append({
                 "product_id": product_id,
@@ -245,21 +264,27 @@ class UpdateCartProductQuantity(APIView):
 
         is_valid, errors = check_valid_booking(combine_products(all_cart_products),
                                                cart_product.cart.start_time.strftime(get_date_format()),
-                                               cart_product.cart.end_time.strftime(get_date_format())
-                                               )
+                                               cart_product.cart.end_time.strftime(get_date_format()))
         if not is_valid:
             return Response({"message": "Can't update the product quantity", "errors": errors}, 400)
+
+        # TODO: change all the logic for updation, no need to loop
+        # TODO: update the details of cart product variable - main product to be updated
+        # TODO: get sub products of current product to be updated and update them
         update_cart_products = []
         for each_product in cart_products:
             if each_product.parent_cart_product is None and each_product.product_id == product_id:
-                update_cart_products.append({"id": each_product.id, "quantity": request.data['quantity'], "size": size})
-            elif each_product.parent_cart_product is not None and each_product.parent_cart_product.product_id == product_id:
+                update_cart_products.append({"id": each_product.id, "quantity": request.data['quantity'],
+                                             "size": size})
+            elif each_product.parent_cart_product is not None and \
+                    each_product.parent_cart_product.product_id == product_id:
                 update_cart_products.append({"id": each_product.id, "quantity": request.data['quantity'] * \
                                                 combo_products_data[each_product.product_id]['quantity'], \
                                                 "size": combo_product_details[each_product.product_id]})
         bulk_update_serializer = CartProductsSerializer()
         bulk_update_serializer.bulk_update(update_cart_products)
 
+        # TODO: if input has transport details key update, no need to delete update the address details in the same row
         if product_details[product_id]['type'] == ProductTypes.Hire_A_Vehicle.value:
             previous_transport_data = TransportDetails.objects.filter(cart_product=cart_product)
             previous_transport_data.delete()
@@ -398,73 +423,74 @@ class CheckoutCart(ListAPIView):
 
     def post(self, request, *args, **kwargs):
         input_serializer = CheckoutCartSerializer(data=request.data)
-        if input_serializer.is_valid():
-            cart_details = Cart.objects.filter(created_by=request.user, entity_type=request.data['entity_type'])
-            cart_items = CartProducts.objects.select_related('cart') \
-                .filter(cart__created_by=request.user, cart__entity_type=request.data['entity_type'])
-
-            if len(cart_details) == 0:
-                return Response({"message": "Can't checkout", "errors": "Sorry, no products in cart"})
-
-            entity_ids = []
-            for each_cart in cart_details:
-                entity_ids.append(each_cart.entity_id)
-
-            product_ids = []
-            for each_product in cart_items:
-                product_ids.append(each_product.product_id)
-            product_details = get_product_id_wise_product_details(product_ids)
-
-            transport_related_cart_product_ids = []
-            for each_cart_product in cart_items:
-                if product_details[each_cart_product.product_id]["type"] == ProductTypes.Hire_A_Vehicle.value or \
-                        product_details[each_cart_product.product_id]["type"] == ProductTypes.Self_Rental.value:
-                    transport_related_cart_product_ids.append(each_cart_product.id)
-
-            transport_details = TransportDetails.objects.filter(cart_product_id__in=transport_related_cart_product_ids)
-            all_cart_products_transport_details = defaultdict()
-            for each_cart_product in transport_details:
-                all_cart_products_transport_details[each_cart_product.cart_product.product_id] = each_cart_product
-
-            total_products_value, product_price_values = \
-                calculate_total_products_value(cart_items, product_details, all_cart_products_transport_details)
-
-            coupon = request.data['coupon']
-            total_coupon_value = 0
-
-            if len(request.data['coupon']) > 0:
-                coupon_data = get_discounted_value(
-                    coupon, request.user, product_ids, entity_ids, request.data['entity_type'], total_products_value)
-                if not coupon_data['is_valid']:
-                    return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
-                total_coupon_value = total_products_value - coupon_data['discounted_value']
-
-            cart_products_for_bookings = form_each_cart_all_products(cart_items, all_cart_products_transport_details, \
-                                                                     product_price_values, product_details, \
-                                                                     total_products_value, total_coupon_value)
-
-            final_cart_details = defaultdict()
-            for each_cart in cart_details:
-                final_cart_details[each_cart.id] = {
-                    "coupon": coupon,
-                    "created_by": request.user,
-                    "entity_id": each_cart.entity_id,
-                    "entity_type": each_cart.entity_type,
-                    "start_time": each_cart.start_time.strftime(get_date_format()),
-                    "end_time": each_cart.end_time.strftime(get_date_format()),
-                    "products": cart_products_for_bookings[each_cart.id],
-                }
-            final_cart_details['all_product_details'] = product_details
-
-            is_valid, errors = create_multiple_bookings_from_cart(final_cart_details)
-
-            if is_valid:
-                cart_details.delete()
-                return Response({"message": "Successfully created {} bookings".format(len(final_cart_details))})
-            else:
-                return Response({"message": "Can't create bookings", "errors": errors})
-        else:
+        if not input_serializer.is_valid():
             return Response({"message": "Cant checkout the cart", "errors": input_serializer.errors}, 400)
+
+        cart_details = Cart.objects.filter(created_by=request.user, entity_type=request.data['entity_type'])
+        cart_items = CartProducts.objects.select_related('cart') \
+            .filter(cart__created_by=request.user, cart__entity_type=request.data['entity_type'])
+
+        if len(cart_details) == 0:
+            return Response({"message": "Can't checkout", "errors": "Sorry, no products in cart"})
+
+        entity_ids = []
+        for each_cart in cart_details:
+            entity_ids.append(each_cart.entity_id)
+
+        product_ids = []
+        for each_product in cart_items:
+            product_ids.append(each_product.product_id)
+        product_details = get_product_id_wise_product_details(product_ids)
+
+        # TODO: use all product ids to get transport details no need to check type
+        transport_related_cart_product_ids = []
+        for each_cart_product in cart_items:
+            if product_details[each_cart_product.product_id]["type"] == ProductTypes.Hire_A_Vehicle.value or \
+                    product_details[each_cart_product.product_id]["type"] == ProductTypes.Self_Rental.value:
+                transport_related_cart_product_ids.append(each_cart_product.id)
+
+        transport_details = TransportDetails.objects.filter(cart_product_id__in=transport_related_cart_product_ids)
+        all_cart_products_transport_details = defaultdict()
+        for each_cart_product in transport_details:
+            all_cart_products_transport_details[each_cart_product.cart_product.product_id] = each_cart_product
+
+        total_products_value, product_price_values = \
+            calculate_total_products_value(cart_items, product_details, all_cart_products_transport_details)
+
+        coupon = request.data['coupon']
+        total_coupon_value = 0
+
+        if len(request.data['coupon']) > 0:
+            coupon_data = get_discounted_value(
+                coupon, request.user, product_ids, entity_ids, request.data['entity_type'], total_products_value)
+            if not coupon_data['is_valid']:
+                return Response({"message": "Can't create the booking", "errors": coupon['errors']}, 400)
+            total_coupon_value = total_products_value - coupon_data['discounted_value']
+
+        cart_products_for_bookings = form_each_cart_all_products(cart_items, all_cart_products_transport_details, \
+                                                                 product_price_values, product_details, \
+                                                                 total_products_value, total_coupon_value)
+
+        final_cart_details = defaultdict()
+        for each_cart in cart_details:
+            final_cart_details[each_cart.id] = {
+                "coupon": coupon,
+                "created_by": request.user,
+                "entity_id": each_cart.entity_id,
+                "entity_type": each_cart.entity_type,
+                "start_time": each_cart.start_time.strftime(get_date_format()),
+                "end_time": each_cart.end_time.strftime(get_date_format()),
+                "products": cart_products_for_bookings[each_cart.id],
+            }
+        final_cart_details['all_product_details'] = product_details
+
+        is_valid, errors = create_multiple_bookings_from_cart(final_cart_details)
+
+        if is_valid:
+            cart_details.delete()
+            return Response({"message": "Successfully created {} bookings".format(len(final_cart_details))})
+        else:
+            return Response({"message": "Can't create bookings", "errors": errors})
 
 
 def calculate_coupon_value(total_coupon_value, product_value, total_products_value, quantity):
@@ -510,6 +536,7 @@ def form_each_cart_all_products(cart_items, transport_details, product_price_val
                     "product_value":0,
                     "is_combo": False,
                     "has_sub_products": False,
+                    # TODO: put transport related data as seperate keys
                     "trip_type": "",
                     "pickup_location": "",
                     "drop_location": "",
@@ -535,6 +562,7 @@ def form_each_cart_all_products(cart_items, transport_details, product_price_val
                 "product_value": product_price_values[each_cart_product.product_id]["discounted_price"],
                 "is_combo": each_cart_product.is_combo,
                 "has_sub_products": each_cart_product.has_sub_products,
+                # TODO: put transport related data as seperate keys
                 "trip_type" : transport_data["trip_type"],
                 "pickup_location" : transport_data["pickup_location"],
                 "drop_location" : transport_data["drop_location"],
@@ -558,14 +586,14 @@ def calculate_total_products_value(cart_products, product_details, transport_det
             group_product_ids_by_type[product_type].append(each_cart_product.product_id)
             group_product_details_by_type[product_type].update(
                 {
-                    each_cart_product.product_id:{
+                    each_cart_product.product_id: {
                         "quantity": each_cart_product.quantity,
                         "size": each_cart_product.size,
                         "start_time":each_cart_product.cart.start_time,
                         "end_time": each_cart_product.cart.end_time,
                         "trip_type": transport_data["trip_type"],
                         "discount_percentage": product_details[each_cart_product.product_id]["discount"],
-                        "km_limit_choosen" : transport_data["km_limit_choosen"]
+                        "km_limit_choosen": transport_data["km_limit_choosen"]
                     }
                 }
             )
