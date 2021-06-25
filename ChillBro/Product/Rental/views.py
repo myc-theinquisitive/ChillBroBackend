@@ -117,12 +117,6 @@ class RentalView(ProductInterface):
     def get_sub_products_ids(self, product_ids):
         return {}
 
-    def get_price_data(self, product_ids):
-        return {}
-
-    def get_duration_data(self, product_ids):
-        return {}
-
     def calculate_starting_prices(self, product_ids, product_ids_with_duration):
         return {}
 

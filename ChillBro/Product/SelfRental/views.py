@@ -246,8 +246,8 @@ class SelfRentalView(ProductInterface):
 
         self_rental_data = self.self_rental_serializer.data
         vehicle_data = get_vehicle_data_by_id(self_rental_data["vehicle"])
-        self_rental_data["distance_price"] = self.get_price_data([product_id])[product_id]
-        self_rental_data["duration_details"] = self.get_duration_details([product_id])[product_id]
+        self_rental_data["distance_price"] = self.get_price_data([self.self_rental_object])[product_id]
+        self_rental_data["duration_details"] = self.get_duration_data([self.self_rental_object])[product_id]
         self_rental_data["vehicle"] = vehicle_data
 
         return self_rental_data
@@ -258,8 +258,8 @@ class SelfRentalView(ProductInterface):
         self_rental_serializer = SelfRentalSerializer(self_rentals, many=True)
         self_rentals_data = self_rental_serializer.data
 
-        self_rental_id_wise_distance_prices = self.get_price_data(product_ids)
-        self_rental_id_wise_duration_details = self.get_duration_data(product_ids)
+        self_rental_id_wise_distance_prices = self.get_price_data(self_rentals)
+        self_rental_id_wise_duration_details = self.get_duration_data(self_rentals)
 
         vehicle_ids = []
         for self_rental_data in self_rentals_data:
@@ -283,8 +283,8 @@ class SelfRentalView(ProductInterface):
 
         return self_rentals_sub_products_ids
 
-    def get_price_data(self, product_ids):
-        self_rentals = SelfRental.objects.filter(product_id__in=product_ids)
+    @staticmethod
+    def get_price_data(self, self_rentals):
         self_rentals_data = defaultdict()
         self_rentals_price_details = defaultdict(dict)
         self_rentals_ids = []
@@ -293,12 +293,12 @@ class SelfRentalView(ProductInterface):
             self_rentals_ids.append(each_self_rental.id)
 
         self_rental_distance_price_data = SelfRentalDistancePrice.objects \
-            .filter(hire_a_vehicle__in=self_rentals_ids)
+            .filter(self_rental__in=self_rentals_ids)
         self_rental_distance_price_serializer = \
             SelfRentalDistancePriceSerializer(self_rental_distance_price_data, many=True)
 
         for each_distance_price in self_rental_distance_price_serializer.data:
-            self_rentals_data[each_distance_price["hire_a_vehicle"]] = each_distance_price
+            self_rentals_data[each_distance_price["self_rental"]] = each_distance_price
 
         for each_hire_a_vehicle in self_rentals:
             self_rentals_price_details[each_hire_a_vehicle.product_id].update({
@@ -307,8 +307,8 @@ class SelfRentalView(ProductInterface):
 
         return self_rentals_price_details
 
-    def get_duration_data(self, product_ids):
-        self_rentals = SelfRental.objects.filter(product_id__in=product_ids)
+    @staticmethod
+    def get_duration_data(self, self_rentals):
         self_rentals_data = defaultdict()
         self_rentals_duration_details = defaultdict()
         self_rentals_ids = []
@@ -332,7 +332,7 @@ class SelfRentalView(ProductInterface):
 
     def calculate_starting_prices(self, product_ids, product_details_with_ids):
         self_rentals = SelfRental.objects.filter(product_id__in=product_ids)
-        self_rentals_price_details = self.get_price_data(product_ids)
+        self_rentals_price_details = self.get_price_data(self_rentals)
         result = defaultdict()
 
         for each_self_rental in self_rentals:
@@ -410,7 +410,8 @@ class SelfRentalView(ProductInterface):
         is_valid = True
         errors = defaultdict(list)
 
-        duration_data = self.get_duration_data(product_ids)
+        self_rentals = SelfRental.objects.filter(product_id__in=product_ids)
+        duration_data = self.get_duration_data(self_rentals)
 
         start_time_date_object = datetime.strptime(start_time, get_date_format())
         end_time_date_object = datetime.strptime(end_time, get_date_format())

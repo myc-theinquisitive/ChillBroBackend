@@ -90,7 +90,7 @@ class AddProductToCart(APIView):
             for each_sub_product in sub_products:
                 products.append({
                     "product_id": each_sub_product,
-                    "quantity": 1 * quantity,
+                    "quantity": quantity,
                     "size": ""
                 })
         else:
@@ -222,7 +222,7 @@ class UpdateCartProductQuantity(APIView):
             for each_sub_product in sub_products:
                 products.append({
                     "product_id": each_sub_product,
-                    "quantity": 1 * quantity,
+                    "quantity": quantity,
                     "size": ""
                 })
         else:
@@ -586,8 +586,9 @@ def get_transport_data(product_id, product_details, transport_details):
     if product_type == ProductTypes.Hire_A_Vehicle.value or product_type == ProductTypes.Self_Rental.value:
         transport_data = {"trip_type": transport_details[product_id].trip_type,
                           "pickup_location": transport_details[product_id].pickup_location,
-                          "drop_location": transport_details[product_id].drop_location}
+                          "drop_location": transport_details[product_id].drop_location,
+                          "km_limit_choosen": transport_details[product_id].km_limit_choosen}
     else:
-        transport_data = {"trip_type": "", "pickup_location": "", "drop_location": ""}
+        transport_data = {"trip_type": "", "pickup_location": "", "drop_location": "", "km_limit_choosen": 0}
 
     return transport_data

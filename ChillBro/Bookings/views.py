@@ -1,6 +1,4 @@
 import json
-from datetime import timedelta
-from math import ceil
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Sum, Count
@@ -796,7 +794,7 @@ class BookingStart(APIView):
         for each_booking in booked_products:
             transport_details_ids.append(each_booking.id)
 
-        transport_details = TransportBookingDetails.objects.filter(booked_product__in=transport_details_ids)
+        transport_details = TransportBookingDistanceDetails.objects.filter(booked_product__in=transport_details_ids)
         for each_transport_data in transport_details:
             try:
                 each_transport_data.booking_starting_vehicle_km_value = \
@@ -885,7 +883,7 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
         for each_booking in booked_products:
             transport_details_ids.append(each_booking.id)
 
-        transport_details = TransportBookingDetails.objects.filter(booked_product__in=transport_details_ids)
+        transport_details = TransportBookingDistanceDetails.objects.filter(booked_product__in=transport_details_ids)
         for each_transport_data in transport_details:
             try:
                 each_transport_data.booking_ending_vehicle_km_value = \
@@ -917,7 +915,7 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
             if products[each_product]["has_sub_products"]:
                 booked_products_transport_ids.append(products[each_product]["id"])
 
-        booked_products_transport_details = TransportBookingDetails.objects \
+        booked_products_transport_details = TransportBookingDistanceDetails.objects \
                                             .filter(booked_product__in = booked_products_transport_ids)
 
         booked_products_transport_data = defaultdict()
@@ -1329,7 +1327,7 @@ def create_single_booking(booking_object, product_values):
 
         price_data = product_values[each_sub_product['product_id']]['price_data']
 
-        transport_details = TransportBookingDetailsSerializer()
+        transport_details = TransportBookingDistanceDetailsSerializer()
         transport_details.create({
             'booked_product':sub_product,
             'trip_type': each_sub_product['trip_type'],

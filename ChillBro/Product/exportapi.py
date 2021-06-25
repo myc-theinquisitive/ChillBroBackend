@@ -13,8 +13,8 @@ from Entity.export_apis import get_entity_type_and_sub_type
 def get_product_id_wise_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
     sub_products_ids = ProductView().get_sub_products_ids(product_ids)
-    get_price_data = ProductView().get_price_data(product_ids)
-    get_duration_data = ProductView().get_duration_data(product_ids)
+    # get_price_data = ProductView().get_price_data(product_ids)
+    # get_duration_data = ProductView().get_duration_data(product_ids)
 
     if not products:
         products = []
@@ -55,16 +55,16 @@ def get_product_id_wise_details(product_ids):
                 combo_products[each_combo_product.combo_item.id] = combo_product_data
         product_data['combo_products'] = combo_products
         sub_products = defaultdict()
-        price_data = defaultdict()
-        duration_data = defaultdict()
+        # price_data = defaultdict()
+        # duration_data = defaultdict()
         if each_product.has_sub_products:
             sub_products = sub_products_ids[each_product.id]
-            price_data = get_price_data[each_product.id]
-            duration_data = get_duration_data[each_product.id]
+            # price_data = get_price_data[each_product.id]
+            # duration_data = get_duration_data[each_product.id]
 
         product_data['sub_products'] = sub_products
-        product_data['price_data'] = price_data
-        product_data['duration_data'] = duration_data
+        # product_data['price_data'] = price_data
+        # product_data['duration_data'] = duration_data
         product_id_wise_details[each_product.id] = product_data
 
     return product_id_wise_details

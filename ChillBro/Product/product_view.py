@@ -651,38 +651,6 @@ class ProductView(ProductInterface):
 
         return all_sub_products_ids
 
-    def get_price_data(self, product_ids):
-        products = Product.objects.filter(id__in=product_ids)
-
-        group_products_by_type = defaultdict(list)
-        for product in products:
-            group_products_by_type[product.type].append(product.id)
-
-        products_price_data = defaultdict()
-        for type in group_products_by_type:
-            product_specific_view, product_key = self.get_view_and_key_by_type(type)
-
-            price_data_of_specific_type = product_specific_view.get_price_data(group_products_by_type[type])
-            products_price_data.update(price_data_of_specific_type)
-
-        return products_price_data
-
-    def get_duration_data(self, product_ids):
-        products = Product.objects.filter(id__in=product_ids)
-
-        group_products_by_type = defaultdict(list)
-        for product in products:
-            group_products_by_type[product.type].append(product.id)
-
-        all_duration_data = defaultdict()
-        for type in group_products_by_type:
-            product_specific_view, product_key = self.get_view_and_key_by_type(type)
-
-            duration_data_of_specific_type = product_specific_view.get_duration_data(group_products_by_type[type])
-            all_duration_data.update(duration_data_of_specific_type)
-
-        return all_duration_data
-
     def calculate_starting_prices(self, transport_ids_by_type, transport_ids_with_duration):
         all_products_prices = {}
         for type in transport_ids_with_duration:
@@ -711,7 +679,6 @@ class ProductView(ProductInterface):
             all_products_final_prices.update(products_final_prices)
 
         return all_products_final_prices
-
 
     def check_valid_duration(self, product_ids, start_time, end_time):
         products = Product.objects.filter(id__in=product_ids)
