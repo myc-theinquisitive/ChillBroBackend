@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'HelpCenter',
     'channels',
     'EmployeeManagement',
+    'JobPortal',
 ]
 
 

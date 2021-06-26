@@ -42,6 +42,7 @@ class CarouselItemToggle(APIView):
             return Response({'error': 'Detail not found'}, 400)
         return Response({'message': 'Updated '}, 200)
 
+
 class CarouselItemsList(generics.ListAPIView):
     serializer_class = CarouselItemSerializer
     queryset = CarouselItem.objects.all()
@@ -49,7 +50,9 @@ class CarouselItemsList(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         carousel_id = self.kwargs['pk']
         current_time = datetime.now()
-        self.queryset = CarouselItem.objects.filter(carousel=carousel_id,status=CarouselItemStatus.ACTIVE.value,start__lte=current_time,end__gte=current_time)
+        self.queryset = CarouselItem.objects.filter(
+            carousel=carousel_id, status=CarouselItemStatus.ACTIVE.value, start__lte=current_time,
+            end__gte=current_time)
         return super().get(request, *args, **kwargs)
 
 
@@ -62,6 +65,7 @@ class BusinessClientFAQDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BusinessClientFAQSerializer
     queryset = BusinessClientFAQ.objects.all()
 
+
 class HelpCenterFAQList(generics.ListCreateAPIView):
     serializer_class = HelpCenterFAQSerializer
     queryset = HelpCenterFAQ.objects.all()
@@ -71,6 +75,7 @@ class HelpCenterFAQDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = HelpCenterFAQSerializer
     queryset = HelpCenterFAQ.objects.all()
 
+
 class HowToUseList(generics.ListCreateAPIView):
     serializer_class = HowToUseSerializer
     queryset = HowToUse.objects.all()
@@ -79,6 +84,7 @@ class HowToUseList(generics.ListCreateAPIView):
 class HowToUseDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = HowToUseSerializer
     queryset = HowToUse.objects.all()
+
 
 class HowToUseEntityList(generics.ListAPIView):
     serializer_class = HowToUseSerializer
