@@ -721,11 +721,9 @@ class ProceedToPayment(APIView):
                         'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.myc.value
                     }
                 )
-
+            return Response({"message":"Your payment was created successfully"})
         else:
             return Response({"message": "Can't make transaction", "errors": input_serializer.errors},400)
-
-        # TODO: return proper response here
 
 
 class GetBookingDetailsView(generics.ListAPIView):
@@ -1349,7 +1347,8 @@ def create_single_booking(booking_object, product_values):
 
         price_data = product_values[each_sub_product['product_id']]['price_data']
 
-        transport_details = TransportBookingDistanceDetailsSerializer()
+        transport_details = TransportBookingDetailsSerializer()
+        #have to change the fields
         transport_details.create({
             'booked_product': sub_product,
             'trip_type': each_sub_product['trip_type'],

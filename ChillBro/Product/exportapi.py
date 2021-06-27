@@ -47,10 +47,17 @@ def get_product_id_wise_details(product_ids):
         if each_product.is_combo:
             all_combo_products = ComboProductItems.objects.select_related('product') \
                 .filter(product_id = each_product.id)
+            combo_item_ids = []
+            for each_combo_item in all_combo_products:
+                combo_item_ids.append(each_combo_item.combo_item.id)
+            from Product.BaseProduct.views import get_product_sizes
+            product_sizes = get_product_sizes(combo_item_ids)
 
             for each_combo_product in all_combo_products:
+                combo_item_sizes = product_sizes[each_combo_product.combo_item.id]
                 combo_product_data = {
-                    "quantity":each_combo_product.quantity
+                    "quantity":each_combo_product.quantity,
+                    "sizes": combo_item_sizes
                 }
                 combo_products[each_combo_product.combo_item.id] = combo_product_data
         product_data['combo_products'] = combo_products

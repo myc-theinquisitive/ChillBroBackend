@@ -34,9 +34,15 @@ class BookedProductsSerializer(serializers.ModelSerializer):
         return BookedProducts.objects.bulk_create(new_products)
 
     
-class TransportBookingDistanceDetailsSerializer(serializers.ModelSerializer):
+class TransportBookingDetailsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TransportBookingDistanceDetails
+        model = TransportBookingDetails
+        fields = '__all__'
+
+
+class TransportBookingDistancePriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TransportBookingDistancePrice
         fields = '__all__'
 
 

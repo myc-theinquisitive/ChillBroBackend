@@ -251,11 +251,11 @@ class HireAVehicleView(ProductInterface):
                 {
                     each_hire_a_vehicle.vehicle_id:{
                         "quantity": 1,
-                        "size": None
+                        "size": {}
                     },
                     each_hire_a_vehicle.default_driver_id: {
                         "quantity": 1,
-                        "size": None
+                        "size": {}
                     }
                 }
 

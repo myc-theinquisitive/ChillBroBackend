@@ -157,21 +157,25 @@ class BookedProducts(models.Model):
 
 # TODO: move trip type, pickup location, drop location, starting_km_value, ending km value
 #  and km limit choosen into a separate table
-class TransportBookingDistanceDetails(models.Model):
+class TransportBookingDetails(models.Model):
     booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
     trip_type = models.CharField(max_length=30,
-                                 choices=[(trip_type.value, trip_type.value) for trip_type in TripType], null=True,
-                                 blank=True)
+                    choices=[(trip_type.value, trip_type.value) for trip_type in TripType], null=True, blank=True)
     pickup_location = models.CharField(max_length=36, blank=True, null=True)
     drop_location = models.CharField(max_length=36, blank=True, null=True)
+    starting_km_value = models.PositiveIntegerField(default=0)
+    ending_km_value = models.PositiveIntegerField(default=0)
+    km_limit_choosen = models.PositiveIntegerField(default=0)
+    distance_price = models.ForeignKey("TransportBookingDistancePrice", on_delete=models.CASCADE)
+    duration_details = models.ForeignKey("TransportBookingDurationDetails", on_delete=models.CASCADE)
+
+
+class TransportBookingDistancePrice(models.Model):
     km_hour_limit = models.PositiveIntegerField(default=0)
     km_day_limit = models.PositiveIntegerField(default=0)
     excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     is_kms_infinity = models.BooleanField(default=False)
     single_trip_return_value_per_km = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    starting_km_value = models.PositiveIntegerField(default=0)
-    ending_km_value = models.PositiveIntegerField(default=0)
-    km_limit_choosen = models.PositiveIntegerField(default=0)
 
 
 class TransportBookingDurationDetails(models.Model):
