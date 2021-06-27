@@ -642,7 +642,7 @@ class ProductView(ProductInterface):
         for product in products:
             group_products_by_type[product.type].append(product.id)
 
-        all_sub_products_ids = defaultdict(list)
+        all_sub_products_ids = defaultdict()
         for type in group_products_by_type:
             product_specific_view, product_key = self.get_view_and_key_by_type(type)
 

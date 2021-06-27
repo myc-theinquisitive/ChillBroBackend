@@ -244,11 +244,20 @@ class HireAVehicleView(ProductInterface):
 
     def get_sub_products_ids(self, product_ids):
         hire_a_vehicles = HireAVehicle.objects.filter(product_id__in=product_ids)
-        hire_a_vehicles_sub_products_ids = defaultdict(list)
+        hire_a_vehicles_sub_products_ids = defaultdict()
 
         for each_hire_a_vehicle in hire_a_vehicles:
             hire_a_vehicles_sub_products_ids[each_hire_a_vehicle.product_id] = \
-                [each_hire_a_vehicle.vehicle_id, each_hire_a_vehicle.default_driver_id]
+                {
+                    each_hire_a_vehicle.vehicle_id:{
+                        "quantity": 1,
+                        "size": None
+                    },
+                    each_hire_a_vehicle.default_driver_id: {
+                        "quantity": 1,
+                        "size": None
+                    }
+                }
 
         return hire_a_vehicles_sub_products_ids
 

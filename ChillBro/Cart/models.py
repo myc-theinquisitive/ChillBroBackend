@@ -28,7 +28,7 @@ class CartProducts(models.Model):
     cart = models.ForeignKey('Cart', on_delete=models.CASCADE)
     product_id = models.CharField(max_length=36)
     quantity = models.IntegerField()
-    size = models.CharField(max_length=10, verbose_name="Size")
+    size = models.CharField(max_length=10, verbose_name="Size", blank=True, null=True)
     has_sub_products = models.BooleanField(default=False)
     is_combo = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
@@ -39,7 +39,7 @@ class CartProducts(models.Model):
         return "cart - {} and product - {}".format(self.cart, self.product_id)
 
     class Meta:
-        unique_together = (("cart", "product_id", "hidden", "parent_cart_product"),)
+        unique_together = (("cart", "product_id", "size", "hidden", "parent_cart_product"),)
 
 
 class TransportDetails(models.Model):

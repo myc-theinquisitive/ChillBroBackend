@@ -46,13 +46,36 @@ class TransportDetailsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class AddressSerializer(serializers.Serializer):
+    name= serializers.CharField(allow_null=True)
+    phone_number = serializers.CharField(max_length=10, allow_null=True)
+    pincode = serializers.CharField(max_length=6, min_length=6, required=True)
+    address_line = serializers.CharField(allow_null=True)
+    extend_address = serializers.CharField(allow_null=True)
+    landmark = serializers.CharField(allow_null=True)
+    city = serializers.CharField(required=True)
+    state = serializers.CharField(required=True)
+    country = serializers.CharField(required=True)
+    latitude = serializers.CharField(allow_null=True)
+    longitude = serializers.CharField(allow_null=True)
+
+
+class AddtoCartTransportDetailsSerializer(serializers.Serializer):
+    trip_type = serializers.CharField(required=True)
+    pickup_location = AddressSerializer()
+    drop_location = AddressSerializer()
+    km_limit_choosen = serializers.IntegerField(required=True)
+
+
 class AddProductToCartSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
     quantity = serializers.IntegerField(required=True)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     # TODO: add validation for transport details and other inputs for add to cart
-    #transport_details = TransportDetailsSerializer(allow_null=True)
+    transport_details = AddtoCartTransportDetailsSerializer(allow_null=True)
+    #, allow_blank=True) - getting error while passing it  --__init__() got an unexpected keyword argument 'allow_blank'
+
 
 class CheckoutCartSerializer(serializers.Serializer):
     entity_type = serializers.CharField(required=True)

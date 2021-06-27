@@ -275,11 +275,17 @@ class SelfRentalView(ProductInterface):
 
     def get_sub_products_ids(self, product_ids):
         self_rentals = SelfRental.objects.filter(product_id__in=product_ids)
-        self_rentals_sub_products_ids = defaultdict(list)
+        self_rentals_sub_products_ids = defaultdict()
 
         for each_self_rental in self_rentals:
             self_rentals_sub_products_ids[each_self_rental.product_id] = \
-                [each_self_rental.vehicle_id]
+                {
+                    each_self_rental.vehicle_id:
+                    {
+                        "quantity": 1,
+                        "size":""
+                    }
+                }
 
         return self_rentals_sub_products_ids
 
