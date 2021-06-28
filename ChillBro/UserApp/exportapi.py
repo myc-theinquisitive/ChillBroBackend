@@ -1,5 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from .models import BusinessClient, Employee
+from django.db.models import F
 
 
 def get_employee_details_for_entities(entity_ids):
@@ -32,5 +33,11 @@ def entity_ids_for_employee(employee_id):
             return [employee.entity_id]
     except ObjectDoesNotExist:
         return []
-
     return []
+
+
+def get_employee_details(employee_ids):
+    employees = Employee.objects.filter(id__in=employee_ids, is_active=True). \
+        values('id', 'role', first_name=F('user_id__first_name'), email=F('user_id__email'),
+               phone_number=F('user_id__phone_number'))
+    return employees

@@ -93,13 +93,14 @@ class EmployeeAdd(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
+        request.data._mutable = True
+        if not serializer.is_valid():
             return Response(serializer.errors, 400)
 
         request.data['is_verified'] = True
         request.data['email'] = request.data['email'].lower().strip()
         user_serializer = MyUserList.serializer_class(data=request.data)
-        if user_serializer.is_valid():
+        if not user_serializer.is_valid():
             return Response(user_serializer.errors, 400)
         user_instance = user_serializer.save()
 
@@ -109,7 +110,7 @@ class EmployeeAdd(APIView):
         request.data['user_id'] = user_id
 
         employee_serializer = EmployeeSerializer(data=request.data)
-        if employee_serializer.is_valid():
+        if not employee_serializer.is_valid():
             user_instance.delete()
             return Response(employee_serializer.errors, 400)
         employee_instance = employee_serializer.save()
