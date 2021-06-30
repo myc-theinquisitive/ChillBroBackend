@@ -42,3 +42,6 @@ class PaymentMode(enum.Enum):
     full = "FULL"
 
 
+BookingApprovalTime = 10
+
+

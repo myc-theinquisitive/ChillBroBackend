@@ -2,22 +2,33 @@ import uuid
 from django.db.models import Q
 from django.db import models
 from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, \
-    PaymentMode, TripType
-from datetime import datetime
+    PaymentMode, TripType, BookingApprovalTime
+from datetime import datetime, timedelta
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
 from .Quotation.models import *
+from django.utils import timezone
+import random
 
 # Create your models here.
+
+
 def get_id():
     return str(uuid.uuid4())
+
+
+def generate_otp():
+    return random.randint(100000,999999)
 
 
 class BookingsManager(models.Manager):
 
     # TODO: add booking status cancelled condition and booking time less than that approval time for business client
     def active(self):
-        return self.filter(~Q(payment_status=PaymentStatus.failed.value))
+        current_time = timezone.now() - timedelta(minutes=BookingApprovalTime)
+
+        return self.filter(~Q(payment_status=PaymentStatus.failed.value) & \
+                        Q(~Q(booking_status=ProductBookingStatus.cancelled.value) &~Q(booing_date__lte=current_time)))
 
     def received_bookings(self, from_date, to_date, entity_types, entity_ids):
         if from_date and to_date:
@@ -83,6 +94,10 @@ class Bookings(models.Model):
     entity_id = models.CharField(max_length=36)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+    excess_total_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_total_net_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+
+    otp = models.IntegerField(default=generate_otp)
 
     objects = BookingsManager()
 
@@ -141,10 +156,10 @@ class BookedProducts(models.Model):
     net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     coupon_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
-    booking_status = models.CharField(
-        max_length=30, choices=[(booking_status.value, booking_status.value)
-                                for booking_status in ProductBookingStatus],
-        default=ProductBookingStatus.booked.value)
+    booking_status = models.CharField(max_length=30, choices=[(booking_status.value, booking_status.value)
+            for booking_status in ProductBookingStatus],default=ProductBookingStatus.booked.value)
+    excess_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_net_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
     objects = BookedProductManager()
 
@@ -166,20 +181,21 @@ class TransportBookingDetails(models.Model):
     starting_km_value = models.PositiveIntegerField(default=0)
     ending_km_value = models.PositiveIntegerField(default=0)
     km_limit_choosen = models.PositiveIntegerField(default=0)
-    distance_price = models.ForeignKey("TransportBookingDistancePrice", on_delete=models.CASCADE)
-    duration_details = models.ForeignKey("TransportBookingDurationDetails", on_delete=models.CASCADE)
+    distance_details = models.ForeignKey("TransportBookingDistanceDetails", on_delete=models.CASCADE)
+    duration_details = models.ForeignKey("TransportBookingDurationDetails", on_delete=models.CASCADE, blank=True, null=True)
 
 
-class TransportBookingDistancePrice(models.Model):
+class TransportBookingDistanceDetails(models.Model):
     km_hour_limit = models.PositiveIntegerField(default=0)
     km_day_limit = models.PositiveIntegerField(default=0)
     excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
-    is_kms_infinity = models.BooleanField(default=False)
+    is_infinity = models.BooleanField(default=False)
     single_trip_return_value_per_km = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    km_limit = models.PositiveIntegerField(default=0)
 
 
 class TransportBookingDurationDetails(models.Model):
-    booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
     hour_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     day_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_hour_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
@@ -286,6 +302,7 @@ class CancelledDetailsManager(models.Manager):
 class CancelledDetails(models.Model):
     booking = models.OneToOneField('Bookings', on_delete=models.CASCADE)
     cancelled_time = models.DateTimeField(default=datetime.now)
+    reason = models.TextField()
 
     objects = CancelledDetailsManager()
 
@@ -322,12 +339,8 @@ class ReportCustomerReasons(models.Model):
 class BusinessClientProductCancellation(models.Model):
     booking = models.ForeignKey('Bookings', on_delete=models.CASCADE)
     product_id = models.CharField(max_length=36)
-    # TODO: make reason as text field, and move this to CancelledDetails table
-    reason = models.CharField(max_length=1000)
     user_model = get_user_model()
     cancelled_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
-    # TODO: remove time as it is stored in cancellation table
-    time = models.DateTimeField(default=datetime.now)
 
     def __str__(self):
         return "Booking Id {} Product Id- {}".format(self.booking, self.product_id)

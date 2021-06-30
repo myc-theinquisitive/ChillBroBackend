@@ -47,8 +47,7 @@ def add_wishlist_status_for_products(user_id, products_response):
         product["in_wishlist"] = product_id_wise_wishlist_status[product["id"]]
 
 
-def calculate_product_net_price(selling_price, discount):
-    final_selling_price = selling_price - (selling_price * discount) / 100
+def calculate_net_price(final_selling_price, product_type):
     commission_fee = final_selling_price * COMMISION_FEE_PERCENT / 100
     transaction_fee = final_selling_price * TRANSACTION_FEE_PERCENT / 100
     fixed_fee = final_selling_price * FIXED_FEE_PERCENT / 100
@@ -65,6 +64,11 @@ def calculate_product_net_price(selling_price, discount):
             "gst": gst
         }
     }
+
+
+def calculate_product_net_price(selling_price, discount):
+    final_selling_price = selling_price - (selling_price * discount) / 100
+    return calculate_net_price(final_selling_price, "product type")
 
 
 def add_verification_details_to_product(products_list):

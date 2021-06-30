@@ -4,6 +4,7 @@ from django.db.models import Min
 from .Category.models import Category
 from .BaseProduct.models import Product, ComboProductItems, ProductSize
 from .HireAVehicle.models import HireAVehicle
+from .SelfRental.models import SelfRental
 from .views import calculate_product_net_price
 from django.db.models import Count
 from .product_view import ProductView
@@ -13,8 +14,7 @@ from Entity.export_apis import get_entity_type_and_sub_type
 def get_product_id_wise_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
     sub_products_ids = ProductView().get_sub_products_ids(product_ids)
-    # get_price_data = ProductView().get_price_data(product_ids)
-    # get_duration_data = ProductView().get_duration_data(product_ids)
+    transport_details = get_transport_details(product_ids)
 
     if not products:
         products = []
@@ -62,16 +62,15 @@ def get_product_id_wise_details(product_ids):
                 combo_products[each_combo_product.combo_item.id] = combo_product_data
         product_data['combo_products'] = combo_products
         sub_products = defaultdict()
-        # price_data = defaultdict()
-        # duration_data = defaultdict()
         if each_product.has_sub_products:
             sub_products = sub_products_ids[each_product.id]
-            # price_data = get_price_data[each_product.id]
-            # duration_data = get_duration_data[each_product.id]
 
         product_data['sub_products'] = sub_products
-        # product_data['price_data'] = price_data
-        # product_data['duration_data'] = duration_data
+        if each_product.id in transport_details:
+            product_data['transport_details'] = transport_details[each_product.id]
+        else:
+            product_data['transport_details'] = {}
+
         product_id_wise_details[each_product.id] = product_data
 
     return product_id_wise_details
@@ -136,3 +135,33 @@ def get_product_final_prices(products):
     from .views import ProductView
     product_view = ProductView()
     return product_view.calculate_final_prices(products)
+
+
+def get_transport_details(product_ids):
+    transport_details = defaultdict()
+    from Product.HireAVehicle.views import HireAVehicleView
+    hire_a_vehicles = HireAVehicle.objects.filter(product_id__in=product_ids)
+    hire_a_vehicles_price_details = HireAVehicleView().get_price_data(hire_a_vehicles)
+    hire_a_vehicle_duration_details = HireAVehicleView().get_duration_data(hire_a_vehicles)
+    for each_product in hire_a_vehicles:
+        transport_details[each_product.product_id] = {
+            "price_details": hire_a_vehicles_price_details[each_product.product_id],
+            "duration_details": hire_a_vehicle_duration_details[each_product.product_id]
+        }
+    from Product.SelfRental.views import SelfRentalView
+    self_rentals = SelfRental.objects.filter(product_id__in=product_ids)
+    self_rentals_price_details = SelfRentalView().get_price_data(self_rentals)
+    self_rentals_duration_details = SelfRentalView().get_duration_data(self_rentals)
+
+    for each_product in self_rentals:
+        transport_details[each_product.product_id] = {
+            "price_details": self_rentals_price_details[each_product.product_id],
+            "duration_details": self_rentals_duration_details[each_product.product_id]
+        }
+
+    return transport_details
+
+
+def calculate_product_excess_net_price(excess_price, product_type):
+    from .views import calculate_net_price
+    return calculate_net_price(excess_price, product_type)

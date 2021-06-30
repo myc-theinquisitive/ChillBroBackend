@@ -19,7 +19,7 @@ class SelfRental(models.Model):
 class SelfRentalDistancePrice(models.Model):
     price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     km_limit = models.PositiveIntegerField()
-    excess_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     is_infinity = models.BooleanField(default=False)
     self_rental = models.ForeignKey('SelfRental', on_delete=models.CASCADE)
 

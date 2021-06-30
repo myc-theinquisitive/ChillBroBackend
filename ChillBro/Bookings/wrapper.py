@@ -51,3 +51,8 @@ def get_entity_details(entity_ids):
 def get_product_prices_by_duration(products):
     from Product.exportapi import get_product_final_prices
     return get_product_final_prices(products)
+
+
+def get_product_net_price(excess_price, product_type):
+    from Product.exportapi import calculate_product_excess_net_price
+    return calculate_product_excess_net_price(excess_price, product_type)

@@ -94,18 +94,17 @@ class HireAVehicleView(ProductInterface):
             "default_driver": string,
             "distance_price":
                     {
-                        'hour_price': int,
-                        'day_price': int,
-                        'is_km_infinity': Boolean,
                         'km_hour_limit': int,
                         'km_day_limit': int,
-                        'excess_hour_duration_price': int,
-                        'excess_day_duration_price': int,
                         'single_trip_return_value_per_km' : int,
-
+                        'excess_km_price' : int
                     },
             "duration_details":
                     {
+                        'hour_price': int,
+                        'day_price': int,
+                        'excess_hour_duration_price': int,
+                        'excess_day_duration_price': int,
                         'min_hour_duration': int,
                         'max_hour_duration': int,
                         'min_day_duration': int,
@@ -113,11 +112,6 @@ class HireAVehicleView(ProductInterface):
                     }
         }
         """
-
-        if 'is_infinity' in self.distance_price_data:
-            self.distance_price_data['excess_km_price'] = 0 if self.distance_price_data['is_infinity'] else self.distance_price_data['excess_km_price']
-        else:
-            self.distance_price_data['is_infinity'] = False
 
         distance_price_serializer = HireAVehicleDistancePriceSerializer()
         hire_a_vehicle_distance_object = distance_price_serializer.create(self.distance_price_data)
@@ -174,7 +168,6 @@ class HireAVehicleView(ProductInterface):
             "distance_price":
                     {
                         'excess_km_price':int,
-                        'is_km_infinity': Boolean,
                         'km_hour_limit': int,
                         'km_day_limit': int,
                         'single_trip_return_value_per_km' : int,
@@ -263,48 +256,33 @@ class HireAVehicleView(ProductInterface):
 
     @staticmethod
     def get_price_data(hire_a_vehicles):
-        hire_a_vehicles_data = defaultdict()
         hire_a_vehicle_price_details = defaultdict()
-        hire_a_vehicles_distance_price_ids = []
 
         for each_hire_a_vehicle in hire_a_vehicles:
-            hire_a_vehicles_distance_price_ids.append(each_hire_a_vehicle.distance_price.id)
-
-        hire_a_vehicle_distance_price_data = HireAVehicleDistancePrice.objects\
-            .filter(id__in=hire_a_vehicles_distance_price_ids)
-        hire_a_vehicle_distance_price_serializer = \
-            HireAVehicleDistancePriceSerializer(hire_a_vehicle_distance_price_data, many=True)
-
-        for each_distance_price in hire_a_vehicle_distance_price_serializer.data:
-            hire_a_vehicles_data[each_distance_price["id"]] =each_distance_price
-
-        for each_hire_a_vehicle in hire_a_vehicles:
-            hire_a_vehicle_price_details[each_hire_a_vehicle.product_id] = \
-                hire_a_vehicles_data[each_hire_a_vehicle.distance_price.id]
+            hire_a_vehicle_price_details[each_hire_a_vehicle.product_id] = {
+                "excess_km_price": each_hire_a_vehicle.distance_price.excess_km_price,
+                "km_hour_limit": each_hire_a_vehicle.distance_price.km_hour_limit,
+                "km_day_limit": each_hire_a_vehicle.distance_price.km_day_limit,
+                "single_trip_return_value_per_km": each_hire_a_vehicle.distance_price.single_trip_return_value_per_km
+            }
 
         return hire_a_vehicle_price_details
 
     @staticmethod
     def get_duration_data(hire_a_vehicles):
-        hire_a_vehicles_data = defaultdict()
         hire_a_vehicle_duration_details = defaultdict()
-        hire_a_vehicles_duration_details_ids = []
 
         for each_hire_a_vehicle in hire_a_vehicles:
-            hire_a_vehicles_duration_details_ids.append(each_hire_a_vehicle.duration_details.id)
-
-        hire_a_vehicle_duration_details_data = HireAVehicleDurationDetails.objects \
-            .filter(id__in=hire_a_vehicles_duration_details_ids)
-
-        hire_a_vehicle_duration_details_serializer = \
-            HireAVehicleDurationDetailsSerializer(hire_a_vehicle_duration_details_data, many=True)
-
-        for each_duration_details in hire_a_vehicle_duration_details_serializer.data:
-            hire_a_vehicles_data[each_duration_details["id"]] = each_duration_details
-
-        for each_hire_a_vehicle in hire_a_vehicles:
-            hire_a_vehicle_duration_details[each_hire_a_vehicle.product_id] = \
-                hire_a_vehicles_data[each_hire_a_vehicle.duration_details.id]
+            hire_a_vehicle_duration_details[each_hire_a_vehicle.product_id] = {
+                "hour_price": each_hire_a_vehicle.duration_details.hour_price,
+                "day_price": each_hire_a_vehicle.duration_details.day_price,
+                "excess_hour_duration_price": each_hire_a_vehicle.duration_details.excess_hour_duration_price,
+                "excess_day_duration_price": each_hire_a_vehicle.duration_details.excess_day_duration_price,
+                "min_hour_duration": each_hire_a_vehicle.duration_details.min_hour_duration,
+                "max_hour_duration": each_hire_a_vehicle.duration_details.max_hour_duration,
+                "min_day_duration": each_hire_a_vehicle.duration_details.min_day_duration,
+                "max_day_duration": each_hire_a_vehicle.duration_details.max_day_duration,
+            }
 
         return hire_a_vehicle_duration_details
 
@@ -332,7 +310,6 @@ class HireAVehicleView(ProductInterface):
             duration_price = float(duration_data["day_price"]) * days + float(duration_data["hour_price"]) * hours
 
             if trip_type == TripType.single.value:
-                #TODO: have to a handle is_km_infinity case
                 trip_type_price = float(price_data["single_trip_return_value_per_km"]) * \
                                 (float(price_data["km_day_limit"]) * days + float(price_data["km_hour_limit"]) * hours)
             else:
@@ -353,7 +330,7 @@ class HireAVehicleView(ProductInterface):
     def calculate_final_prices(self, products):
         final_prices = defaultdict()
         for each_product in products:
-            price_data = products[each_product]["price_data"]
+            transport_details = products[each_product]["transport_details"]
             start_time = datetime.strptime(products[each_product]["start_time"], get_date_format())
             booking_end_time = datetime.strptime(products[each_product]["booking_end_time"], get_date_format())
             present_end_time = datetime.strptime(products[each_product]["present_end_time"], get_date_format())
@@ -361,35 +338,39 @@ class HireAVehicleView(ProductInterface):
             booking_total_hours = ceil((booking_difference_date.total_seconds() // 60) / 60)
             days = booking_total_hours // 24
             hours = booking_total_hours % 24
+            excess_days = excess_hours = 0
             if present_end_time > booking_end_time:
                 excess_difference_date = (present_end_time - booking_end_time)
                 excess_total_hours = ceil((excess_difference_date.total_seconds() // 60) / 60)
                 excess_days = excess_total_hours // 24
                 excess_hours = excess_total_hours % 24
-                excess_duration_price = price_data["excess_day_duration_price"] * excess_days + \
-                                        price_data["excess_hour_duration_price"] * excess_hours
+                excess_duration_price = transport_details["duration_details"]["excess_day_duration_price"] * excess_days + \
+                                        transport_details["duration_details"]["excess_hour_duration_price"] * excess_hours
             else:
                 excess_duration_price = 0
 
-            max_km_can_travel = price_data["km_day_limit"] * days + price_data["km_hour_limit"] * hours
-            km_travelled = price_data["booking_ending_km_value"] - price_data["booking_started_km_value"]
+            max_km_can_travel = transport_details["distance_details"]["km_day_limit"] * days +\
+                                transport_details["distance_details"]["km_hour_limit"] * hours
+            km_travelled = transport_details["ending_km_value"] - transport_details["starting_km_value"]
             if km_travelled > max_km_can_travel:
                 excess_km_travelled = km_travelled - max_km_can_travel
-                excess_km_price = price_data["excess_km_price"] * excess_km_travelled
+                excess_km_price = transport_details["distance_details"]["excess_km_price"] * excess_km_travelled
             else:
                 excess_km_price = 0
 
-            duration_price = float(price_data["day_price"] * days + price_data["hour_price"]  * hours)
+            duration_price = float(transport_details["duration_details"]["day_price"] * days +\
+                                   transport_details["duration_details"]["hour_price"]  * hours)
 
-            if price_data["trip_type"] == TripType.single.value:
-                trip_type_price = price_data["single_trip_return_value_per_km"] * \
-                                    (price_data["km_day_limit"] * days + price_data["km_hour_limit"] * hours)
+            if transport_details["trip_type"] == TripType.single.value:
+                trip_type_price = transport_details["distance_details"]["single_trip_return_value_per_km"] * \
+                                    (transport_details["distance_details"]["km_day_limit"] * excess_days + \
+                                     transport_details["distance_details"]["km_hour_limit"] * excess_hours)
             else:
                 trip_type_price = 0
 
-            total_price = float((duration_price + trip_type_price + excess_km_price + excess_duration_price) * \
+            total_price = float((trip_type_price + excess_km_price + excess_duration_price) * \
                           products[each_product]["quantity"])
-            discounted_price = total_price - ((total_price * products[each_product]["discount_percentage"]) / 100)
+            discounted_price = total_price - ((total_price * float(products[each_product]["discount_percentage"]))/ 100)
             final_prices[each_product] = {
                 "duration_price": duration_price,
                 "trip_type_price": trip_type_price,

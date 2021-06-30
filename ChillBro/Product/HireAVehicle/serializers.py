@@ -44,7 +44,7 @@ class HireAVehicleDistancePriceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return HireAVehicleDistancePrice.objects.create(
-            excess_km_price=validated_data["excess_km_price"], is_km_infinity=validated_data["is_km_infinity"],
+            excess_km_price=validated_data["excess_km_price"],
             km_hour_limit=validated_data["km_hour_limit"], km_day_limit=validated_data["km_day_limit"],
             single_trip_return_value_per_km=validated_data["single_trip_return_value_per_km"])
 

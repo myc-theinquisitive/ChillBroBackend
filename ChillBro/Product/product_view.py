@@ -666,16 +666,15 @@ class ProductView(ProductInterface):
         product_ids = products.keys()
         all_products = Product.objects.filter(id__in=product_ids)
 
-        group_products_by_type = defaultdict(list)
+        group_products_by_type = defaultdict(dict)
         for product in all_products:
-            group_products_by_type[product.type].append(products[product.id])
+            group_products_by_type[product.type].update({product.id:products[product.id]})
 
         all_products_final_prices = defaultdict()
         for type in group_products_by_type:
             product_specific_view, product_key = self.get_view_and_key_by_type(type)
 
-            products_final_prices = product_specific_view.calculate_final_prices(products)
-
+            products_final_prices = product_specific_view.calculate_final_prices(group_products_by_type[type])
             all_products_final_prices.update(products_final_prices)
 
         return all_products_final_prices

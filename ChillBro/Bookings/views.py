@@ -23,32 +23,24 @@ import threading
 from .tasks import cancel_booking_if_not_accepted_by_business_client
 from datetime import datetime, timedelta
 import pytz
+from django.utils import timezone
 
 
 # Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_transaction_details_by_booking_id, \
     business_client_review_on_customer, get_product_details, get_entity_details, \
-    get_business_client_review_by_booking_id, get_product_prices_by_duration
+    get_business_client_review_by_booking_id, get_product_prices_by_duration, get_product_net_price
 
 _booking_lock = threading.Lock()
 
 
-def render_to_pdf(template_src, context_dict={}):
-    template = get_template(template_src)
-    html = template.render(context_dict)
-    result = BytesIO()
-    pdf = pisa.pisaDocument(BytesIO(html.encode("ISO-8859-1")), result)
-    if not pdf.err:
-        return HttpResponse(result.getvalue(), content_type='application/pdf')
-    return None
 
 
 def get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size):
     # TODO: remove booking status check after adding conditions in active function
     return BookedProducts.objects.active().select_related('booking') \
         .filter(product_id=product_id, size=product_size) \
-        .filter(~Q(booking_status=ProductBookingStatus.cancelled.value)) \
         .filter(
         Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gt=start_time)) |
         Q(Q(booking__start_time__lt=end_time) & Q(booking__end_time__gte=end_time)) |
@@ -352,7 +344,8 @@ class CreateBooking(generics.ListCreateAPIView):
 
         # TODO: make modifications to convert the input data into required format for this function,
         #  include coupon logic
-        create_single_booking(request.data, product_values)
+        with _booking_lock:
+            create_single_booking(request.data, product_values)
 
         return Response({"message": "Booking created"}, 200)
 
@@ -641,6 +634,11 @@ class BusinessClientBookingApproval(generics.UpdateAPIView):
 
         # TODO: Check the approval time is less than the time allocated for approval
         self.check_object_permissions(request, booking)
+
+        current_time = timezone.now() - timedelta(minutes=BookingApprovalTime)
+        if current_time > booking.booking_date :
+            return Response({"message": "Can't approve the booking", "errors":"this booking is already canclled"})
+        # print(request.data['booking_status']) --- data also not coming
         return super().put(request, *args, **kwargs)
 
 
@@ -663,67 +661,67 @@ class ProceedToPayment(APIView):
 
     def post(self, request, *args, **kwargs):
         input_serializer = ProceedToPaymentSerializer(data=request.data)
-        if input_serializer.is_valid():
-            payment_mode = request.data['payment_mode']
-            booking_id = request.data['booking_id']
-            transaction_money = request.data['transaction_money']
-
-            try:
-                booking = Bookings.objects.get(id=booking_id)
-            except ObjectDoesNotExist:
-                return Response({"message": "Can't get booking details", "error": "Invalid Booking id"}, 400)
-
-            if payment_mode == PaymentMode.partial.value:
-                if transaction_money != booking.total_money - booking.total_net_value:
-                    return Response({"message": "Can't create transaction", "errors": "Invalid transaction"}, 400)
-                booking.payment_mode = payment_mode
-                booking.save()
-
-                create_booking_transaction(
-                    {
-                        'booking_id': booking.id, 'entity_id': booking.entity_id,
-                        'entity_type': booking.entity_type, 'total_money': booking.total_money - booking.total_net_value,
-                        'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-                        'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.customer.value
-                    }
-                )
-
-                create_booking_transaction(
-                    {
-                        'booking_id': booking.id, 'entity_id': booking.entity_id,
-                        'entity_type': booking.entity_type, 'total_money': booking.total_net_value,
-                        'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-                        'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.customer.value
-                    }
-                )
-
-            elif payment_mode == PaymentMode.full.value:
-                if transaction_money != booking.total_money:
-                    return Response({"message": "Can't create transaction", "errors": "Invalid transaction"}, 400)
-                # TODO: move this logic to outside of if else as it is common for all payment modes
-                booking.transaction_type = payment_mode
-                booking.save()
-
-                create_booking_transaction(
-                    {
-                        'booking_id': booking.id, 'entity_id': booking.entity_id,
-                        'entity_type': booking.entity_type, 'total_money': booking.total_money,
-                        'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-                        'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.customer.value
-                    }
-                )
-
-                create_booking_transaction(
-                    {
-                        'booking_id': booking.id, 'entity_id': booking.entity_id,
-                        'entity_type': booking.entity_type, 'total_money': booking.total_net_value,
-                        'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-                        'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.myc.value
-                    }
-                )
-            return Response({"message":"Your payment was created successfully"})
-        else:
+        if not input_serializer.is_valid():
             return Response({"message": "Can't make transaction", "errors": input_serializer.errors},400)
+        payment_mode = request.data['payment_mode']
+        booking_id = request.data['booking_id']
+        transaction_money = request.data['transaction_money']
+
+        try:
+            booking = Bookings.objects.get(id=booking_id)
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't get booking details", "error": "Invalid Booking id"}, 400)
+
+        if payment_mode == PaymentMode.partial.value:
+            if transaction_money != booking.total_money - booking.total_net_value:
+                return Response({"message": "Can't create transaction", "errors": "Invalid transaction"}, 400)
+            booking.payment_mode = payment_mode
+            booking.save()
+
+            create_booking_transaction(
+                {
+                    'booking_id': booking.id, 'entity_id': booking.entity_id,
+                    'entity_type': booking.entity_type, 'total_money': booking.total_money - booking.total_net_value,
+                    'booking_date': booking.booking_date, 'booking_start': booking.start_time,
+                    'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.customer.value
+                }
+            )
+
+            create_booking_transaction(
+                {
+                    'booking_id': booking.id, 'entity_id': booking.entity_id,
+                    'entity_type': booking.entity_type, 'total_money': booking.total_net_value,
+                    'booking_date': booking.booking_date, 'booking_start': booking.start_time,
+                    'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.customer.value
+                }
+            )
+
+        elif payment_mode == PaymentMode.full.value:
+            if transaction_money != booking.total_money:
+                return Response({"message": "Can't create transaction", "errors": "Invalid transaction"}, 400)
+            # TODO: move this logic to outside of if else as it is common for all payment modes
+            # this logic should be inside of both cases since we have to check transaction money is valid or not
+            booking.payment_mode = payment_mode
+            booking.save()
+
+            create_booking_transaction(
+                {
+                    'booking_id': booking.id, 'entity_id': booking.entity_id,
+                    'entity_type': booking.entity_type, 'total_money': booking.total_money,
+                    'booking_date': booking.booking_date, 'booking_start': booking.start_time,
+                    'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.customer.value
+                }
+            )
+
+            create_booking_transaction(
+                {
+                    'booking_id': booking.id, 'entity_id': booking.entity_id,
+                    'entity_type': booking.entity_type, 'total_money': booking.total_net_value,
+                    'booking_date': booking.booking_date, 'booking_start': booking.start_time,
+                    'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.myc.value
+                }
+            )
+        return Response({"message":"Your payment was created successfully"})
 
 
 class GetBookingDetailsView(generics.ListAPIView):
@@ -777,10 +775,10 @@ class BookingStart(APIView):
 
     def post(self, request, *args, **kwargs):
         '''
-        'booking_starting_details':
+        'start_details':
         {
-            'product_id'(string- 36characters) : starting_km(int),
-            'product_id'(string- 36characters) : starting_km(int)
+            'product_id'(string- 36characters) : {"starting_km": starting_km(int)},
+            'product_id'(string- 36characters) : {"starting_km": starting_km(int)}
         }
         '''
 
@@ -794,22 +792,21 @@ class BookingStart(APIView):
         data = request.data.dict()
         data["booking"] = booking
         # TODO: rename the key as start details
-        booking_starting_details = data.pop("booking_starting_details", None)
-        booking_starting_details = json.loads(booking_starting_details)
+        start_details = data.pop("start_details", None)
+        start_details = json.loads(start_details)
 
         booked_products = BookedProducts.objects.filter(booking=booking, has_sub_products=True)
         transport_details_ids = []
         for each_booking in booked_products:
             transport_details_ids.append(each_booking.id)
 
-        transport_details = TransportBookingDistanceDetails.objects.filter(
-            booked_product__in=transport_details_ids)
+        transport_details = TransportBookingDetails.objects.filter(booked_product__in=transport_details_ids)
         for each_transport_data in transport_details:
             try:
-                each_transport_data.booking_starting_vehicle_km_value = \
-                    booking_starting_details[each_transport_data.booked_product.product_id]
+                each_transport_data.starting_km_value = \
+                    start_details[each_transport_data.booked_product.product_id]['starting_km']
                 each_transport_data.save()
-            except ObjectDoesNotExist:
+            except KeyError:
                 return Response({"message": "Can't get booking details",
                                  "error": "Invalid product id"})
         other_images = request.data.pop('other_images', None)
@@ -863,14 +860,14 @@ class BookingEnd(APIView):
 
 
 class GetBookingEndDetailsView(generics.RetrieveAPIView):
-    # permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
         '''
-        'booking_ending_details':
+        'end_details':
         {
-            'product_id'(string - 36characters) : ending_km(int),
-            'product_id'(string- 36characters) : ending_km(int),
+            'product_id'(string - 36characters) : {"ending_km" :ending_km(int)},
+            'product_id'(string - 36characters) : {"ending_km" :ending_km(int)}
         }
         '''
 
@@ -881,20 +878,20 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
         except ObjectDoesNotExist:
             return Response({"message": "Can't get booking details", "error": "Invalid booking id"}, 400)
 
-        booking_ending_details = request.data.pop("booking_ending_details", None)
+        end_details = request.data.pop("end_details", None)
         booked_products = BookedProducts.objects.select_related('booking').filter(booking_id=kwargs['booking_id'])
         booked_product_serializer = BookedProductsSerializer(booked_products, many=True).data
         transport_details_ids = []
         for each_booking in booked_products:
             transport_details_ids.append(each_booking.id)
 
-        transport_details = TransportBookingDistanceDetails.objects.filter(booked_product__in=transport_details_ids)
+        transport_details = TransportBookingDetails.objects.filter(booked_product_id__in=transport_details_ids)
         for each_transport_data in transport_details:
             try:
-                each_transport_data.booking_ending_vehicle_km_value = \
-                    booking_ending_details[each_transport_data.booked_product.product_id]
+                each_transport_data.ending_km_value = \
+                    end_details[each_transport_data.booked_product.product_id]['ending_km']
                 each_transport_data.save()
-            except ObjectDoesNotExist:
+            except KeyError:
                 return Response({"message": "Can't get booking details",
                                  "error": "Invalid product id in booking starting details"})
 
@@ -903,60 +900,43 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
         for each_booked_product in booked_product_serializer:
             if each_booked_product["parent_booked_product"] is None:
                 product_ids.append(each_booked_product["product_id"])
-                # TODO: remove this check in check and use start time always
-                if check_in_object.check_in > booking.start_time:
-                    each_booked_product["start_time"] = booking.start_time.strftime(get_date_format())
-                else:
-                    each_booked_product["start_time"] = check_in_object.check_in.strftime(get_date_format())
+                each_booked_product["start_time"] = booking.start_time.strftime(get_date_format())
                 each_booked_product["booking_end_time"] = booking.end_time.strftime(get_date_format())
                 each_booked_product["present_end_time"] = (datetime.now()).strftime(get_date_format())
                 products[each_booked_product["product_id"]] = each_booked_product
 
         products_details = get_product_id_wise_product_details(product_ids)
-        # TODO: Remove this and use product ids in query
-        booked_products_transport_ids = []
+
+        transport_details = get_transport_details(product_ids)
+
         for each_product in products:
-            if products[each_product]["has_sub_products"]:
-                booked_products_transport_ids.append(products[each_product]["id"])
-
-        # TODO: Move this to separate functions
-        booked_products_transport_details = TransportBookingDistanceDetails.objects\
-            .filter(booked_product__in=booked_products_transport_ids)
-
-        booked_products_transport_data = defaultdict()
-        for each_transport_data in booked_products_transport_details:
-            booked_products_transport_data[each_transport_data.booked_product.product_id] = each_transport_data
-
-        if booking.entity_type == EntityType.TRANSPORT.value:
-            for each_product in products:
-                if products[each_product]["parent_booked_product"] is None:
-                    products[each_product]["discount_percentage"] = products_details[each_product]["discount"]
-
-                    # TODO: move these details formations to separate functions
-                    transport_data = booked_products_transport_data[each_product]
-                    products[each_product]["price_data"] ={
-                        "trip_type": transport_data.trip_type,
-                        "km_hour_limit":transport_data.km_hour_limit,
-                        "km_day_limit":transport_data.km_day_limit,
-                        "day_price":transport_data.day_price,
-                        "hour_price":transport_data.hour_price,
-                        "excess_km_price":transport_data.excess_km_price,
-                        "excess_hour_duration_price":transport_data.excess_hour_duration_price,
-                        "excess_day_duration_price":transport_data.excess_day_duration_price,
-                        "is_kms_infinity":transport_data.is_kms_infinity,
-                        "single_trip_return_value_per_km":transport_data.single_trip_return_value_per_km,
-                        "booking_started_km_value": transport_data.booking_starting_vehicle_km_value,
-                        "booking_ending_km_value" : transport_data.booking_ending_vehicle_km_value,
-                        "km_limit_choosen": transport_data.km_limit_choosen
-                    }
-        else:
-            for each_product in products:
-                products[each_product]["discount_percentage"] = products_details[each_product]["discount"]
+            #doubt have to reduce discount for excess value
+            products[each_product]["discount_percentage"] = products_details[each_product]["discount"]
+            products[each_product]["transport_details"] = transport_details[each_product]
 
         final_product_prices = get_product_prices_by_duration(products)
-        total_final_price = 0
+        excess_price = 0
+        excess_net_price = 0
+        net_price_values = {}
         for each_product in final_product_prices:
-            total_final_price += final_product_prices[each_product]["discounted_price"]
+            final_price = final_product_prices[each_product]["final_price"]
+            excess_price += final_price
+            net_price = get_product_net_price(final_price, "product type")
+            net_price_values[each_product] = {"excess_net_price": net_price['net_price'], "excess_price": final_price}
+            excess_net_price += net_price['net_price']
+
+        booking.excess_total_price = excess_price
+        booking.excess_total_net_price = excess_net_price
+        booking.save()
+
+        booked_products_excess_prices = []
+        for each_product in booked_products:
+            if each_product.parent_booked_product is None:
+                update_dict = {"id":each_product.id}
+                update_dict.update(net_price_values[each_product.product_id])
+                booked_products_excess_prices.append(update_dict)
+        booked_product_serializer = BookedProductsSerializer()
+        booked_product_serializer.bulk_update(booked_products_excess_prices)
 
         response_data = {
             'is_caution_deposit_collected': True,
@@ -972,17 +952,14 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
             other_images.append(image_url)
 
         response_data['other_images'] = other_images
-        response_data['final_price'] = total_final_price
+        response_data['final_price'] = excess_price + float(booking.total_money)
+        response_data['excess_price'] = excess_price
         response_data["extra_information"] = final_product_prices
 
-        excess_money = total_final_price - booking.total_money
-        # TODO: do net price calculation for each product and add it up to get overall net price and subtract it
-        #  with the existing net price, add product type field to net price calculation
-        excess_money_net_price = calculate_product_net_price(excess_money)
         create_booking_transaction(
             {
                 'booking_id': booking.id, 'entity_id': booking.entity_id,
-                'entity_type': booking.entity_type, 'total_money': excess_money,
+                'entity_type': booking.entity_type, 'total_money': excess_price,
                 'booking_date': booking.booking_date, 'booking_start': booking.start_time,
                 'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.customer.value
             }
@@ -991,7 +968,7 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
         create_booking_transaction(
             {
                 'booking_id': booking.id, 'entity_id': booking.entity_id,
-                'entity_type': booking.entity_type, 'total_money': excess_money_net_price,
+                'entity_type': booking.entity_type, 'total_money': excess_net_price,
                 'booking_date': booking.booking_date, 'booking_start': booking.start_time,
                 'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.myc.value
             }
@@ -1139,64 +1116,6 @@ class GetBookingDetailsOfProductId(generics.ListAPIView):
         return response
 
 
-# TODO: move these to a new file
-class GeneratePDF(APIView):
-
-    def get(self, request, *args, **kwargs):
-        bookings = Bookings.objects.all()
-
-        all_data = {'total_length': len(bookings)}
-        booking_details = []
-        for booking in bookings:
-            data = {
-                'booking_id': booking.id,
-                'booking_date': booking.booking_date,
-                'booking_status': booking.booking_status,
-            }
-            booking_details.append(data)
-        all_data['data'] = booking_details
-        pdf = render_to_pdf('pdf.html', all_data)
-
-        # force download
-        if pdf:
-            response = Response(pdf, content_type='application/pdf')
-            filename = "bookings%s.pdf" % (data['booking_id'])
-            # content = "inline; filename='%s'" % (filename)
-            content = "attachment; filename=%s" % (filename)
-            response['Content-Disposition'] = content
-            return response
-        return Response({"message": "Not able to generate PDF", "error": "Not able to generate PDF"}, 400)
-
-
-class GenerateExcel(APIView):
-
-    def get(self, request, *args, **kwargs):
-        response = Response(content_type='application/ms-excel')
-        response['Content-Disposition'] = 'attachment; filename=excel_example' + str(datetime.now()) + '.xls'
-        wb = xlwt.Workbook(encoding='utf-8')
-
-        ws = wb.add_sheet('Expenses')
-        row_num = 0
-        font_style = xlwt.XFStyle()
-        font_style.font.bold = True
-        columns = ['Booking Id', 'Booking Date', 'Booking Status']
-        for col_num in range(len(columns)):
-            ws.write(row_num, col_num, columns[col_num], font_style)
-
-        font_style = xlwt.XFStyle()
-
-        rows = Bookings.objects.all().values_list('id', 'booking_date', 'booking_status')
-
-        for row in rows:
-            row_num += 1
-
-            for col_num in range(3):
-                ws.write(row_num, col_num, str(row[col_num]), font_style)
-
-        wb.save(response)
-        return response
-
-
 class BusinessClientProductCancellationDetails(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -1279,15 +1198,14 @@ def create_single_booking(booking_object, product_values):
     sub_products_parent_products = []
     product_list_copy = product_list[::]
     for product in product_list_copy:
-        net_value = calculate_product_net_price(float(product['product_value']))
+        net_value = get_product_net_price(float(product['product_value']), "product_type")
         # TODO: move the common logic to outside of if function
+        product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
+        product['net_value'] = net_value
         if product['is_combo']:
             combo_product = product
             product_list.remove(product)
             combo_product['hidden'] = False
-            combo_product["product_value"] = product_values[combo_product['product_id']]['price'] * \
-                                             combo_product['quantity']
-            combo_product['net_value'] = net_value
             total_net_value += net_value
             combo_parent_products.append(combo_product)
 
@@ -1295,16 +1213,11 @@ def create_single_booking(booking_object, product_values):
             sub_product = product
             product_list.remove(product)
             sub_product['hidden'] = False
-            sub_product["product_value"] = product_values[sub_product['product_id']]['price'] \
-                                           * sub_product['quantity']
-            sub_product['net_value'] = net_value
             total_net_value += net_value
             sub_products_parent_products.append(sub_product)
 
         elif product['parent_booked_product'] is None:
             product['hidden'] = False
-            product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
-            product['net_value'] = net_value
             total_net_value += net_value
         else:
             product['hidden'] = True
@@ -1345,24 +1258,31 @@ def create_single_booking(booking_object, product_values):
         })
         booked_combo_products[each_sub_product['product_id']] = sub_product
 
-        price_data = product_values[each_sub_product['product_id']]['price_data']
+        transport_data = product_values[sub_product.product_id]['transport_details']
+        transport_details = each_sub_product['transport_details']
+        km_limit_choosen = transport_details['km_limit_choosen']
+        transport_details_serializer = TransportBookingDetailsSerializer()
+        transport_distance_details_serializer = TransportBookingDistanceDetailsSerializer()
+        transport_duration_details_serializer = TransportBookingDurationDetailsSerializer()
+        if km_limit_choosen > 0:
+            transport_distance_details_object = transport_distance_details_serializer\
+                .create(transport_data['price_details'][km_limit_choosen])
 
-        transport_details = TransportBookingDetailsSerializer()
-        #have to change the fields
-        transport_details.create({
+            transport_duration_details_object = None
+        else:
+            transport_distance_details_object = transport_distance_details_serializer\
+                .create(transport_data['price_details'])
+            transport_duration_details_object = transport_duration_details_serializer\
+                .create(transport_data['duration_details'])
+
+        transport_details_serializer.create({
             'booked_product': sub_product,
-            'trip_type': each_sub_product['trip_type'],
-            'pickup_location': each_sub_product['pickup_location'],
-            'drop_location': each_sub_product['drop_location'],
-            'day_price': price_data['day_price'],
-            'hour_price': price_data['hour_price'],
-            'km_hour_limit': price_data['km_hour_limit'],
-            'km_day_limit': price_data['km_day_limit'],
-            'excess_km_price':price_data['excess_km_price'],
-            'excess_hour_duration_price': price_data['excess_hour_duration_price'],
-            'excess_day_duration_price': price_data['excess_day_duration_price'],
-            'is_kms_infinity': price_data['is_km_infinity'],
-            'single_trip_return_value_per_km': price_data['single_trip_return_value_per_km']
+            'trip_type': transport_details['trip_type'],
+            'pickup_location': transport_details['pickup_location'],
+            'drop_location': transport_details['drop_location'],
+            'km_limit_choosen': km_limit_choosen,
+            'distance_details': transport_distance_details_object,
+            'duration_details': transport_duration_details_object
         })
 
     for each_booked_product in product_list:
@@ -1383,14 +1303,18 @@ def create_single_booking(booking_object, product_values):
 def combine_products(all_cart_products):
     form_together = defaultdict()
     for each_product in all_cart_products:
+        if each_product['size'] is None:
+            size = ""
+        else:
+            size = each_product['size']
         try:
-            form_together[each_product['product_id'] + "," + each_product['size']] = {
+            form_together[each_product['product_id'] + "," + size] = {
                 "product_id": each_product['product_id'],
-                "quantity": form_together[each_product['product_id'] + "," + each_product['size']]['quantity'] + each_product['quantity'],
+                "quantity": form_together[each_product['product_id'] + "," + size]['quantity']+each_product['quantity'],
                 "size": each_product['size']
             }
         except:
-            form_together[each_product['product_id'] + "," + each_product['size']] = {
+            form_together[each_product['product_id'] + "," + size] = {
                 "product_id": each_product['product_id'],
                 "quantity": each_product['quantity'],
                 "size": each_product['size']
@@ -1407,12 +1331,46 @@ class UserSelectQuotation(generics.UpdateAPIView):
     queryset = Bookings.objects.all()
 
 
-# TODO: Remove this function
-def calculate_product_net_price(selling_price):
-    commission_fee = selling_price * COMMISION_FEE_PERCENT / 100
-    transaction_fee = selling_price * TRANSACTION_FEE_PERCENT / 100
-    fixed_fee = selling_price * FIXED_FEE_PERCENT / 100
-    gst = selling_price * GST_PERCENT / 100
-    net_price = selling_price - (commission_fee + transaction_fee + fixed_fee + gst)
+def get_transport_details(product_ids):
+    booked_products_transport_details = TransportBookingDetails.objects.select_related('booked_product')\
+        .filter(booked_product__product_id__in=product_ids)
 
-    return net_price
+    booked_products_transport_data = {}
+    for each_transport_data in booked_products_transport_details:
+        booked_products_transport_data[each_transport_data.booked_product.product_id] = each_transport_data
+
+    transport_details = defaultdict()
+    for each_product in product_ids:
+        if each_product in booked_products_transport_data:
+            each_product_transport_data = booked_products_transport_data[each_product]
+
+            transport_details[each_product] = {
+                "trip_type": each_product_transport_data.trip_type,
+                "starting_km_value": each_product_transport_data.starting_km_value,
+                "ending_km_value": each_product_transport_data.ending_km_value,
+                "km_limit_choosen": each_product_transport_data.km_limit_choosen,
+                "distance_details": {
+                    "km_hour_limit": each_product_transport_data.distance_details.km_hour_limit,
+                    "km_day_limit": each_product_transport_data.distance_details.km_day_limit,
+                    "excess_km_price": each_product_transport_data.distance_details.excess_km_price,
+                    "is_infinity": each_product_transport_data.distance_details.is_infinity,
+                    "single_trip_return_value_per_km": each_product_transport_data.distance_details.single_trip_return_value_per_km,
+                    "price": each_product_transport_data.distance_details.price,
+                    "km_limit": each_product_transport_data.distance_details.km_limit
+                }
+            }
+            if each_product_transport_data.duration_details is not None:
+                transport_details[each_product].update(
+                    {"duration_details": {
+                        "hour_price": each_product_transport_data.duration_details.hour_price,
+                        "day_price": each_product_transport_data.duration_details.day_price,
+                        "excess_hour_duration_price": each_product_transport_data.duration_details.excess_hour_duration_price,
+                        "excess_day_duration_price": each_product_transport_data.duration_details.excess_day_duration_price
+                    }}
+                )
+            else:
+                transport_details[each_product].update({"duration_details":{}})
+        else:
+            transport_details[each_product] = {}
+
+    return transport_details

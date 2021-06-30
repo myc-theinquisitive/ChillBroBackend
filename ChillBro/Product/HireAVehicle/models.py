@@ -20,7 +20,6 @@ class HireAVehicleDistancePrice(models.Model):
     excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     km_hour_limit = models.PositiveIntegerField()
     km_day_limit = models.PositiveIntegerField()
-    is_km_infinity = models.BooleanField(default=False)
     single_trip_return_value_per_km = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
 

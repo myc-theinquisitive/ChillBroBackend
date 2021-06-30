@@ -70,7 +70,7 @@ class SelfRentalView(ProductInterface):
             errors['vehicle'] = "Vehicle does not exist"
             return is_valid, errors
 
-        if vehicle_data['registration_type'] != "RENTAL":
+        if vehicle_data.registration_type != "RENTAL":
             is_valid = False
             errors['registration_type'] = "Only Commercial Vehicle allowed"
 
@@ -101,12 +101,13 @@ class SelfRentalView(ProductInterface):
         """
         self_rental: {
             "product_id": string, # internal data need not be validated,
+            "excess_price_per_hour": int,
             "vehicle_id": string
             distance_price: [
                     {
                         'price': int,
                         'km_limit': int,
-                        'excess_price':int,
+                        'excess_km_price':int,
                         'excess_price_per_hour': int,
                         is_infinity: Boolean
                     }
@@ -125,14 +126,14 @@ class SelfRentalView(ProductInterface):
         for distance_price in self.distance_price_data:
             distance_price["self_rental"] = self_rental_object
             if 'is_infinity' in distance_price:
-                distance_price['excess_price'] = 0 if distance_price['is_infinity'] else distance_price['excess_price']
+                distance_price['excess_km_price'] = 0 if distance_price['is_infinity'] else distance_price['excess_km_price']
             else:
                 distance_price['is_infinity'] = False
 
         distance_price_serializer = SelfRentalDistancePriceSerializer()
         distance_price_serializer.bulk_create(self.distance_price_data)
 
-        self.duration_details["hire_a_vehicle"] = self_rental_object
+        self.duration_details["self_rental"] = self_rental_object
         duration_details_serializer = SelfRentalDurationDetailsSerializer()
         duration_details_serializer.create(self.duration_details)
 
@@ -204,7 +205,7 @@ class SelfRentalView(ProductInterface):
                     {
                         'price': int,
                         'km_limit': int,
-                        'excess_price': int,
+                        'excess_km_price': int,
                         'excess_price_per_hour': int,
                     }
                 ],
@@ -213,7 +214,7 @@ class SelfRentalView(ProductInterface):
                         'id': string,
                         'price': int,
                         'km_limit': int,
-                        'excess_price': int,
+                        'excess_km_price': int,
                         'excess_price_per_hour': int,
                    }
                 ]
@@ -283,15 +284,15 @@ class SelfRentalView(ProductInterface):
                     each_self_rental.vehicle_id:
                     {
                         "quantity": 1,
-                        "size":""
+                        "size":{}
                     }
                 }
 
         return self_rentals_sub_products_ids
 
     @staticmethod
-    def get_price_data(self, self_rentals):
-        self_rentals_data = defaultdict()
+    def get_price_data(self_rentals):
+        self_rentals_data = defaultdict(dict)
         self_rentals_price_details = defaultdict(dict)
         self_rentals_ids = []
 
@@ -304,17 +305,15 @@ class SelfRentalView(ProductInterface):
             SelfRentalDistancePriceSerializer(self_rental_distance_price_data, many=True)
 
         for each_distance_price in self_rental_distance_price_serializer.data:
-            self_rentals_data[each_distance_price["self_rental"]] = each_distance_price
+            self_rentals_data[each_distance_price["self_rental"]][each_distance_price['km_limit']] = each_distance_price
 
-        for each_hire_a_vehicle in self_rentals:
-            self_rentals_price_details[each_hire_a_vehicle.product_id].update({
-                    self_rentals_data[each_hire_a_vehicle.id]["km_limit"] : self_rentals_data[each_hire_a_vehicle.id]
-                })
+        for each_self_rental in self_rentals:
+            self_rentals_price_details[each_self_rental.product_id].update(self_rentals_data[each_self_rental.id])
 
         return self_rentals_price_details
 
     @staticmethod
-    def get_duration_data(self, self_rentals):
+    def get_duration_data(self_rentals):
         self_rentals_data = defaultdict()
         self_rentals_duration_details = defaultdict()
         self_rentals_ids = []
@@ -355,10 +354,9 @@ class SelfRentalView(ProductInterface):
 
             price_data = self_rentals_price_details[each_self_rental.product_id][km_limit_choosen]
 
-            duration_price = price_data["price"] * days
-
+            duration_price = float(price_data["price"]) * days
             total_price = duration_price * quantity
-            discounted_price = total_price - ((total_price * discount_percentage) / 100)
+            discounted_price = total_price - ((total_price * float(discount_percentage)) / 100)
 
             result[each_self_rental.product_id] = {
                 "duration_price": duration_price,
@@ -371,7 +369,9 @@ class SelfRentalView(ProductInterface):
     def calculate_final_prices(self, products):
         final_prices = defaultdict()
         for each_product in products:
-            price_data = products[each_product]["price_data"]
+            transport_details = products[each_product]["transport_details"]
+            print(transport_details,"transport_details")
+
             start_time = datetime.strptime(products[each_product]["start_time"], get_date_format())
             booking_end_time = datetime.strptime(products[each_product]["booking_end_time"], get_date_format())
             present_end_time = datetime.strptime(products[each_product]["present_end_time"], get_date_format())
@@ -380,27 +380,30 @@ class SelfRentalView(ProductInterface):
             booking_total_hours = ceil((booking_difference_date.total_seconds() // 60) / 60)
             days = booking_total_hours // 24
             hours = booking_total_hours % 24
-            duration_price = price_data["day_price"] * (days + hours/24)
+            duration_price = float(transport_details["distance_details"]["price"]) * (days + hours/24)
 
             if present_end_time > booking_end_time:
                 excess_difference_date = (present_end_time - booking_end_time)
                 excess_total_hours = ceil((excess_difference_date.total_seconds() // 60) / 60)
                 excess_days = excess_total_hours // 24
                 excess_hours = excess_total_hours % 24
-                excess_duration_price = price_data["day_price"] * (excess_days + excess_hours/24)
+                excess_duration_price = float(transport_details["distance_details"]["price"]) *\
+                                        (excess_days + excess_hours/24)
             else:
                 excess_duration_price = 0
 
-            max_km_can_travel = price_data["km_day_limit"] * days
-            km_travelled = price_data["booking_ending_km_value"] - price_data["booking_started_km_value"]
+            max_km_can_travel = transport_details["distance_details"]["km_limit"] * days +\
+                                transport_details["distance_details"]["km_limit"] * hours //24
+            km_travelled = transport_details["ending_km_value"] - transport_details["starting_km_value"]
             if km_travelled > max_km_can_travel:
                 excess_km_travelled = km_travelled - max_km_can_travel
-                excess_km_price = price_data["excess_km_price"] * excess_km_travelled
+                excess_km_price = float(transport_details["distance_details"]["excess_km_price"]) *\
+                                  excess_km_travelled
             else:
                 excess_km_price = 0
 
-            total_price = (duration_price + excess_km_price + excess_duration_price) *products[each_product]["quantity"]
-            discounted_price = total_price - ((total_price * products[each_product]["discount_percentage"]) / 100)
+            total_price = (excess_km_price + excess_duration_price) * products[each_product]["quantity"]
+            discounted_price = total_price - ((total_price * float(products[each_product]["discount_percentage"]))/ 100)
             final_prices[each_product] = {
                 "duration_price": duration_price,
                 "trip_type_price": 0,

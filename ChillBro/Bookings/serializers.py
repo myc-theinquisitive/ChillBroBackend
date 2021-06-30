@@ -33,23 +33,52 @@ class BookedProductsSerializer(serializers.ModelSerializer):
             new_products.append(add_booking_product)
         return BookedProducts.objects.bulk_create(new_products)
 
-    
+    def bulk_update(self, validated_data):
+        booked_products = []
+        for each_product in validated_data:
+            update_product = BookedProducts(
+                id=each_product['id'],
+                excess_price=each_product['excess_price'],
+                excess_net_price=each_product['excess_net_price']
+            )
+            booked_products.append(update_product)
+        BookedProducts.objects.bulk_update(booked_products, ['excess_price', 'excess_net_price'])
+
+
 class TransportBookingDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransportBookingDetails
         fields = '__all__'
 
 
-class TransportBookingDistancePriceSerializer(serializers.ModelSerializer):
+class TransportBookingDistanceDetailsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TransportBookingDistancePrice
+        model = TransportBookingDistanceDetails
         fields = '__all__'
+
+    def create(self, validated_data):
+        print(validated_data)
+        if "price" in validated_data:
+            return TransportBookingDistanceDetails.objects.create(
+                price=validated_data["price"], km_limit=validated_data["km_limit"],
+                excess_km_price=validated_data["excess_km_price"], is_infinity=validated_data["is_infinity"])
+        else:
+            return TransportBookingDistanceDetails.objects.create(
+                excess_km_price=validated_data["excess_km_price"],
+                km_hour_limit=validated_data["km_hour_limit"], km_day_limit=validated_data["km_day_limit"],
+                single_trip_return_value_per_km=validated_data["single_trip_return_value_per_km"])
 
 
 class TransportBookingDurationDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransportBookingDurationDetails
         fields = '__all__'
+
+    def create(self, validated_data):
+        return TransportBookingDurationDetails.objects.create(
+            hour_price=validated_data["hour_price"], day_price=validated_data["day_price"],
+            excess_hour_duration_price=validated_data["excess_hour_duration_price"],
+            excess_day_duration_price=validated_data["excess_day_duration_price"])
 
 
 class CheckInDetailsSerializer(serializers.ModelSerializer):
@@ -223,6 +252,7 @@ class BookingStartSerializer(serializers.Serializer):
     other_images = serializers.ListField(
         child=serializers.FileField()
     )
+    otp = serializers.IntegerField(required=True)
 
 
 class BookingEndSerializer(serializers.Serializer):
