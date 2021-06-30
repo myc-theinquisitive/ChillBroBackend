@@ -48,3 +48,15 @@ class LeavesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Leaves
         fields = "__all__"
+
+
+class SalarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Salary
+        fields = "__all__"
+
+
+class GetEmployeeSalarySerializer(serializers.Serializer):
+    year = serializers.IntegerField()
+    month = serializers.IntegerField(validators=[lambda x: 0 < x <= 12])
+    employee = serializers.CharField()

@@ -1,5 +1,5 @@
 from django.db import models
-from .constants import Department, AttendanceStatus, LeaveStatus
+from .constants import Department, AttendanceStatus, LeaveStatus, LeaveType
 import uuid
 from django.core.validators import MinLengthValidator
 from .validations import validate_ifsc_code, validate_bank_account_no, validate_aadhar, validate_pan
@@ -53,5 +53,12 @@ class Leaves(models.Model):
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     approval_status = models.CharField(choices=[(status.name, status.value) for status in LeaveStatus], max_length=36)
-    approved_by = models.CharField(max_length=36, verbose_name="Manager")
+    approved_by = models.CharField(max_length=36, verbose_name="Approved By")
+    leave_type = models.CharField(max_length=36, choices=[(type.name, type.value) for type in LeaveType], verbose_name='Leave type')
 
+    class Meta:
+        unique_together = ('employee', 'date', )
+
+class Salary(models.Model):
+    employee = models.CharField(max_length=36, unique=True, verbose_name="Employee ID")
+    year_salary = models.IntegerField()

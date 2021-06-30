@@ -17,9 +17,12 @@ urlpatterns = [
     path('attendance/', AttendanceList.as_view()),
     path('attendance/department/', AttendanceList.as_view()),
     path('attendance/manager/', AttendanceList.as_view()),
-    path('leaves/',LeavesList.as_view()),
-    path('leaves/<str:pk>/',LeavesDetail.as_view()),
+    path('leaves/', LeavesList.as_view()),
+    path('leaves/<str:pk>/', LeavesDetail.as_view()),
     path('pending-leaves/', PendingLeavesList.as_view()),
+    path('salary/', SalaryList.as_view()),
+    path('salary/<str:id>/', SalaryDetail.as_view()),
+    path('month-salary/', GetSalaryDetail.as_view()),
 
     # employee full details
     path('<str:employee_id>/', EmployeeFullDetails.as_view()),

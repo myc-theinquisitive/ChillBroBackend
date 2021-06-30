@@ -4,5 +4,5 @@ def get_employee_details(employee_ids):
     employee_data = {}
     for employee in employees:
         employee_data[employee["id"]] = employee
-        del employee["id"]
+        employee.pop("id")
     return employee_data

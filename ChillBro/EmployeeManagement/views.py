@@ -7,6 +7,7 @@ from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from .wrappers import get_employee_details
+from calendar import monthrange
 
 
 def get_employee_details_with_manager(employee_ids):
@@ -103,9 +104,10 @@ class EmployeeFullDetails(generics.RetrieveAPIView):
             myc_employee = MYCEmployee.objects.get(employee=kwargs['employee_id'])
             id_proofs = IdProofs.objects.filter(employee=kwargs['employee_id'])
             salary_account = SalaryAccount.objects.get(employee=kwargs['employee_id'])
-        except Exception as e:
-            print(e)
-            return Response({"Error": "Does not exist", "message": "Employee id not found "})
+        except MYCEmployee.DoesNotExist:
+            myc_employee = {}
+        except SalaryAccount.DoesNotExist:
+            salary_account = {}
 
         myc_employee_serializer = MYCEmployeeSerializer(myc_employee)
         id_proofs_serializer = IdProofsSerializer(id_proofs, many=True)
@@ -162,11 +164,27 @@ class AttendanceList(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         attendances = request.data['attendances']
+        date = request.data['date']
+        for attendance in attendances:
+            attendance['date'] = date
         attendance_serializer = self.serializer_class(data=attendances, many=True)
         if attendance_serializer.is_valid():
             self.serializer_class.bulk_create(attendances)
             return Response({"message": "Attendance updated successfully"}, 200)
         return Response(attendance_serializer.errors, 400)
+
+    def put(self, request, *args, **kwargs):
+        date = request.data['date']
+        attendances = request.data['attendances']
+        employee_ids = list(map(lambda x: x['employee'], attendances))
+        for attendance in attendances:
+            attendance['date'] = date
+        attendance_serializer = self.serializer_class(data=attendances, many=True)
+        if not attendance_serializer.is_valid() and "non_field_errors" not in attendance_serializer.errors[0]:
+            return Response(attendance_serializer.errors, 400)
+        Attendance.objects.filter(employee__in=employee_ids, date=date).delete()
+        self.serializer_class.bulk_create(attendances)
+        return Response({"message": "Attendance updated successfully"}, 200)
 
 
 class AttendanceDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -182,7 +200,7 @@ class LeavesList(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         request.data['employee'] = request.user.id
-        super().post(self, request, *args, **kwargs)
+        return super().post(request, *args, **kwargs)
 
 
 class LeavesDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -200,3 +218,39 @@ class PendingLeavesList(generics.ListAPIView):
         self.queryset = Leaves.objects.filter(approval_status="PENDING")
         super().get(request, *args, **kwargs)
 
+
+class SalaryList(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
+    queryset = Salary.objects.all()
+    serializer_class = SalarySerializer
+
+
+class SalaryDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
+    queryset = Salary.objects.all()
+    serializer_class = SalarySerializer
+
+
+class GetSalaryDetail(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
+    queryset = Salary.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        get_salary_serializer = GetEmployeeSalarySerializer(data=request.data)
+        if not get_salary_serializer.is_valid():
+            return Response(get_salary_serializer.errors, 400)
+
+        try:
+            employee_id = request.data["employee"]
+            salary = Salary.objects.get(employee=employee_id)
+        except Salary.DoesNotExist:
+            return Response({"message": "Incorrect Employee ID", "error": "Detail not found"})
+
+        year = request.data['year']
+        month = request.data['month']
+        month_salary = salary.year_salary / 12
+        no_of_paid_leaves = Leaves.objects.filter(employee=employee_id, leave_type="PAID", date__year=year,
+                                                  date__month=month).count()
+
+        salary = month_salary - month_salary * no_of_paid_leaves / monthrange(year, month)[1]
+        return Response({"salary": salary, "no of paid leaves": no_of_paid_leaves}, 200)

@@ -17,3 +17,9 @@ class LeaveStatus(enum.Enum):
     PENDING = "PENDING"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
+
+class LeaveType(enum.Enum):
+    SICK = "SICK"
+    PERSONAL = "PERSONAL"
+    CASUAL = "CASUAL"
+    PAID = "PAID"
