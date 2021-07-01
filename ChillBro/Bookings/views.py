@@ -9,13 +9,6 @@ from .serializers import *
 from .helpers import *
 from .constants import *
 from collections import defaultdict
-# libraries for generating pdf
-from io import BytesIO
-from django.http import HttpResponse
-from django.template.loader import get_template
-from xhtml2pdf import pisa
-# library for generating excel
-import xlwt
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsUserOwner, IsOwner, IsGet, \
     IsEmployee, IsBookingBusinessClient, IsBusinessClientEntityById, IsEmployeeEntityById, IsBookingEmployee, \
     IsBusinessClientEntities, IsEmployeeEntities
@@ -29,12 +22,12 @@ from django.utils import timezone
 # Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_transaction_details_by_booking_id, \
-    business_client_review_on_customer, get_product_details, get_entity_details, \
-    get_business_client_review_by_booking_id, get_product_prices_by_duration, get_product_net_price
+    business_client_review_on_customer, get_product_details, get_entity_details, is_product_valid, \
+    get_business_client_review_by_booking_id, get_product_prices_by_duration, get_product_net_price, \
+    check_valid_duration, check_valid_address, combine_all_products, entity_id_and_entity_type, get_coupon_value, \
+    get_product_price_values
 
 _booking_lock = threading.Lock()
-
-
 
 
 def get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size):
@@ -286,6 +279,24 @@ def product_availability(product_id, start_time, end_time, product_size):
     return Response({"availabilities": availabilities}, 200)
 
 
+def get_check_in_details(check_in_object):
+    response_data = {
+        'is_caution_deposit_collected': True,
+        'caution_amount': check_in_object.caution_amount
+    }
+
+    other_images = []
+    check_in_images = CheckInImages.objects.filter(check_in_id=check_in_object.id)
+    for check_in_image in check_in_images:
+        image_url = check_in_image.image.url
+        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
+        other_images.append(image_url)
+
+    response_data['other_images'] = other_images
+
+    return response_data
+
+
 class GetProductAvailability(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -322,30 +333,95 @@ class CreateBooking(generics.ListCreateAPIView):
         if not new_booking_serializer.is_valid():
             return Response(new_booking_serializer.errors, 400)
 
-        product_list = request.data['products']
-        product_ids = []
-        for product in product_list:
-            product_ids.append(product['product_id'])
+        product_id = request.data.pop('product_id',None)
+        quantity = request.data.pop('quantity',None)
+        size = request.data.pop('size',None)
+        combo_product_details = request.data.pop('combo_product_details',None)
+        transport_details = request.data.pop('transport_details',None)
+        data= request.data
+        data['entity_id'], data['entity_type'] = entity_id_and_entity_type(product_id)
 
         # Get product values
-        product_values = get_product_id_wise_product_details(product_ids)
+        product_details = get_product_id_wise_product_details([product_id])
 
-        if len(product_values) != len(product_ids):
-            return Response({"message": "Can't create booking", "errors": "Invalid Products"}, 400)
+        is_valid, errors = is_product_valid(product_details, product_id, quantity, size, combo_product_details)
+        if not is_valid:
+            return Response({"message": "Can't add product to cart", "errors": errors})
 
-        is_valid, errors = valid_booking_with_product_details(
-            product_values, product_list, request.data['start_time'], request.data['end_time'])
+        is_valid, errors = check_valid_duration([product_id], data['start_time'], data['end_time'])
+        if not is_valid:
+            return Response({"message": "Can't add product to cart", "errors": errors})
+
+        if len(transport_details) > 0:
+            if transport_details['km_limit_choosen'] > 0:
+                if transport_details['km_limit_choosen'] not in product_details[product_id]['transport_details']['price_details']:
+                    return Response({"message": "Can't Add Product to Cart", "errors": "Invalid km limit choosen"}, 400)
+            is_valid, errors = check_valid_address(transport_details['pickup_location'])
+            if not is_valid:
+                return Response({"message": "Can't add product to cart", "errors": errors})
+            is_valid, errors = check_valid_address(transport_details['drop_location'])
+            if not is_valid:
+                return Response({"message": "Can't add product to cart", "errors": errors})
+
+        all_product_ids, products = combine_all_products(product_id, size, quantity, combo_product_details,\
+                                                         product_details)
+
+        is_valid, errors = valid_booking(products, data['start_time'], data['end_time'])
         if not is_valid:
             return Response({"message": "Can't create booking", "errors": errors}, 400)
-        is_valid, errors = valid_booking_with_product_quantity(
-            product_values, product_list, request.data['start_time'], request.data['end_time'])
-        if not is_valid:
-            return Response({"message": "Can't create booking", "errors": errors}, 400)
 
+        product_details = get_product_id_wise_product_details(all_product_ids)
+
+
+
+        product_price_values = get_product_price_values({data['entity_type']:[product_id]}, \
+                                                {data['entity_type'] : {
+                                                    product_id: {
+                                                        "quantity": data['quantity'],
+                                                        "size": data['size'],
+                                                        "start_time": data['start_time'].strptime(get_date_format()),
+                                                        "end_time": data['end_time'].strptime(get_date_format()),
+                                                        "trip_type": transport_details["trip_type"],
+                                                        "discount_percentage": product_details[product_id]["discount"],
+                                                        "km_limit_choosen": transport_details["km_limit_choosen"]
+                                                    }
+                                                }})
+
+        if len(data['coupon']) == 0:
+            coupon_value = get_coupon_value(data['coupon'],request.user.id, [data['entity_id']], [product_id], \
+                           data['entity_type'], product_price_values[product_id]['discounted_price'])
+        else:
+            coupon_value = 0
+
+        total_unique_products = 0
+        for each_product in products:
+            if each_product['parent_booked_product'] is None:
+                total_unique_products += 1
+
+        is_combo = product_details[product_id]['is_combo']
+        has_sub_products = product_details[product_id]['has_sub_products']
+
+        for each_product in products:
+            if each_product['parent_booked_product'] is not None:
+                each_product["coupon_value"] = 0
+                each_product["product_value"] = 0
+                each_product["is_combo"] = False
+                each_product["has_sub_products"] = False
+                each_product["transport_details"] = {}
+            else:
+                each_product["coupon_value"] = coupon_value / total_unique_products
+                each_product["product_value"] = product_price_values[product_id]['discounted_price']
+                each_product["is_combo"] = is_combo
+                each_product["has_sub_products"] = has_sub_products
+                each_product["transport_details"] = transport_details
+
+        data['coupon'] = coupon_value
+        data['created_by'] = request.user
+        data['products'] = products
         # TODO: make modifications to convert the input data into required format for this function,
         #  include coupon logic
         with _booking_lock:
-            create_single_booking(request.data, product_values)
+            create_single_booking(data, product_details)
 
         return Response({"message": "Booking created"}, 200)
 
@@ -938,20 +1014,7 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
         booked_product_serializer = BookedProductsSerializer()
         booked_product_serializer.bulk_update(booked_products_excess_prices)
 
-        response_data = {
-            'is_caution_deposit_collected': True,
-            'caution_amount': check_in_object.caution_amount
-        }
-
-        # TODO: move this to seperate function
-        other_images = []
-        check_in_images = CheckInImages.objects.filter(check_in_id=check_in_object.id)
-        for check_in_image in check_in_images:
-            image_url = check_in_image.image.url
-            image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
-            other_images.append(image_url)
-
-        response_data['other_images'] = other_images
+        response_data = get_check_in_details(check_in_object)
         response_data['final_price'] = excess_price + float(booking.total_money)
         response_data['excess_price'] = excess_price
         response_data["extra_information"] = final_product_prices

@@ -77,7 +77,8 @@ def combine_all_products(product_id, size, quantity, combo_product_details, prod
                 combo_product = {
                     "product_id": each_combo_product,
                     "quantity": combo_product_details[each_combo_product]['quantity'] * quantity,
-                    "size": None
+                    "size": None,
+                    "parent_booked_product": product_id
                 }
                 products.append(combo_product)
             else:
@@ -85,7 +86,8 @@ def combine_all_products(product_id, size, quantity, combo_product_details, prod
                     combo_product = {
                         "product_id": each_combo_product,
                         "quantity": all_sizes[each_size],
-                        "size": each_size
+                        "size": each_size,
+                        "parent_booked_product": product_id
                     }
                     products.append(combo_product)
 
@@ -99,7 +101,8 @@ def combine_all_products(product_id, size, quantity, combo_product_details, prod
                 products.append({
                     "product_id": each_sub_product,
                     "quantity": sub_products[each_sub_product]['quantity'] * quantity,
-                    "size": sub_product_size
+                    "size": sub_product_size,
+                    "parent_booked_product": product_id
                 })
             else:
                 #this case is not there at present
@@ -107,7 +110,8 @@ def combine_all_products(product_id, size, quantity, combo_product_details, prod
                     products.append({
                         "product_id": each_sub_product,
                         "quantity": sub_product_sizes[each_size] * quantity,
-                        "size": each_size
+                        "size": each_size,
+                        "parent_booked_product": product_id
                     })
     else:
         all_sizes = size
@@ -115,13 +119,15 @@ def combine_all_products(product_id, size, quantity, combo_product_details, prod
             products.append({
                 "product_id": product_id,
                 "quantity": quantity,
-                "size": None
+                "size": None,
+                "parent_booked_product": None
             })
         for each_size in all_sizes:
             products.append({
                 "product_id": product_id,
                 "quantity": all_sizes[each_size],
-                "size": each_size
+                "size": each_size,
+                "parent_booked_product": None
             })
 
     return all_product_ids, products
@@ -592,7 +598,7 @@ class CheckoutCart(ListAPIView):
         is_valid, errors = create_multiple_bookings_from_cart(final_cart_details)
 
         if is_valid:
-            # cart_details.delete()
+            cart_details.delete()
             return Response({"message": "Successfully created {} bookings".format(len(final_cart_details))})
         else:
             return Response({"message": "Can't create bookings", "errors": errors})
