@@ -186,7 +186,20 @@ class TravelPackageVehiclesList(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     def get_sub_products_ids(self, product_ids):
-        return {}
+        travel_package_vehicles = TravelPackageVehicle.objects.filter(product_id__in=product_ids)
+        travel_package_vehicles_sub_products_ids = defaultdict()
+
+        for each_travel_package_vehicle in travel_package_vehicles:
+            travel_package_vehicles_sub_products_ids[each_travel_package_vehicle.product_id] = \
+                {
+                    each_travel_package_vehicle.vehicle_id:
+                        {
+                            "quantity": 1,
+                            "size": {}
+                        }
+                }
+
+        return travel_package_vehicles_sub_products_ids
 
     def calculate_starting_prices(self, product_ids, product_ids_with_duration):
         return {}

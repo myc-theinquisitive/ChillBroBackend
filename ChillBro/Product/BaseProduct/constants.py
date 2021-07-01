@@ -22,3 +22,4 @@ class PriceTypes(enum.Enum):
     DAY = "DAY"
     HOUR = "HOUR"
     MONTH = "MONTH"
+    PACKAGE = "PACKAGE"
