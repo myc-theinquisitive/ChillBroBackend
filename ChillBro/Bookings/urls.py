@@ -2,9 +2,10 @@ from django.urls import path
 from .views import ReportCustomerReasonsList, ReportCustomerReasonsDetail, CreateBooking, UserBookingsList, \
     CancelBookingView, BookingsStatistics, GetBookingsStatisticsDetails, CancelProductStatusView, GetDateFilters, \
     GetSpecificBookingDetails, GetBookingDetailsView, BookingStart, BookingEnd, GetBookingEndDetailsView, \
-    ReportCustomerForBooking, GeneratePDF, GenerateExcel, GetBookingDetailsOfProductId, ProductStatistics, \
+    ReportCustomerForBooking, GetBookingDetailsOfProductId, ProductStatistics, \
     GetProductAvailability, BusinessClientProductCancellationDetails, BusinessClientBookingApproval, \
     UserSelectQuotation, ProceedToPayment, GetBookingCostDetailsView
+from .downloads import  GeneratePDF, GenerateExcel
 from .Quotation.views import *
 
 

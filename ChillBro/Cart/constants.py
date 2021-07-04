@@ -1,1 +1,3 @@
-from ChillBro.constants import EntityType
+import enum
+
+from ChillBro.constants import EntityType, ProductTypes, TripType

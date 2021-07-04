@@ -130,7 +130,6 @@ class BookingTransaction(models.Model):
     objects = BookingTransactionsManager()
 
     class Meta:
-        unique_together = (("booking_id", "paid_to", "paid_by"),)
         ordering = ["-created_at"]
 
     def __str__(self):

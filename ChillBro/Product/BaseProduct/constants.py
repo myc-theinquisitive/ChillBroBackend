@@ -1,4 +1,5 @@
 import enum
+from ChillBro.constants import PriceTypes
 
 
 class ProductTypes(enum.Enum):
@@ -19,8 +20,3 @@ class ActivationStatus(enum.Enum):
     REJECTED = "REJECTED"
     DELETED = "DELETED"
 
-
-class PriceTypes(enum.Enum):
-    DAY = "DAY"
-    HOUR = "HOUR"
-    MONTH = "MONTH"

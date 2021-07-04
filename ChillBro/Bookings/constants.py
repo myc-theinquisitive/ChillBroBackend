@@ -1,5 +1,6 @@
 import enum
-from ChillBro.constants import EntityType, DateFilters
+from ChillBro.constants import EntityType, DateFilters, ProductTypes, TripType, DurationType, \
+    COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, FIXED_FEE_PERCENT, GST_PERCENT, PriceTypes
 
 
 class BookingStatus(enum.Enum):
@@ -39,3 +40,8 @@ class PaymentUser(enum.Enum):
 class PaymentMode(enum.Enum):
     partial = "PARTIAL"
     full = "FULL"
+
+
+BookingApprovalTime = 10
+
+

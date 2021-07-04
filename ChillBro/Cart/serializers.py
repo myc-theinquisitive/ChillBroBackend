@@ -37,7 +37,20 @@ class CartProductsSerializer(serializers.ModelSerializer):
                 size=each_cart_product['size']
             )
             cart_products.append(update_cart_product_quantity)
-        return CartProducts.objects.bulk_update(cart_products,['quantity','size'])
+        return CartProducts.objects.bulk_update(cart_products, ['quantity', 'size'])
+
+
+class TransportDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TransportDetails
+        fields = '__all__'
+
+
+class AddtoCartTransportDetailsSerializer(serializers.Serializer):
+    trip_type = serializers.CharField(required=True)
+    is_pickup_location_updated = serializers.BooleanField(required=True)
+    id_drop_location_updated = serializers.BooleanField(required=True)
+    km_limit_choosen = serializers.IntegerField(required=True)
 
 
 class AddProductToCartSerializer(serializers.Serializer):
@@ -45,6 +58,8 @@ class AddProductToCartSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(required=True)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
+    # TODO: add validation for transport details and other inputs for add to cart
+    transport_details = AddtoCartTransportDetailsSerializer(allow_null=True)
 
 
 class CheckoutCartSerializer(serializers.Serializer):

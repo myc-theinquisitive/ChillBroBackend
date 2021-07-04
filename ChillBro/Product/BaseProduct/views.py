@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, status
@@ -83,3 +85,11 @@ class ProductQuantity(APIView):
         product_sizes.update(quantity=quantity)
 
         return Response({"message": "Updated Successfully"}, status=status.HTTP_200_OK)
+
+
+def get_product_sizes(product_ids):
+    product_sizes = defaultdict(dict)
+    all_products_sizes = ProductSize.objects.filter(product_id__in=product_ids)
+    for each_product_size in all_products_sizes:
+        product_sizes[each_product_size.product_id].update({each_product_size.size:each_product_size.quantity})
+    return product_sizes

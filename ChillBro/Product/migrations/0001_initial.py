@@ -59,6 +59,30 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
+            name='HireAVehicleDistancePrice',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('excess_km_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('km_hour_limit', models.PositiveIntegerField()),
+                ('km_day_limit', models.PositiveIntegerField()),
+                ('single_trip_return_value_per_km', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='HireAVehicleDurationDetails',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('hour_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('day_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('excess_hour_duration_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('excess_day_duration_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('min_hour_duration', models.PositiveIntegerField(default=1)),
+                ('max_hour_duration', models.PositiveIntegerField(default=24)),
+                ('min_day_duration', models.PositiveIntegerField(default=1)),
+                ('max_day_duration', models.PositiveIntegerField(default=31)),
+            ],
+        ),
+        migrations.CreateModel(
             name='Place',
             fields=[
                 ('id', models.CharField(default=Product.Places.models.get_id, max_length=36, primary_key=True, serialize=False)),
@@ -81,7 +105,7 @@ class Migration(migrations.Migration):
                 ('seller_id', models.CharField(max_length=36)),
                 ('price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
                 ('discounted_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
-                ('price_type', models.CharField(choices=[('DAY', 'DAY'), ('HOUR', 'HOUR'), ('MONTH', 'MONTH')], default='DAY', max_length=30, verbose_name='Price Type')),
+                ('price_type', models.CharField(choices=[('DAY', 'DAY'), ('HOUR', 'HOUR'), ('MONTH', 'MONTH'), ('PACKAGE', 'PACKAGE')], default='DAY', max_length=30, verbose_name='Price Type')),
                 ('featured', models.BooleanField(default=False)),
                 ('has_sizes', models.BooleanField(default=False)),
                 ('has_sub_products', models.BooleanField(default=False)),
@@ -95,6 +119,15 @@ class Migration(migrations.Migration):
                 ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.category', verbose_name='Category')),
                 ('category_product', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='Product.categoryproduct', verbose_name='CategoryProduct')),
                 ('tags', taggit.managers.TaggableManager(help_text='A comma-separated list of tags.', through='taggit.TaggedItem', to='taggit.Tag', verbose_name='Tags')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='SelfRental',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('excess_price_per_hour', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='Product.product', verbose_name='Product')),
+                ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='self_rental_product', to='Product.product', verbose_name='Vehicle')),
             ],
         ),
         migrations.CreateModel(
@@ -174,12 +207,14 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name='SelfRental',
+            name='SelfRentalDurationDetails',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('excess_price_per_hour', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
-                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='Product.product', verbose_name='Product')),
-                ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='self_rental_product', to='Product.product', verbose_name='Vehicle')),
+                ('min_hour_duration', models.PositiveIntegerField(default=1)),
+                ('max_hour_duration', models.PositiveIntegerField(default=24)),
+                ('min_day_duration', models.PositiveIntegerField(default=1)),
+                ('max_day_duration', models.PositiveIntegerField(default=31)),
+                ('self_rental', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.selfrental')),
             ],
         ),
         migrations.CreateModel(
@@ -220,6 +255,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('default_driver', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='driver_for_vehicle', to='Product.product', verbose_name='Default Driver')),
+                ('distance_price', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.hireavehicledistanceprice')),
+                ('duration_details', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.hireavehicledurationdetails')),
                 ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='Product.product', verbose_name='Product')),
                 ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='vehicle_product', to='Product.product', verbose_name='Vehicle')),
             ],
@@ -309,6 +346,20 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
+            name='SelfRentalDistancePrice',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('km_limit', models.PositiveIntegerField()),
+                ('excess_km_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
+                ('is_infinity', models.BooleanField(default=False)),
+                ('self_rental', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.selfrental')),
+            ],
+            options={
+                'unique_together': {('self_rental', 'km_limit')},
+            },
+        ),
+        migrations.CreateModel(
             name='ProductSize',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -379,26 +430,23 @@ class Migration(migrations.Migration):
             name='HotelAvailableAmenities',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('make_your_own_trip', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.makeyourowntrip', verbose_name='Make Your Own Trip')),
+                ('place', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.place', verbose_name='Make Your Own Trip Place')),
+            ],
+            options={
+                'unique_together': {('make_your_own_trip', 'place')},
+            },
+        ),
+        migrations.CreateModel(
+            name='HotelAvailableAmenities',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('is_available', models.BooleanField(default=False)),
                 ('amenity', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.amenities', verbose_name='Amenities')),
                 ('hotel_room', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.hotelroom', verbose_name='Hotel')),
             ],
             options={
                 'unique_together': {('hotel_room', 'amenity')},
-            },
-        ),
-        migrations.CreateModel(
-            name='DistancePrice',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
-                ('km_limit', models.PositiveIntegerField()),
-                ('excess_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
-                ('is_infinity', models.BooleanField(default=False)),
-                ('self_rental', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Product.selfrental')),
-            ],
-            options={
-                'unique_together': {('self_rental', 'km_limit')},
             },
         ),
         migrations.CreateModel(
