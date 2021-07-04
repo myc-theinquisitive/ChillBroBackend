@@ -1,5 +1,11 @@
 from datetime import date, timedelta, datetime
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
+
+
+def get_storage():
+    storage_path = settings.DEFAULT_FILE_STORAGE if hasattr(settings, 'DEFAULT_FILE_STORAGE') else ""
+    return FileSystemStorage(storage_path)
 
 
 def get_today_day():

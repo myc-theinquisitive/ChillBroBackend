@@ -151,6 +151,7 @@ if IS_SERVER:
     # STATIC_ROOT = 'chillbro_backend/'
     MEDIA_URL = 'https://chillbro.co.in/chillbro_backend/'
     MEDIA_ROOT = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
+    DEFAULT_FILE_STORAGE = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
 
     ALLOWED_HOSTS = ["chillbro.co.in"]
 
