@@ -446,13 +446,13 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
         count = 0
         for each_product in product_ids:
             if count % 4 == 0:
-                rental_categories_home_page['best_valued_products'].append(rental_products_details[each_product])
+                rental_categories_home_page['Best Valued'].append(rental_products_details[each_product])
             if count % 4 == 1:
-                rental_categories_home_page['combo_products_rentals'].append(rental_products_details[each_product])
+                rental_categories_home_page["Combo's"].append(rental_products_details[each_product])
             if count % 4 == 2:
-                rental_categories_home_page['seasonal_rentals'].append(rental_products_details[each_product])
+                rental_categories_home_page['Seasonal Rentals'].append(rental_products_details[each_product])
             if count % 4 == 3:
-                rental_categories_home_page['new_arrivals_rentals'].append(rental_products_details[each_product])
+                rental_categories_home_page['New Arrivals'].append(rental_products_details[each_product])
 
         return Response({"results": rental_categories_home_page},200)
 
@@ -460,8 +460,7 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
 class RentalProductsTypes(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        rental_products_types = {"Best Valued": "best_valued_products", "Combo's": "combo_products_rentals",
-                                 "Seasonal Rentals": "seasonal_rentals", "New Arrivals": "new_arrivals_rentals"}
+        rental_products_types = ["Best Valued","Combo's", "Seasonal Rentals", "New Arrivals" ]
 
         return Response({"results": rental_products_types}, 200)
 
