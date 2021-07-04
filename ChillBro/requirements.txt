@@ -25,12 +25,14 @@ constantly==15.1.0
 coreapi==2.3.3
 coreschema==0.0.4
 cryptography==3.4.7
+da-vinci==0.3.0
 daphne==3.0.2
 Django==3.2.4
 django-celery-beat==2.2.0
 django-crispy-forms==1.11.2
 django-filter==2.4.0
 django-redis==5.0.0
+django-thumbnails==0.6.0
 django-timezone-field==4.1.2
 djangoadmin==2.2.8
 djangochannelsrestframework==0.2.2
@@ -96,6 +98,7 @@ rsa==4.7.2
 ruamel.yaml==0.17.0
 ruamel.yaml.clib==0.2.2
 service-identity==21.1.0
+shortuuid==1.0.1
 simplejson==3.17.2
 six==1.15.0
 sqlparse==0.4.1
