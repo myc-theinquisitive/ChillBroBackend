@@ -56,7 +56,6 @@ class DistancePriceSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def bulk_create(validated_data):
-        print(validated_data, 'validated data')
         distance_prices = []
         for distance_price in validated_data:
             distance_price_object = DistancePrice(
