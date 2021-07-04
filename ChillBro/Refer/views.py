@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.response import Response
 from .models import *
@@ -28,18 +27,20 @@ class ShareApp(APIView):
     def get(self, request):
         return Response({"message": SHARE_APP_MESSAGE})
 
+
 class SignUpRequestCreate(generics.CreateAPIView):
     serializer_class = SignUpRequestSerialiser
     queryset = SignUpRequest.objects.all()
+
 
 class SignUpRequestList(generics.ListAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
     serializer_class = SignUpRequestSerialiser
     queryset = SignUpRequest.objects.all()
 
-    def get(self,request,*args,**kwargs):
+    def get(self, request, *args, **kwargs):
         self.queryset = SignUpRequest.objects.filter(status=kwargs['status'])
-        return super().get(request,*args,**kwargs)
+        return super().get(request, *args, **kwargs)
 
 
 class SignUpRequestDetail(generics.UpdateAPIView):

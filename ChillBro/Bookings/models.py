@@ -10,8 +10,6 @@ from .Quotation.models import *
 from django.utils import timezone
 import random
 
-# Create your models here.
-
 
 def get_id():
     return str(uuid.uuid4())

@@ -16,11 +16,11 @@ class Address(models.Model):
     extend_address = models.CharField(max_length=250, blank=True, null=True, verbose_name="Extend Address")
     landmark = models.CharField(max_length=250, blank=True, null=True, verbose_name="Landmark")
     city = models.CharField(max_length=30, default=Cities.VSKP.value,
-                            choices=[(city.name, city.value) for city in Cities], verbose_name="City")
+                            choices=[(city.value, city.value) for city in Cities], verbose_name="City")
     state = models.CharField(max_length=30, default=States.AP.value,
-                             choices=[(state.name, state.value) for state in States], verbose_name="State")
+                             choices=[(state.value, state.value) for state in States], verbose_name="State")
     country = models.CharField(max_length=30, default=Countries.IND.value,
-                               choices=[(country.name, country.value) for country in Countries], verbose_name="Country")
+                               choices=[(country.value, country.value) for country in Countries], verbose_name="Country")
     latitude = models.CharField(max_length=15, blank=True, null=True, verbose_name="Latitude")
     longitude = models.CharField(max_length=15, blank=True, null=True, verbose_name="Longitude")
 
