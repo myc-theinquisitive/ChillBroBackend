@@ -460,7 +460,7 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
 class RentalProductsTypes(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        rental_products_types = ["Best Valued","Combo's", "Seasonal Rentals", "New Arrivals" ]
+        rental_products_types = ["Best Valued","Combo's", "Seasonal Rentals", "New Arrivals"]
 
         return Response({"results": rental_products_types}, 200)
 

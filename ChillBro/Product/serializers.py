@@ -29,6 +29,7 @@ class GetProductsBySearchFilters(serializers.Serializer):
     sort_filter = serializers.CharField(allow_null=True, allow_blank=True)
     price_filter = PriceFilter()
     location_filter = LocationFilter()
+    trending_type = serializers.CharField(allow_null=True, allow_blank=True)
 
 
 class GetBusinessClientProductsByStatusSerializer(serializers.Serializer):
