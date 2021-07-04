@@ -439,22 +439,24 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
     # permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        product_ids = Product.objects.filter(type=ProductTypes.Rental.value).values_list('id',flat=True)
+        product_ids = Product.objects.filter(type=ProductTypes.Rental.value).values_list('id', flat=True)
+
         rental_products_details = ProductView().get_by_ids(product_ids)
         rental_categories_home_page = defaultdict(list)
 
         count = 0
         for each_product in product_ids:
             if count % 4 == 0:
-                rental_categories_home_page['Best Valued'].append(rental_products_details[each_product])
+                rental_categories_home_page['Best Valued'].append(rental_products_details[count])
             if count % 4 == 1:
-                rental_categories_home_page["Combo's"].append(rental_products_details[each_product])
+                rental_categories_home_page["Combo's"].append(rental_products_details[count])
             if count % 4 == 2:
-                rental_categories_home_page['Seasonal Rentals'].append(rental_products_details[each_product])
+                rental_categories_home_page['Seasonal Rentals'].append(rental_products_details[count])
             if count % 4 == 3:
-                rental_categories_home_page['New Arrivals'].append(rental_products_details[each_product])
+                rental_categories_home_page['New Arrivals'].append(rental_products_details[count])
+            count += 1
 
-        return Response({"results": rental_categories_home_page},200)
+        return Response({"results": rental_categories_home_page}, 200)
 
 
 class RentalProductsTypes(generics.ListAPIView):

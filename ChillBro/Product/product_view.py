@@ -562,10 +562,13 @@ class ProductView(ProductInterface):
                 "id": product.category.id,
                 "name": product.category.name
             }
-            product_data["category_product"] = {
-                "id": product.category_product.id,
-                "name": product.category_product.product_name
-            }
+            if product.category_product is not None:
+                product_data["category_product"] = {
+                    "id": product.category_product.id,
+                    "name": product.category_product.product_name
+                }
+            else:
+                product_data["category_product"] = {}
             group_products_by_type[product_data["type"]].append(product_data)
             product_data = self.update_product_response(product_data)
             products_data.append(product_data)
