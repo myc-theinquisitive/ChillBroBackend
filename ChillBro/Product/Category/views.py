@@ -43,6 +43,8 @@ class CategoryTopLevelList(generics.ListAPIView):
 
 def convert_category_to_dict(category):
     icon_url = category.icon_url
+    # For thumbnails need to validate as it works in linux but not in windows
+    # icon_url = category.icon_url.thumbnails.small.url
     icon_url = icon_url.url.replace(settings.IMAGE_REPLACED_STRING, "")
 
     return {
@@ -52,53 +54,35 @@ def convert_category_to_dict(category):
         "parent_category_id": category.parent_category_id,
         "icon_url": icon_url,
         "sub_categories": [],
-        # "images": []
     }
 
 
-def recursive_category_grouping(group_categories_by_parent_id, group_images_by_category_id,
-                                current_category_id, response):
+def recursive_category_grouping(group_categories_by_parent_id, current_category_id, response):
     categories = group_categories_by_parent_id[current_category_id]
     for category in categories:
         category_id = category["id"]
-        # category["images"] = group_images_by_category_id[category_id]
         category.pop("parent_category_id")
         response.append(category)
-        recursive_category_grouping(group_categories_by_parent_id, group_images_by_category_id,
-                                    category_id, category["sub_categories"])
+        recursive_category_grouping(group_categories_by_parent_id, category_id, category["sub_categories"])
 
 
 def get_category_details(parent_id):
     categories = Category.objects.all()
-    # category_images = CategoryImage.objects.all()
 
     group_categories_by_parent_id = defaultdict(list)
     for category in categories:
         group_categories_by_parent_id[category.parent_category_id].append(convert_category_to_dict(category))
 
-    group_images_by_category_id = defaultdict(list)
-    # for category_image in category_images:
-    #     if category_image.image and hasattr(category_image.image, 'url'):
-    #         image_url = category_image.image.url
-    #         image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
-    #         group_images_by_category_id[category_image.category_id].append(
-    #             {
-    #                 "id": category_image.id,
-    #                 "image": image_url,
-    #                 "order": category_image.order
-    #             }
-    #         )
-
     response = []
-    recursive_category_grouping(group_categories_by_parent_id, group_images_by_category_id, parent_id, response)
-    return response, group_images_by_category_id
+    recursive_category_grouping(group_categories_by_parent_id, parent_id, response)
+    return response
 
 
 class GetCategoriesLevelWise(APIView):
     permission_classes = (IsAuthenticated, )
 
     def get(self, request, format=None):
-        response_data, group_images_by_category_id = get_category_details(None)
+        response_data = get_category_details(None)
         return Response({"results": response_data}, 200)
 
 
@@ -111,7 +95,7 @@ class GetSpecificCategoriesLevelWise(APIView):
         except ObjectDoesNotExist:
             return Response({"errors": "Invalid Category!!!"}, 400)
 
-        sub_categories, group_images_by_category_id = get_category_details(category.id)
+        sub_categories = get_category_details(category.id)
         response_data = convert_category_to_dict(category)
         response_data["sub_categories"] = sub_categories
         return Response(response_data, 200)

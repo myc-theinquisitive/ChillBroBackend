@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'channels',
     'EmployeeManagement',
     'JobPortal',
+    'thumbnails',
 ]
 
 
@@ -212,6 +213,8 @@ else:
     DEBUG = True
 
     MEDIA_URL = 'http://127.0.0.1:8000/'
+    MEDIA_ROOT = ''
+    STATIC_ROOT = 'static/'
 
     ALLOWED_HOSTS = []
 
@@ -315,3 +318,33 @@ CACHES = {
 }
 
 ASGI_APPLICATION = 'ChillBro.routing.application'
+
+THUMBNAILS = {
+    'METADATA': {
+        'BACKEND': 'thumbnails.backends.metadata.DatabaseBackend',
+    },
+    'STORAGE': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'SIZES': {
+        'small': {
+            'PROCESSORS': [
+                {'PATH': 'thumbnails.processors.resize', 'width': 10, 'height': 10},
+                {'PATH': 'thumbnails.processors.crop', 'width': 80, 'height': 80}
+            ],
+            'POST_PROCESSORS': [
+                {
+                    'PATH': 'thumbnails.post_processors.optimize',
+                    'png_command': 'optipng -force -o7 "%(filename)s"',
+                    'jpg_command': 'jpegoptim -f --strip-all "%(filename)s"',
+                },
+            ],
+        },
+        'large': {
+            'PROCESSORS': [
+                {'PATH': 'thumbnails.processors.resize', 'width': 20, 'height': 20},
+                {'PATH': 'thumbnails.processors.flip', 'direction': 'horizontal'}
+            ],
+        }
+    }
+}
