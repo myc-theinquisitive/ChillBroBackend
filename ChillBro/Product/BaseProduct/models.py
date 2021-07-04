@@ -1,4 +1,6 @@
 from django.db import models
+
+from ChillBro.helpers import get_storage
 from .helpers import image_upload_to_product, get_user_model
 from django.db.models import Q
 from .constants import ProductTypes, ActivationStatus, PriceTypes
@@ -127,7 +129,7 @@ kvstore.register(Product)
 
 class ProductImage(models.Model):
     product = models.ForeignKey("Product", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_product)
+    image = models.ImageField(upload_to=image_upload_to_product, storage=get_storage())
     order = models.IntegerField()
 
     class Meta:

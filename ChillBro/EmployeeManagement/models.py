@@ -1,4 +1,6 @@
 from django.db import models
+
+from ChillBro.helpers import get_storage
 from .constants import Department, AttendanceStatus, LeaveStatus, LeaveType
 import uuid
 from django.core.validators import MinLengthValidator
@@ -25,8 +27,8 @@ class IdProofs(models.Model):
         max_length=10, validators=[MinLengthValidator(10), validate_pan], verbose_name="PAN No")
     aadhar_no = models.CharField(
         max_length=14, validators=[MinLengthValidator(14), validate_aadhar], verbose_name="Aadhar No")
-    pan_image = models.ImageField(upload_to=upload_pan_image_for_employee, max_length=500)
-    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_employee, max_length=500)
+    pan_image = models.ImageField(upload_to=upload_pan_image_for_employee, max_length=500, storage=get_storage())
+    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_employee, max_length=500, storage=get_storage())
 
 
 class SalaryAccount(models.Model):

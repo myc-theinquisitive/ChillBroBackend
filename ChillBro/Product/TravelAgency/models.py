@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 import uuid
+
+from ChillBro.helpers import get_storage
 from .helpers import image_upload_to_travel_agency, upload_image_to_travel_characteristics
 from .validations import is_json
 from .constants import PlaceTypes
@@ -12,7 +14,7 @@ def get_id():
 
 class TravelCharacteristics(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    icon_url = models.ImageField(upload_to=upload_image_to_travel_characteristics, max_length=300)
+    icon_url = models.ImageField(upload_to=upload_image_to_travel_characteristics, max_length=300, storage=get_storage())
 
     def __str__(self):
         return self.name
@@ -46,7 +48,7 @@ class TravelAgencyPlaces(models.Model):
 
 class TravelAgencyImage(models.Model):
     travel_agency = models.ForeignKey("TravelAgency", on_delete=models.CASCADE, verbose_name="Travel Agency")
-    image = models.ImageField(upload_to=image_upload_to_travel_agency)
+    image = models.ImageField(upload_to=image_upload_to_travel_agency, storage=get_storage())
     order = models.IntegerField()
 
     class Meta:

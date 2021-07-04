@@ -1,5 +1,7 @@
 from django.db import models
 from django.db.models import Q
+
+from ChillBro.helpers import get_storage
 from .constants import Status, EntityType, BankAccountTypes, ActivationStatus, EntitySubType
 import uuid
 from django.core.validators import MinLengthValidator
@@ -16,7 +18,7 @@ def get_id():
 
 class Amenities(models.Model):
     name = models.CharField(max_length=40)
-    icon_url = models.ImageField(upload_to=image_upload_to_amenities)
+    icon_url = models.ImageField(upload_to=image_upload_to_amenities, storage=get_storage())
 
     def __str__(self):
         return self.name
@@ -65,7 +67,7 @@ class MyEntity(models.Model):
 
 class EntityImage(models.Model):
     entity = models.ForeignKey("MyEntity", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=upload_image_for_entity)
+    image = models.ImageField(upload_to=upload_image_for_entity, storage=get_storage())
     order = models.IntegerField()
 
     class Meta:
@@ -97,10 +99,10 @@ class EntityRegistration(models.Model):
     gst_in = models.CharField(max_length=15, validators=[MinLengthValidator(15), validate_gst])
     aadhar_no = models.CharField(max_length=14, validators=[MinLengthValidator(14), validate_aadhar])
 
-    pan_image = models.ImageField(upload_to=upload_pan_image_for_entity, max_length=500)
-    registration_image = models.ImageField(upload_to=upload_registration_image_for_entity, max_length=500)
-    gst_image = models.ImageField(upload_to=upload_gst_image_for_entity, max_length=500)
-    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_entity, max_length=500)
+    pan_image = models.ImageField(upload_to=upload_pan_image_for_entity, max_length=500, storage=get_storage())
+    registration_image = models.ImageField(upload_to=upload_registration_image_for_entity, max_length=500, storage=get_storage())
+    gst_image = models.ImageField(upload_to=upload_gst_image_for_entity, max_length=500, storage=get_storage())
+    aadhar_image = models.ImageField(upload_to=upload_aadhar_image_for_entity, max_length=500, storage=get_storage())
 
 
 class EntityAccount(models.Model):

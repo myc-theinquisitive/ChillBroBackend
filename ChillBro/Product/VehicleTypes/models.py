@@ -1,6 +1,8 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 import uuid
+
+from ChillBro.helpers import get_storage
 from .helpers import upload_image_to_vehicle_type, upload_image_to_vehicle_characteristics
 from .constants import WheelType
 
@@ -11,7 +13,7 @@ def get_id():
 
 class VehicleCharacteristics(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    icon_url = models.ImageField(upload_to=upload_image_to_vehicle_characteristics, max_length=300)
+    icon_url = models.ImageField(upload_to=upload_image_to_vehicle_characteristics, max_length=300, storage=get_storage())
     units = models.CharField(max_length=30, null=True, blank=True)
     display_front = models.BooleanField(default=False)
 
@@ -30,7 +32,7 @@ class VehicleType(models.Model):
     wheel_type = models.CharField(
         max_length=30, choices=[(wheel_type.value, wheel_type.value) for wheel_type in WheelType])
 
-    image = models.ImageField(upload_to=upload_image_to_vehicle_type, max_length=300)
+    image = models.ImageField(upload_to=upload_image_to_vehicle_type, max_length=300, storage=get_storage())
 
     def __str__(self):
         return self.name + "-" + self.category.name

@@ -1,5 +1,7 @@
 from django.core.validators import MinLengthValidator
 from django.db import models
+
+from ChillBro.helpers import get_storage
 from authentication.models import EmailUserManager, EmailAbstractUser
 from .validations import validate_phone
 from .helpers import upload_employee_image
@@ -36,4 +38,4 @@ class Employee(models.Model):
 
 class EmployeeImage(models.Model):
     employee = models.ForeignKey('Employee',on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=upload_employee_image,max_length=300)
+    image = models.ImageField(upload_to=upload_employee_image,max_length=300, storage=get_storage())

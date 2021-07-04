@@ -10,14 +10,14 @@ def get_media_root():
 def upload_image_to_vehicle_type(instance, filename):
     name = instance.name
     slug = slugify(name)
-    basename, file_extension = filename.split(".")
+    file_extension = filename.split(".")[-1]
     new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
-    return get_media_root() + "static/images/vehicle/type/%s/%s" % (slug, new_filename)
+    return "static/images/vehicle/type/%s/%s" % (slug, new_filename)
 
 
 def upload_image_to_vehicle_characteristics(instance, filename):
     name = instance.name
     slug = slugify(name)
-    basename, file_extension = filename.split(".")
+    file_extension = filename.split(".")[-1]
     new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
-    return get_media_root() + "static/images/vehicle/characteristics/%s/%s" % (slug, new_filename)
+    return "static/images/vehicle/characteristics/%s/%s" % (slug, new_filename)

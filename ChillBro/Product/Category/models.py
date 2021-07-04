@@ -23,7 +23,7 @@ class Category(models.Model):
 
 class CategoryImage(models.Model):
     category = models.ForeignKey("Category", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=upload_image_to_category)
+    image = models.ImageField(upload_to=upload_image_to_category, storage=get_storage())
     order = models.IntegerField()
 
     class Meta:

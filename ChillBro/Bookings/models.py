@@ -1,6 +1,8 @@
 import uuid
 from django.db.models import Q
 from django.db import models
+
+from ChillBro.helpers import get_storage
 from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, \
     PaymentMode, TripType, BookingApprovalTime, PriceTypes
 from datetime import datetime, timedelta
@@ -239,7 +241,7 @@ class CheckInDetails(models.Model):
     id_proof_type = models.CharField(
         max_length=30, choices=[(id_proof.value, id_proof.value) for id_proof in IdProofType],
         default=IdProofType.aadhar_card.value)
-    id_image = models.ImageField(upload_to=image_upload_to_user_id_proof)
+    id_image = models.ImageField(upload_to=image_upload_to_user_id_proof, storage=get_storage())
 
     objects = CheckInDetailsManager()
 
@@ -318,12 +320,12 @@ class CancelledDetails(models.Model):
 
 class CheckInImages(models.Model):
     check_in = models.ForeignKey('CheckInDetails', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_check_in)
+    image = models.ImageField(upload_to=image_upload_to_check_in, storage=get_storage())
 
 
 class CheckOutImages(models.Model):
     check_out = models.ForeignKey('CheckOutDetails', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_check_out)
+    image = models.ImageField(upload_to=image_upload_to_check_out, storage=get_storage())
 
 
 class BusinessClientReportOnCustomer(models.Model):

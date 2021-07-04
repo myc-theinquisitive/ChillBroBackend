@@ -1,12 +1,14 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+
+from ChillBro.helpers import get_storage
 from ..BaseProduct.models import Product
 from .helpers import image_upload_to_amenities
 
 
 class Amenities(models.Model):
     name = models.CharField(max_length=40)
-    icon_url = models.ImageField(upload_to=image_upload_to_amenities)
+    icon_url = models.ImageField(upload_to=image_upload_to_amenities, storage=get_storage())
 
     def __str__(self):
         return self.name

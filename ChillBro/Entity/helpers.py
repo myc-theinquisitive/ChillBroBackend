@@ -8,10 +8,6 @@ def get_user_model():
     return settings.AUTH_USER_MODEL
 
 
-def get_media_root():
-    return settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else ""
-
-
 def get_entity_status(statuses):
     all_statuses = [each_entity.value for each_entity in ActivationStatus]
     if len(statuses) == 0:
@@ -36,9 +32,9 @@ def upload_image_for_entity_type(instance, filename, type):
 def image_upload_to_amenities(instance, filename):
     name = instance.name
     slug = slugify(name)
-    basename, file_extension = filename.split(".")
+    file_extension = filename.split(".")[-1]
     new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
-    return get_media_root() + "static/images/Amenities/%s/%s" % (slug, new_filename)
+    return "static/images/Amenities/%s/%s" % (slug, new_filename)
 
 
 def upload_pan_image_for_entity(instance, filename):
