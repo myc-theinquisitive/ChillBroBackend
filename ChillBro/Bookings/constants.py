@@ -1,6 +1,6 @@
 import enum
 from ChillBro.constants import EntityType, DateFilters, ProductTypes, TripType, DurationType, \
-    COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, FIXED_FEE_PERCENT, GST_PERCENT
+    COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, FIXED_FEE_PERCENT, GST_PERCENT, PriceTypes
 
 
 class BookingStatus(enum.Enum):

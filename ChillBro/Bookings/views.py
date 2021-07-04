@@ -1264,7 +1264,12 @@ def create_single_booking(booking_object, product_values):
         net_value = get_product_net_price(float(product['product_value']), "product_type")
         # TODO: move the common logic to outside of if function
         product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
+        product['price'] = product_values[product['product_id']]['price_by_type']
+        product['price_type'] = product_values[product['product_id']]['price_type']
         product['net_value'] = net_value
+
+        net_value = product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
+
         if product['is_combo']:
             combo_product = product
             product_list.remove(product)

@@ -2,7 +2,7 @@ import uuid
 from django.db.models import Q
 from django.db import models
 from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, \
-    PaymentMode, TripType, BookingApprovalTime
+    PaymentMode, TripType, BookingApprovalTime, PriceTypes
 from datetime import datetime, timedelta
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
@@ -152,6 +152,14 @@ class BookedProducts(models.Model):
     hidden = models.BooleanField(default=False)
     parent_booked_product = models.ForeignKey(
         'self', on_delete=models.CASCADE, null=True, blank=True, verbose_name="Parent Booked Product Id")
+
+    #this price is in hour/day price of product
+    price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    price_type = models.CharField(max_length=30, default=PriceTypes.DAY.value,
+                                  choices=[(price_type.value, price_type.value) for price_type in PriceTypes],
+                                  verbose_name="Price Type")
+
+    #final product values
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     coupon_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)

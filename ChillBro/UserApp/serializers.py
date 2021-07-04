@@ -2,7 +2,6 @@ from rest_framework import serializers
 from .models import *
 from .validations import validate_phone
 from django.core.validators import MinLengthValidator
-from .constants import Roles
 
 
 class MyUserSerializer(serializers.ModelSerializer):
@@ -31,7 +30,7 @@ class BusinessClientSerializer(serializers.ModelSerializer):
 
 class NewEmployeeSerializer(UserSerializer):
     entity_id = serializers.CharField(max_length=100)
-    role = serializers.ChoiceField(choices=[(role.name, role.value) for role in Roles])
+    role = serializers.CharField(max_length=30)
     is_active = serializers.BooleanField()
     images = serializers.ListField(
         allow_empty=True,

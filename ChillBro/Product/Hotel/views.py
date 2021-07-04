@@ -1,9 +1,15 @@
+from datetime import datetime
+from math import ceil
 from typing import List, Dict
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+
+from Bookings.helpers import get_date_format
+from ChillBro.constants import PriceTypes
 from .models import Amenities, HotelRoom, HotelAvailableAmenities
 from .serializers import AmenitiesSerializer, HotelAvailableAmenitiesSerializer, HotelRoomSerializer, \
     HotelAvailableAmenitiesUpdateSerializer
+from ..BaseProduct.models import Product
 from ..product_interface import ProductInterface
 from collections import defaultdict
 from django.conf import settings
@@ -297,11 +303,70 @@ class HotelView(ProductInterface):
     def get_sub_products_ids(self, product_ids):
         return {}
 
-    def calculate_starting_prices(self, product_ids, product_ids_with_duration):
-        return {}
+    def calculate_starting_prices(self, product_ids, product_details_with_ids):
+        products = Product.objects.filter(id__in=product_ids)
+        starting_prices = defaultdict()
+        for each_product in products:
+            each_hire_a_vehicle_details = product_details_with_ids[each_product.product_id]
+            start_time_date_object = each_hire_a_vehicle_details['start_time']
+            end_time_date_object = each_hire_a_vehicle_details['end_time']
+            quantity = each_hire_a_vehicle_details["quantity"]
+            discount_percentage = each_hire_a_vehicle_details["discount_percentage"]
+
+            difference_date = (end_time_date_object - start_time_date_object)
+            total_hours = ceil((difference_date.total_seconds() // 60) / 60)
+            days = total_hours // 24
+            hours = total_hours % 24
+
+            total_price = discounted_price = 0
+            if each_product.price_type == PriceTypes.HOUR.value:
+                total_price = float(each_product.price) * total_hours * quantity
+                discounted_price = float(each_product.discounted_price) * total_hours * quantity
+            elif each_product.price_type == PriceTypes.DAY.value:
+                total_price = (float(each_product.price) * (days + hours / 24)) * quantity
+                discounted_price = (float(each_product.discounted_price) * (days + hours / 24)) * quantity
+
+            starting_prices[each_product.id] = {
+                "total_price": total_price,
+                "discounted_price": discounted_price
+            }
+
+        return starting_prices
 
     def calculate_final_prices(self, products):
-        return {}
+        final_prices = defaultdict()
+        for each_product in products:
+            product_details = products[each_product]
+            quantity = product_details["quantity"]
+            start_time = datetime.strptime(product_details["start_time"], get_date_format())
+            booking_end_time = datetime.strptime(product_details["booking_end_time"], get_date_format())
+            present_end_time = datetime.strptime(product_details["present_end_time"], get_date_format())
+            booking_difference_date = (booking_end_time - start_time)
+            booking_total_hours = ceil((booking_difference_date.total_seconds() // 60) / 60)
+            days = booking_total_hours // 24
+            hours = booking_total_hours % 24
+            excess_total_hours = excess_days = excess_hours = 0
+            if present_end_time > booking_end_time:
+                excess_difference_date = (present_end_time - booking_end_time)
+                excess_total_hours = ceil((excess_difference_date.total_seconds() // 60) / 60)
+                excess_days = excess_total_hours // 24
+                excess_hours = excess_total_hours % 24
+
+            duration_price = excess_duration_price = 0
+            if product_details["price_type"] == PriceTypes.HOUR.value:
+                duration_price = float(product_details["price"]) * booking_total_hours * quantity
+                excess_duration_price = float(product_details["price"]) * excess_total_hours * quantity
+            elif product_details["price_type"] == PriceTypes.DAY.value:
+                duration_price = (float(product_details["price"]) * (days + hours / 24)) * quantity
+                excess_duration_price = (float(product_details["price"]) * (excess_days + excess_hours / 24)) * quantity
+
+            total_price = duration_price + excess_duration_price
+
+            final_prices[each_product] = {
+                "final_price": total_price,
+                "discounted_price": total_price
+            }
+        return final_prices
 
     def check_valid_duration(self, product_ids, start_time, end_time):
         is_valid = True

@@ -25,6 +25,8 @@ def get_product_id_wise_details(product_ids):
         product_data = {
             'product_id': each_product.id,
             'price': each_product.discounted_price,
+            'price_by_type': each_product.price,
+            'price_type': each_product.price_type,
             'net_value_details': calculate_product_net_price(each_product.price, discount),
             'discount': discount,
             'quantity_unlimited': each_product.quantity_unlimited,

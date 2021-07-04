@@ -51,6 +51,14 @@ class DurationType(enum.Enum):
     day = "DAY"
     week = "WEEK"
 
+
+class PriceTypes(enum.Enum):
+    DAY = "DAY"
+    HOUR = "HOUR"
+    MONTH = "MONTH"
+    PACKAGE = "PACKAGE"
+
+
 COMMISION_FEE_PERCENT = 10
 TRANSACTION_FEE_PERCENT = 2
 FIXED_FEE_PERCENT = 2

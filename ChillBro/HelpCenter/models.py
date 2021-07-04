@@ -21,13 +21,16 @@ class CarouselItem(models.Model):
     status = models.CharField(max_length=20, choices=[(status.name, status.value) for status in CarouselItemStatus],
                               default=CarouselItemStatus.ACTIVE.value)
 
+
 class BusinessClientFAQ(models.Model):
     question = models.CharField(max_length=100)
     answer = models.TextField()
 
+
 class HelpCenterFAQ(models.Model):
     question = models.CharField(max_length=100)
     answer = models.TextField()
+
 
 class HowToUse(models.Model):
     entity_type = models.CharField(max_length=30)

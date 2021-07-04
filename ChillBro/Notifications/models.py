@@ -5,8 +5,12 @@ import uuid
 from .helpers import get_user_model
 
 
+def get_id():
+    return str(uuid.uuid4())
+
+
 class Notification(models.Model):
-    id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
+    id = models.CharField(primary_key=True, default=get_id, editable=False, max_length=36)
     title = models.CharField(max_length=60)
     redirect_url = models.URLField(max_length=256)
     type = models.CharField(choices=[(type.name, type.value) for type in NotificationType], max_length=20)

@@ -1,4 +1,5 @@
 import enum
+from ChillBro.constants import PriceTypes
 
 
 class ProductTypes(enum.Enum):
@@ -8,6 +9,8 @@ class ProductTypes(enum.Enum):
     Vehicle = "VEHICLE"
     Hire_A_Vehicle = "HIRE_A_VEHICLE"
     Travel_Package_Vehicle = "TRAVEL_PACKAGE_VEHICLE"
+    Travel_Agency = "TRAVEL_AGENCY"
+    Make_Your_Own_Trip = "MAKE_YOUR_OWN_TRIP"
     Self_Rental = "SELF_RENTAL"
 
 
@@ -17,9 +20,3 @@ class ActivationStatus(enum.Enum):
     REJECTED = "REJECTED"
     DELETED = "DELETED"
 
-
-class PriceTypes(enum.Enum):
-    DAY = "DAY"
-    HOUR = "HOUR"
-    MONTH = "MONTH"
-    PACKAGE = "PACKAGE"

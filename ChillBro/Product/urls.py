@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
-    ProductVerificationDetail, ProductListBasedOnVerificationStatus
+    ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
@@ -13,7 +13,7 @@ from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDe
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
 from .TravelPackageVehicle.views import TravelPackageVehiclesList
-
+from  .TravelAgency.views import TravelCharacteristicsList,TravelCharacteristicsDetail
 
 urlpatterns = [
 
@@ -53,6 +53,10 @@ urlpatterns = [
     path('travel_package/image/<int:pk>/', TravelPackageImageDelete.as_view()),
     path('travel_package/<str:pk>/', TravelPackageDetail.as_view()),
 
+    # urls for travel agency characteristics
+    path('travel_agency/characteristics/',TravelCharacteristicsList.as_view()),
+    path('travel_agency/characteristics/<str:id>/', TravelCharacteristicsDetail.as_view()),
+
     # urls for all products
     path('product/', ProductList.as_view()),
 
@@ -77,6 +81,10 @@ urlpatterns = [
     # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
 
+    path('product/rental_home_page_categories/', RentalHomePageCategories.as_view()),
+    path('product/rental_products_types/', RentalProductsTypes.as_view()),
+
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),
+
 ]

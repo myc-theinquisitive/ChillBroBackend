@@ -2,7 +2,7 @@ from .views import *
 from django.urls import path
 
 urlpatterns = [
-    path('send/',sendNotification.as_view()),
+    path('send/', SendNotification.as_view()),
     path('create/',NotificationCreate.as_view()),
     path('business_client/',BusinessClientNotification.as_view()),
     path('business_client/<str:type>/', BusinessClientTypeNotification.as_view()),
