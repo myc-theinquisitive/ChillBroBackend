@@ -23,16 +23,17 @@ from .serializers import PasswordChangeSerializer
 from .serializers import UserSerializer
 import jwt
 from .wrapper import sendOTP, check_business_client, check_employee, create_wallet
+from ChillBro.validations import validate_phone, validate_email
 
 
 class Signup(APIView):
-    permission_classes = (AllowAny, )
+    permission_classes = (AllowAny,)
     mail_serializer_class = MailSignUpSerializer
     phone_serializer_class = PhoneSignUpSerializer
 
     def mailSignUp(self, serializer, email, password, first_name, last_name):
         must_validate_email = getattr(settings, "AUTH_VERIFICATION", True)
-        email=email.lower().strip()
+        email = email.lower().strip()
         try:
             user = get_user_model().objects.get(email=email)
             if user.is_verified:
@@ -66,7 +67,7 @@ class Signup(APIView):
             signup_code.send_signup_email()
 
         content = {'email': email, 'first_name': first_name,
-                   'last_name': last_name, 'message':'Verification mail has been sent to '+email}
+                   'last_name': last_name, 'message': 'Verification mail has been sent to ' + email}
         return Response(content, status=status.HTTP_201_CREATED)
 
     def phoneSignUp(self, serializer, phone_number, first_name, last_name):
@@ -105,7 +106,7 @@ class Signup(APIView):
             sendOTP(signup_code, phone_number)
 
         content = {'phone_number': phone_number, 'first_name': first_name,
-                   'last_name': last_name, 'message':'OTP Sent to '+phone_number}
+                   'last_name': last_name, 'message': 'OTP Sent to ' + phone_number}
         return Response(content, status=status.HTTP_201_CREATED)
 
     def post(self, request, mail, phone, format=None):
@@ -228,10 +229,22 @@ class PasswordReset(APIView):
     serializer_class = PasswordResetSerializer
 
     def post(self, request, format=None):
+
+        email_or_phone = request.data['email']
+        if validate_phone(email_or_phone):
+            phone = email_or_phone
+            user = get_user_model().objects.get(phone=phone)
+            request.data['email'] = user.email
+        elif validate_email(email_or_phone):
+            email = email_or_phone
+            user = get_user_model().objects.get(email=email)
+            request.data['phone'] = user.phone
+
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid():
             email = serializer.data['email']
+            phone = serializer.data['phone']
 
             try:
                 user = get_user_model().objects.get(email=email)
@@ -243,7 +256,8 @@ class PasswordReset(APIView):
                     password_reset_code = \
                         PasswordResetCode.objects.create_password_reset_code(user)
                     password_reset_code.send_password_reset_email()
-                    content = {'email': email, 'message':'Password reset link sent to '+email}
+                    sendOTP(password_reset_code, phone)
+                    content = {'email': email, 'message': 'OTP sent to ' + email}
                     return Response(content, status=status.HTTP_201_CREATED)
 
             except get_user_model().DoesNotExist:
@@ -262,7 +276,10 @@ class PasswordResetVerify(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request, format=None):
-        code = request.GET.get('code', '')
+        # code = request.GET.get('code', '')
+        if 'code' not in request.data:
+            return Response({'code':'Code is required'}, 400)
+        code = request.data['code']
 
         try:
             password_reset_code = PasswordResetCode.objects.get(code=code)
@@ -340,7 +357,7 @@ class EmailChange(APIView):
 
                 email_change_code.send_email_change_emails()
 
-                content = {'email': email_new, 'message':'Verification link sent to '+email_new}
+                content = {'email': email_new, 'message': 'Verification link sent to ' + email_new}
                 return Response(content, status=status.HTTP_201_CREATED)
 
         else:
@@ -412,7 +429,7 @@ class PasswordChange(APIView):
                 user.set_password(new_password)
                 user.save()
             else:
-                content = {"message":"Password Incorrect"}
+                content = {"message": "Password Incorrect"}
                 return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
             content = {'success': _('Password changed.')}
@@ -440,6 +457,7 @@ def checkPhoneExists(phone):
     except:
         return False
 
+
 class OTPLogin(APIView):
     serializer_class = OTPCreateSerializer
 
@@ -449,7 +467,7 @@ class OTPLogin(APIView):
             phone = request.data['phone']
             if checkPhoneExists(phone):
                 serializer.save()
-                sendOTP(serializer.data['otp'],phone)
+                sendOTP(serializer.data['otp'], phone)
                 return Response({'otp': serializer.data['otp']}, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
