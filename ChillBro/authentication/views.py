@@ -229,14 +229,15 @@ class PasswordReset(APIView):
     serializer_class = PasswordResetSerializer
 
     def post(self, request, format=None):
+        if 'email' not in request.data and 'phone' not in request.data:
+            return Response({'error':'Phone or Email should be provided'}, 400)
+        email = request.data['email'] if 'email' in request.data else None
+        phone = request.data['phone'] if 'phone' in request.data else None
 
-        email_or_phone = request.data['email']
-        if validate_phone(email_or_phone):
-            phone = email_or_phone
+        if validate_phone(phone):
             user = get_user_model().objects.get(phone=phone)
             request.data['email'] = user.email
-        elif validate_email(email_or_phone):
-            email = email_or_phone
+        if validate_email(email):
             user = get_user_model().objects.get(email=email)
             request.data['phone'] = user.phone
 
@@ -278,11 +279,23 @@ class PasswordResetVerify(APIView):
     def get(self, request, format=None):
         # code = request.GET.get('code', '')
         if 'code' not in request.data:
-            return Response({'code':'Code is required'}, 400)
+            return Response({'Error':'Code is required'}, 400)
+
+        if 'email' not in request.data and 'phone' not in request.data:
+            return Response({'error':'Phone or Email should be provided'}, 400)
+
+        email = request.data['email'] if 'email' in request.data else None
+        phone = request.data['phone'] if 'phone' in request.data else None
+
+        if validate_phone(phone):
+            user = get_user_model().objects.get(phone=phone)
+        if validate_email(email):
+            user = get_user_model().objects.get(email=email)
+
         code = request.data['code']
 
         try:
-            password_reset_code = PasswordResetCode.objects.get(code=code)
+            password_reset_code = PasswordResetCode.objects.get(code=code,user=user)
 
             # Delete password reset code if older than expiry period
             delta = date.today() - password_reset_code.created_at.date()

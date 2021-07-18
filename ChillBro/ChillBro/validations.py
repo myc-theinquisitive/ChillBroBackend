@@ -9,14 +9,14 @@ def validate_pan(pan_no):  # Eg: abwpn4366r
     return True
 
 
-def validate_aadhar(aadhar_no): # 4444 3333 2222
+def validate_aadhar(aadhar_no):  # 4444 3333 2222
     regex = re.compile("[2-9]{1}[0-9]{3}\\s[0-9]{4}\\s[0-9]{4}")
     if not regex.match(aadhar_no):
         raise ValidationError(('Invalid AadharNo'))
     return True
 
 
-def validate_bank_account_no(account_no): # 1010101010
+def validate_bank_account_no(account_no):  # 1010101010
     regex = re.compile("[0-9]{9,18}")
     if not regex.match(account_no):
         raise ValidationError('Invalid Account Number')
@@ -30,7 +30,7 @@ def validate_ifsc_code(ifsc_code):  # SBIN0125620
     return True
 
 
-def validate_upi_id(upi_id): #9898989898@ybl
+def validate_upi_id(upi_id):  # 9898989898@ybl
     regex = re.compile("[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}")
     if not regex.match(upi_id):
         raise ValidationError('Invalid UPI ID')
@@ -48,7 +48,7 @@ def validate_phone(phone):
     return True
 
 
-def validate_email(email): #admin@theinquisitive.in
+def validate_email(email):  # admin@theinquisitive.in
     regex = re.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}")
     if not regex.match(email):
         raise ValidationError('Invalid Email')
