@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
-    ProductVerificationDetail, ProductListBasedOnVerificationStatus
+    ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
@@ -81,6 +81,10 @@ urlpatterns = [
     # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
 
+    path('product/rental_home_page_categories/', RentalHomePageCategories.as_view()),
+    path('product/rental_products_types/', RentalProductsTypes.as_view()),
+
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),
+
 ]

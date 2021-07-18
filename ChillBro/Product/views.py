@@ -1,3 +1,6 @@
+import json
+from collections import defaultdict
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Subquery, OuterRef, PositiveIntegerField
 from rest_framework.permissions import IsAuthenticated
@@ -14,12 +17,17 @@ from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCE
 from .BaseProduct.models import Product, ProductVerification
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwnerById, IsUserOwner, IsSellerProduct, \
     IsBusinessClientEntities, IsEmployeeEntities
-from .BaseProduct.constants import ActivationStatus
+from .BaseProduct.constants import ActivationStatus, ProductTypes
 from datetime import datetime
 from .helpers import get_date_format, get_status
 from decimal import Decimal
 from rest_framework.response import Response
 from .Category.models import Category
+from django.core.cache import cache
+from django.conf import settings
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
+
+CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
 
 def get_invalid_product_ids(product_ids):
@@ -47,8 +55,7 @@ def add_wishlist_status_for_products(user_id, products_response):
         product["in_wishlist"] = product_id_wise_wishlist_status[product["id"]]
 
 
-def calculate_product_net_price(selling_price, discount):
-    final_selling_price = selling_price - (selling_price * discount) / 100
+def calculate_net_price(final_selling_price, product_type):
     commission_fee = final_selling_price * COMMISION_FEE_PERCENT / 100
     transaction_fee = final_selling_price * TRANSACTION_FEE_PERCENT / 100
     fixed_fee = final_selling_price * FIXED_FEE_PERCENT / 100
@@ -65,6 +72,11 @@ def calculate_product_net_price(selling_price, discount):
             "gst": gst
         }
     }
+
+
+def calculate_product_net_price(selling_price, discount):
+    final_selling_price = selling_price - (selling_price * discount) / 100
+    return calculate_net_price(final_selling_price, "product type")
 
 
 def add_verification_details_to_product(products_list):
@@ -247,33 +259,40 @@ class GetProductsByCategory(generics.ListAPIView):
         return list(set(result_category_ids))
 
     def get(self, request, *args, **kwargs):
-
         input_serializer = GetProductsBySearchFilters(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't get products", "errors": input_serializer.errors}, 400)
 
-        try:
-            category = Category.objects.get(name__icontains=kwargs["slug"])
-        except ObjectDoesNotExist:
-            return Response({"errors": "Invalid Category!!!"}, 400)
-        all_category_ids = self.recursively_get_lower_level_categories([category.id])
+        # adding inputs other than request body data
+        request.data["category"] = kwargs["slug"]
+        request.data["page"] = request.query_params.get('page')
+        cache_key = json.dumps(request.data)
+        if cache_key in cache:
+            response_data = cache.get(cache_key)
+        else:
+            try:
+                category = Category.objects.get(name__icontains=kwargs["slug"])
+            except ObjectDoesNotExist:
+                return Response({"errors": "Invalid Category!!!"}, 400)
+            all_category_ids = self.recursively_get_lower_level_categories([category.id])
 
-        sort_filter = request.data["sort_filter"]
-        product_ids = self.apply_filters(all_category_ids, request.data)
-        self.queryset = Product.objects.filter(id__in=product_ids)
-        self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
+            sort_filter = request.data["sort_filter"]
+            product_ids = self.apply_filters(all_category_ids, request.data)
+            self.queryset = Product.objects.filter(id__in=product_ids)
+            self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
 
-        response = super().get(request, args, kwargs)
-        response_data = response.data
+            response = super().get(request, args, kwargs)
+            response_data = response.data
 
-        product_ids = []
-        for product in response_data["results"]:
-            product_ids.append(product["id"])
-        response_data["results"] = self.product_view.get_by_ids(product_ids)
+            product_ids = []
+            for product in response_data["results"]:
+                product_ids.append(product["id"])
+            response_data["results"] = self.product_view.get_by_ids(product_ids)
+            self.sort_results(response_data["results"], sort_filter)
+            cache.set(cache_key, response_data, timeout=CACHE_TTL)
 
         add_wishlist_status_for_products(request.user.id, response_data["results"])
-        self.sort_results(response_data["results"], sort_filter)
-        return response
+        return Response(response_data)
 
 
 class SearchProducts(generics.ListAPIView):
@@ -414,3 +433,38 @@ class ProductVerificationDetail(APIView):
         product_data = ProductView().get(product_verification.product)
         add_verification_details_to_product([product_data])
         return Response(product_data, status=status.HTTP_200_OK)
+
+
+class RentalHomePageCategories(generics.RetrieveAPIView):
+    # permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        product_ids = Product.objects.filter(type=ProductTypes.Rental.value).values_list('id', flat=True)
+
+        rental_products_details = ProductView().get_by_ids(product_ids)
+        rental_categories_home_page = defaultdict(list)
+
+        count = 0
+        for each_product in product_ids:
+            if count % 4 == 0:
+                rental_categories_home_page['Best Valued'].append(rental_products_details[count])
+            if count % 4 == 1:
+                rental_categories_home_page["Combo's"].append(rental_products_details[count])
+            if count % 4 == 2:
+                rental_categories_home_page['Seasonal Rentals'].append(rental_products_details[count])
+            if count % 4 == 3:
+                rental_categories_home_page['New Arrivals'].append(rental_products_details[count])
+            count += 1
+
+        return Response({"results": rental_categories_home_page}, 200)
+
+
+class RentalProductsTypes(generics.ListAPIView):
+
+    def get(self, request, *args, **kwargs):
+        rental_products_types = ["Best Valued","Combo's", "Seasonal Rentals", "New Arrivals"]
+
+        return Response({"results": rental_products_types}, 200)
+
+
+

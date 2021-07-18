@@ -287,6 +287,9 @@ class VehicleTypeView(ProductInterface):
 
         return vehicle_types_data
 
+    def get_sub_products_ids(self, product_ids):
+        return {}
+
 
 class VehicleTypeList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
@@ -350,5 +353,18 @@ class VehicleTypeDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response({"message": "Vehicle Type updated successfully"},
                         status=status.HTTP_200_OK)
 
+
     def get_sub_products_ids(self, product_ids):
         return {}
+
+    def calculate_starting_prices(self, product_ids, product_ids_with_duration):
+        return {}
+
+    def calculate_final_prices(self, products):
+        return {}
+
+    def check_valid_duration(self, product_ids, start_time, end_time):
+        is_valid = True
+        errors = defaultdict(list)
+        return is_valid, errors
+

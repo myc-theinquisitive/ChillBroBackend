@@ -1,5 +1,7 @@
 from django.db import models
 import uuid
+
+from ChillBro.helpers import get_storage
 from .helpers import upload_image_to_place
 from django.db.models import Q
 
@@ -34,7 +36,7 @@ class Place(models.Model):
 
 class PlaceImage(models.Model):
     place = models.ForeignKey("Place", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=upload_image_to_place)
+    image = models.ImageField(upload_to=upload_image_to_place, storage=get_storage())
     order = models.IntegerField()
 
     class Meta:

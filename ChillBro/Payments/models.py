@@ -1,6 +1,8 @@
 from django.db import models
 import uuid
 from django.db.models import Q, Sum, F, FloatField
+
+from ChillBro.helpers import get_storage
 from .constants import PayMode, PayStatus, EntityType, PaymentUser
 from .helpers import get_user_model, image_upload_to_transaction_proof
 
@@ -122,7 +124,7 @@ class BookingTransaction(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    transaction_proof = models.ImageField(upload_to=image_upload_to_transaction_proof, blank=True, null=True)
+    transaction_proof = models.ImageField(upload_to=image_upload_to_transaction_proof, blank=True, null=True, storage=get_storage())
     credited_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, blank=True, null=True)
@@ -130,7 +132,6 @@ class BookingTransaction(models.Model):
     objects = BookingTransactionsManager()
 
     class Meta:
-        unique_together = (("booking_id", "paid_to", "paid_by"),)
         ordering = ["-created_at"]
 
     def __str__(self):

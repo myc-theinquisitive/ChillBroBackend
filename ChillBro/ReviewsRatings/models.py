@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from datetime import datetime
+
+from ChillBro.helpers import get_storage
 from .constants import REVIEW_SCALE, FeedbackCategory, BASE_RATING_STRING
 from .helpers import image_upload_to_review
 
@@ -26,7 +28,7 @@ class ReviewsRatings(models.Model):
 
 class ReviewImage(models.Model):
     review = models.ForeignKey("ReviewsRatings", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_review)
+    image = models.ImageField(upload_to=image_upload_to_review, max_length = 300, storage=get_storage())
 
     def __str__(self):
         return "Review Image - {0}".format(self.id)

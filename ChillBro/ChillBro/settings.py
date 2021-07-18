@@ -49,6 +49,10 @@ INSTALLED_APPS = [
     'Wallet',
     'Notifications',
     'HelpCenter',
+    'channels',
+    'EmployeeManagement',
+    'JobPortal',
+    'thumbnails',
 ]
 
 
@@ -147,6 +151,7 @@ if IS_SERVER:
     # STATIC_ROOT = 'chillbro_backend/'
     MEDIA_URL = 'https://chillbro.co.in/chillbro_backend/'
     MEDIA_ROOT = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
+    DEFAULT_FILE_STORAGE = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
 
     ALLOWED_HOSTS = ["chillbro.co.in"]
 
@@ -209,6 +214,8 @@ else:
     DEBUG = True
 
     MEDIA_URL = 'http://127.0.0.1:8000/'
+    MEDIA_ROOT = ''
+    STATIC_ROOT = 'static/'
 
     ALLOWED_HOSTS = []
 
@@ -259,13 +266,12 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'UserApp.MyUser'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # Constants
-
 DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
-
 IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
 
 
@@ -292,3 +298,54 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = "Asia/Kolkata"
 CELERY_IMPORTS = ('authentication.tasks', 'Bookings.tasks',)
+
+CHANNEL_LAYERS = {
+    'default': {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        # 'CONFIG': {
+        #     "hosts": [("127.0.0.1", 6379)],
+        # },
+    },
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+ASGI_APPLICATION = 'ChillBro.routing.application'
+
+THUMBNAILS = {
+    'METADATA': {
+        'BACKEND': 'thumbnails.backends.metadata.DatabaseBackend',
+    },
+    'STORAGE': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'SIZES': {
+        'small': {
+            'PROCESSORS': [
+                {'PATH': 'thumbnails.processors.resize', 'width': 10, 'height': 10},
+                {'PATH': 'thumbnails.processors.crop', 'width': 80, 'height': 80}
+            ],
+            'POST_PROCESSORS': [
+                {
+                    'PATH': 'thumbnails.post_processors.optimize',
+                    'png_command': 'optipng -force -o7 "%(filename)s"',
+                    'jpg_command': 'jpegoptim -f --strip-all "%(filename)s"',
+                },
+            ],
+        },
+        'large': {
+            'PROCESSORS': [
+                {'PATH': 'thumbnails.processors.resize', 'width': 20, 'height': 20},
+                {'PATH': 'thumbnails.processors.flip', 'direction': 'horizontal'}
+            ],
+        }
+    }
+}

@@ -861,7 +861,6 @@ class GetEntitiesBySubType(generics.ListAPIView):
 
     @staticmethod
     def apply_filters(entity_ids, filter_data):
-
         # applying search filter
         if filter_data["search_text"]:
             filter_entities = MyEntity.objects.search(filter_data["search_text"]).filter(id__in=entity_ids)

@@ -11,6 +11,26 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
     IsEmployee, IsEmployeeEntityById, IsBusinessClientEmployee, IsOwnerById, IsEmployeeBusinessClient
 
 
+def get_employee_details(employee_ids):
+    return Employee.objects.filter(id__in=employee_ids). \
+        values('id', 'entity_id', 'role', 'is_active', first_name=F('user_id__first_name'),
+               email=F('user_id__email'), phone_number=F('user_id__phone_number'))
+
+
+def get_employee_details_for_entity_ids(entity_ids):
+    return Employee.objects.filter(entity_id__in=entity_ids). \
+        values('id', 'entity_id', 'role', 'is_active', first_name=F('user_id__first_name'),
+               email=F('user_id__email'), phone_number=F('user_id__phone_number'))
+
+
+def get_employee_details_with_images(employee_ids):
+    employees = get_employee_details(employee_ids)
+    for employee in employees:
+        employee_images = EmployeeImage.objects.filter(employee=employee['id']).values_list('image', flat=True)
+        employee['images'] = employee_images
+    return employees
+
+
 class MyUserList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = MyUser.objects.all()
@@ -24,28 +44,27 @@ class BusinessClientAdd(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            request.data['is_verified'] = True
-            request.data['email'] = request.data['email'].lower().strip()
-            user_serializer = MyUserList.serializer_class(data=request.data)
-            if user_serializer.is_valid():
-                user_instance = user_serializer.save()
-                user_instance.set_password(request.data['password'])
-                user_instance.save()
+        if not serializer.is_valid():
+            return Response(serializer.errors, 400)
 
-                request.data['user_id'] = user_instance.id
-                business_client_serializer = BusinessClientSerializer(data=request.data)
-                if business_client_serializer.is_valid():
-                    business_client_serializer.save()
-                    return Response({'message': 'Success'}, status=status.HTTP_200_OK)
-                else:
-                    user_instance.delete()
-                    return Response(business_client_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        request.data['is_verified'] = True
+        request.data['email'] = request.data['email'].lower().strip()
+        user_serializer = MyUserList.serializer_class(data=request.data)
+        if not user_serializer.is_valid():
+            return Response(user_serializer.errors, 400)
 
-            else:
-                return Response(user_serializer.errors,400)
+        user_instance = user_serializer.save()
+        user_instance.set_password(request.data['password'])
+        user_instance.save()
+
+        request.data['user_id'] = user_instance.id
+        business_client_serializer = BusinessClientSerializer(data=request.data)
+        if business_client_serializer.is_valid():
+            business_client_serializer.save()
+            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors,400)
+            user_instance.delete()
+            return Response(business_client_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BusinessClientAll(generics.ListCreateAPIView):
@@ -74,59 +93,39 @@ class EmployeeAdd(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            request.data['is_verified'] = True
-            request.data['email'] = request.data['email'].lower().strip()
-            user_serializer = MyUserList.serializer_class(data=request.data)
-            if user_serializer.is_valid():
-                user_instance = user_serializer.save()
-                user_instance.set_password(request.data['password'])
-                user_instance.save()
-                user_id = user_serializer.data['id']
-                request.data['user_id'] = user_id
-
-                employee_serializer = EmployeeSerializer(data=request.data)
-                if employee_serializer.is_valid():
-                    employee_instance = employee_serializer.save()
-
-                    employee_image_dicts = []
-                    images = request.data.pop('images', None)
-                    for image in images:
-                        employee_image_dict = {
-                            "employee": employee_instance,
-                            "image": image
-                        }
-                        employee_image_dicts.append(employee_image_dict)
-
-                    EmployeeImageSerializer.bulk_create(employee_image_dicts)
-                    return Response({'message': 'Success'}, status=status.HTTP_200_OK)
-                else:
-                    user_instance.delete()
-                    return Response(employee_serializer.errors, 400)
-            else:
-                return Response(user_serializer.errors, 400)
-        else:
+        request.data._mutable = True
+        if not serializer.is_valid():
             return Response(serializer.errors, 400)
 
+        request.data['is_verified'] = True
+        request.data['email'] = request.data['email'].lower().strip()
+        user_serializer = MyUserList.serializer_class(data=request.data)
+        if not user_serializer.is_valid():
+            return Response(user_serializer.errors, 400)
+        user_instance = user_serializer.save()
 
-def get_employee_details(employee_ids):
-    return Employee.objects.filter(id__in=employee_ids). \
-        values('id', 'entity_id', 'role', 'is_active', first_name=F('user_id__first_name'),
-               email=F('user_id__email'), phone_number=F('user_id__phone_number'))
+        user_instance.set_password(request.data['password'])
+        user_instance.save()
+        user_id = user_serializer.data['id']
+        request.data['user_id'] = user_id
 
+        employee_serializer = EmployeeSerializer(data=request.data)
+        if not employee_serializer.is_valid():
+            user_instance.delete()
+            return Response(employee_serializer.errors, 400)
+        employee_instance = employee_serializer.save()
 
-def get_employee_details_for_entity_ids(entity_ids):
-    return Employee.objects.filter(entity_id__in=entity_ids). \
-        values('id', 'entity_id', 'role', 'is_active', first_name=F('user_id__first_name'),
-               email=F('user_id__email'), phone_number=F('user_id__phone_number'))
+        employee_image_dicts = []
+        images = request.data.pop('images', None)
+        for image in images:
+            employee_image_dict = {
+                "employee": employee_instance,
+                "image": image
+            }
+            employee_image_dicts.append(employee_image_dict)
 
-
-def get_employee_details_with_images(employee_ids):
-    employees = get_employee_details(employee_ids)
-    for employee in employees:
-        employee_images = EmployeeImage.objects.filter(employee=employee['id']).values_list('image', flat=True)
-        employee['images'] = employee_images
-    return employees
+        EmployeeImageSerializer.bulk_create(employee_image_dicts)
+        return Response({'message': 'Success'}, status=status.HTTP_200_OK)
 
 
 class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -141,10 +140,9 @@ class EmployeeDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response(employee)
 
     def put(self, request, *args, **kwargs):
-        id = request.user.id
         employee = None
         try:
-            employee = Employee.objects.get(user_id=id)
+            employee = Employee.objects.get(user_id=request.user.id)
         except ObjectDoesNotExist:
             pass
         if employee:
@@ -162,7 +160,7 @@ class EntityBusinessClientEmployee(generics.ListAPIView):
         entity_ids = get_entity_ids_for_business_client(request.user.id)
         employee_ids = Employee.objects.filter(entity_id__in=entity_ids).values_list('id')
         employees = get_employee_details_with_images(employee_ids)
-        return Response({"results":employees}, 200)
+        return Response({"results": employees}, 200)
 
 
 class EmployeeActive(generics.RetrieveUpdateAPIView):

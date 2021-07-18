@@ -1,22 +1,34 @@
 import uuid
 from django.db.models import Q
 from django.db import models
+
+from ChillBro.helpers import get_storage
 from .constants import BookingStatus, EntityType, IdProofType, ProductBookingStatus, PaymentStatus, \
-    PaymentMode
-from datetime import datetime
+    PaymentMode, TripType, BookingApprovalTime, PriceTypes
+from datetime import datetime, timedelta
 from .helpers import get_user_model, image_upload_to_user_id_proof, image_upload_to_check_in, \
     image_upload_to_check_out
 from .Quotation.models import *
+from django.utils import timezone
+import random
 
-# Create your models here.
+
 def get_id():
     return str(uuid.uuid4())
 
 
+def generate_otp():
+    return random.randint(100000,999999)
+
+
 class BookingsManager(models.Manager):
 
+    # TODO: add booking status cancelled condition and booking time less than that approval time for business client
     def active(self):
-        return self.filter(~Q(payment_status=PaymentStatus.failed.value))
+        current_time = timezone.now() - timedelta(minutes=BookingApprovalTime)
+
+        return self.filter(~Q(payment_status=PaymentStatus.failed.value) & \
+                        Q(~Q(booking_status=ProductBookingStatus.cancelled.value) &~Q(booing_date__lte=current_time)))
 
     def received_bookings(self, from_date, to_date, entity_types, entity_ids):
         if from_date and to_date:
@@ -82,6 +94,10 @@ class Bookings(models.Model):
     entity_id = models.CharField(max_length=36)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+    excess_total_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_total_net_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+
+    otp = models.IntegerField(default=generate_otp)
 
     objects = BookingsManager()
 
@@ -134,24 +150,64 @@ class BookedProducts(models.Model):
     is_combo = models.BooleanField(default=False)
     has_sub_products = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
-    parent_booked_product = models.ForeignKey('self', on_delete=models.CASCADE,
-                                            null=True, blank=True, verbose_name="Parent Booked Product Id")
+    parent_booked_product = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True, verbose_name="Parent Booked Product Id")
+
+    #this price is in hour/day price of product
+    price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    price_type = models.CharField(max_length=30, default=PriceTypes.DAY.value,
+                                  choices=[(price_type.value, price_type.value) for price_type in PriceTypes],
+                                  verbose_name="Price Type")
+
+    #final product values
     product_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     net_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     coupon_value = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
-    booking_status = models.CharField(
-        max_length=30, choices=[(booking_status.value, booking_status.value)
-                                for booking_status in ProductBookingStatus],
-        default=ProductBookingStatus.booked.value)
+    booking_status = models.CharField(max_length=30, choices=[(booking_status.value, booking_status.value)
+            for booking_status in ProductBookingStatus],default=ProductBookingStatus.booked.value)
+    excess_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_net_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
     objects = BookedProductManager()
 
     class Meta:
-        unique_together = (("booking", "product_id","hidden","parent_booked_product"),)
+        unique_together = (("booking", "product_id", "hidden", "parent_booked_product"),)
 
     def __str__(self):
         return "Booked Product - {0}, {1}".format(self.booking_id, self.product_id)
+
+
+# TODO: move trip type, pickup location, drop location, starting_km_value, ending km value
+#  and km limit choosen into a separate table
+class TransportBookingDetails(models.Model):
+    booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
+    trip_type = models.CharField(max_length=30,
+                    choices=[(trip_type.value, trip_type.value) for trip_type in TripType], null=True, blank=True)
+    pickup_location = models.CharField(max_length=36, blank=True, null=True)
+    drop_location = models.CharField(max_length=36, blank=True, null=True)
+    starting_km_value = models.PositiveIntegerField(default=0)
+    ending_km_value = models.PositiveIntegerField(default=0)
+    km_limit_choosen = models.PositiveIntegerField(default=0)
+    distance_details = models.ForeignKey("TransportBookingDistanceDetails", on_delete=models.CASCADE)
+    duration_details = models.ForeignKey("TransportBookingDurationDetails", on_delete=models.CASCADE, blank=True, null=True)
+
+
+class TransportBookingDistanceDetails(models.Model):
+    km_hour_limit = models.PositiveIntegerField(default=0)
+    km_day_limit = models.PositiveIntegerField(default=0)
+    excess_km_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    is_infinity = models.BooleanField(default=False)
+    single_trip_return_value_per_km = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    km_limit = models.PositiveIntegerField(default=0)
+
+
+class TransportBookingDurationDetails(models.Model):
+    hour_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    day_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_hour_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    excess_day_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
 
 
 class CheckInDetailsManager(models.Manager):
@@ -185,7 +241,7 @@ class CheckInDetails(models.Model):
     id_proof_type = models.CharField(
         max_length=30, choices=[(id_proof.value, id_proof.value) for id_proof in IdProofType],
         default=IdProofType.aadhar_card.value)
-    id_image = models.ImageField(upload_to=image_upload_to_user_id_proof)
+    id_image = models.ImageField(upload_to=image_upload_to_user_id_proof, storage=get_storage())
 
     objects = CheckInDetailsManager()
 
@@ -254,6 +310,7 @@ class CancelledDetailsManager(models.Manager):
 class CancelledDetails(models.Model):
     booking = models.OneToOneField('Bookings', on_delete=models.CASCADE)
     cancelled_time = models.DateTimeField(default=datetime.now)
+    reason = models.TextField()
 
     objects = CancelledDetailsManager()
 
@@ -263,12 +320,12 @@ class CancelledDetails(models.Model):
 
 class CheckInImages(models.Model):
     check_in = models.ForeignKey('CheckInDetails', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_check_in)
+    image = models.ImageField(upload_to=image_upload_to_check_in, storage=get_storage())
 
 
 class CheckOutImages(models.Model):
     check_out = models.ForeignKey('CheckOutDetails', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_check_out)
+    image = models.ImageField(upload_to=image_upload_to_check_out, storage=get_storage())
 
 
 class BusinessClientReportOnCustomer(models.Model):
@@ -290,10 +347,8 @@ class ReportCustomerReasons(models.Model):
 class BusinessClientProductCancellation(models.Model):
     booking = models.ForeignKey('Bookings', on_delete=models.CASCADE)
     product_id = models.CharField(max_length=36)
-    reason = models.CharField(max_length=1000)
     user_model = get_user_model()
     cancelled_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
-    time = models.DateTimeField(default=datetime.now)
 
     def __str__(self):
         return "Booking Id {} Product Id- {}".format(self.booking, self.product_id)

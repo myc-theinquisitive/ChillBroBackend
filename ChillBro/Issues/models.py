@@ -1,4 +1,6 @@
 from django.db import models
+
+from ChillBro.helpers import get_storage
 from .helpers import image_upload_to_issue
 from .constants import Departments
 from .constants import Status
@@ -37,7 +39,7 @@ class Issue(models.Model):
 
 class IssueImage(models.Model):
     issue = models.ForeignKey("Issue", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=image_upload_to_issue)
+    image = models.ImageField(upload_to=image_upload_to_issue, storage=get_storage())
 
     def __str__(self):
         return "Issue Image - {0}".format(self.id)

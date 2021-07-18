@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 import uuid
+
+from ChillBro.helpers import get_storage
 from .helpers import image_upload_to_travel_package
 from .validations import is_json
 
@@ -44,7 +46,7 @@ class PackagePlaces(models.Model):
 
 class TravelPackageImage(models.Model):
     travel_package = models.ForeignKey("TravelPackage", on_delete=models.CASCADE, verbose_name="Travel Package")
-    image = models.ImageField(upload_to=image_upload_to_travel_package)
+    image = models.ImageField(upload_to=image_upload_to_travel_package, storage=get_storage())
     order = models.IntegerField()
 
     class Meta:

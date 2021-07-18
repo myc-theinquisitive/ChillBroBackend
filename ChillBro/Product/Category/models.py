@@ -1,6 +1,8 @@
 from django.db import models
 from .helpers import upload_image_to_category, update_image_to_category_icon
+from ChillBro.helpers import get_storage
 import uuid
+from thumbnails.fields import ImageField
 
 
 def get_id():
@@ -13,7 +15,7 @@ class Category(models.Model):
     description = models.TextField()
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE,
                                         null=True, verbose_name="Parent Category")
-    icon_url = models.ImageField(upload_to=update_image_to_category_icon, max_length=300)
+    icon_url = ImageField(upload_to=update_image_to_category_icon, max_length=300, storage=get_storage())
 
     def __str__(self):
         return "Category - Nº{0}".format(self.name)
@@ -21,7 +23,7 @@ class Category(models.Model):
 
 class CategoryImage(models.Model):
     category = models.ForeignKey("Category", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=upload_image_to_category)
+    image = models.ImageField(upload_to=upload_image_to_category, storage=get_storage())
     order = models.IntegerField()
 
     class Meta:

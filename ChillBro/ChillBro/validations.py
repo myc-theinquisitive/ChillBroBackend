@@ -8,8 +8,7 @@ def validate_pan(pan_no):  # Eg: abwpn4366r
         raise ValidationError(('Invalid Pan Number'))
     return True
 
-
-def validate_aadhar(aadhar_no):  # 4444 3333 2222
+def validate_aadhar(aadhar_no): # 4444 3333 2222
     regex = re.compile("[2-9]{1}[0-9]{3}\\s[0-9]{4}\\s[0-9]{4}")
     if not regex.match(aadhar_no):
         raise ValidationError(('Invalid AadharNo'))

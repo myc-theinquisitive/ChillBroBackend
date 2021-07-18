@@ -8,3 +8,4 @@ from .HireAVehicle.admin import *
 from .Driver.admin import *
 from .Places.admin import *
 from .TravelPackages.admin import *
+from .SelfRental.admin import *

@@ -9,6 +9,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from Product.BaseProduct.models import Product
 
 
 class TravelPackageVehicleView(ProductInterface):
@@ -125,6 +126,9 @@ class TravelPackageVehicleView(ProductInterface):
 
         return travel_package_vehicles_data
 
+    def get_sub_products_ids(self, product_ids):
+        return {}
+
 
 class TravelPackageVehiclesList(APIView):
     queryset = TravelPackageVehicle.objects.all()
@@ -186,4 +190,44 @@ class TravelPackageVehiclesList(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     def get_sub_products_ids(self, product_ids):
-        return {}
+        travel_package_vehicles = TravelPackageVehicle.objects.filter(product_id__in=product_ids)
+        travel_package_vehicles_sub_products_ids = defaultdict()
+
+        for each_travel_package_vehicle in travel_package_vehicles:
+            travel_package_vehicles_sub_products_ids[each_travel_package_vehicle.product_id] = \
+                {
+                    each_travel_package_vehicle.vehicle_id:
+                        {
+                            "quantity": 1,
+                            "size": {}
+                        }
+                }
+
+        return travel_package_vehicles_sub_products_ids
+
+    def calculate_starting_prices(self, product_ids, product_details_with_ids):
+        products = Product.objects.filter(id__in=product_ids)
+        starting_prices = defaultdict()
+        for each_product in products:
+            quantity = product_details_with_ids[each_product.id]["quantity"]
+            starting_prices[each_product.id] = {
+                "total_price": float(each_product.price) * quantity,
+                "discounted_price": float(each_product.discounted_price) * quantity
+            }
+
+        return starting_prices
+
+    def calculate_final_prices(self, products):
+        final_prices = defaultdict()
+        for each_product in products:
+            quantity = products[each_product]["quantity"]
+            final_prices[each_product] = {
+                "final_price": float(products[each_product]["product_value"]) * quantity,
+                "discounted_price": float(products[each_product]["product_value"]) * quantity
+            }
+        return final_prices
+
+    def check_valid_duration(self, product_ids, start_time, end_time):
+        is_valid = True
+        errors = defaultdict(list)
+        return is_valid, errors

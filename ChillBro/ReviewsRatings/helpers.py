@@ -4,15 +4,11 @@ from .constants import *
 from ChillBro.helpers import get_time_period
 
 
-def get_media_root():
-    return settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else ""
-
-
 def image_upload_to_review(instance, filename):
     id = instance.review_id
-    basename, file_extension = filename.split(".")
+    file_extension = filename.split(".")[-1]
     new_filename = "%s-%s.%s" % (id, str(uuid.uuid4()), file_extension)
-    return get_media_root() + "static/images/review/%s/%s" % (id, new_filename)
+    return "static/images/review/%s/%s" % (id, new_filename)
 
 
 def get_entity_type(entity_filter):
