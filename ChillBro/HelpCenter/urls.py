@@ -6,7 +6,7 @@ from .views import *
 urlpatterns = [
     path('carousel/', CarouselList.as_view()),
     path('carousel/<str:pk>/', CarouselList.as_view()),
-    path('carousel/carousel-items/<str:pk>/', CarouselItemsList.as_view()),
+    path('carousel/carousel-items/<str:name>/', CarouselItemsList.as_view()),
     path('carousel-item/', CarouselItemCreate.as_view()),
     path('carousel-item/delete/',  CarouselItemToggle.as_view(), {"status": CarouselItemStatus.DELETED.value}),
     path('carousel-item/active/',  CarouselItemToggle.as_view(), {"status": CarouselItemStatus.ACTIVE.value}),

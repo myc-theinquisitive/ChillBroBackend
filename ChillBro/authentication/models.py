@@ -107,10 +107,12 @@ class EmailAbstractUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+def random_string():
+    return str(random.randint(100000, 999999))
 
 class SignupCodeManager(models.Manager):
     def create_signup_code(self, user, ipaddr):
-        code = _generate_code(length=6)
+        code = random_string()
         signup_code = self.create(user=user, code=code, ipaddr=ipaddr)
 
         return signup_code
@@ -126,8 +128,6 @@ class SignupCodeManager(models.Manager):
 
         return False
 
-def random_string():
-    return str(random.randint(100000, 999999))
 
 
 class PasswordResetCodeManager(models.Manager):
