@@ -67,7 +67,7 @@ class Signup(APIView):
             signup_code.send_signup_email()
 
         content = {'email': email, 'first_name': first_name,
-                   'last_name': last_name, 'message': 'Verification mail has been sent to ' + email}
+                   'last_name': last_name, 'message': 'Verification mail has been sent to ' + email, 'otp':signup_code}
         return Response(content, status=status.HTTP_201_CREATED)
 
     def phoneSignUp(self, serializer, phone_number, first_name, last_name):
@@ -229,23 +229,23 @@ class PasswordReset(APIView):
     serializer_class = PasswordResetSerializer
 
     def post(self, request, format=None):
-        if 'email' not in request.data and 'phone' not in request.data:
-            return Response({'error':'Phone or Email should be provided'}, 400)
+        if 'email' not in request.data and 'phone_number' not in request.data:
+            return Response({'error':'Phone Number or Email should be provided'}, 400)
         email = request.data['email'] if 'email' in request.data else None
-        phone = request.data['phone'] if 'phone' in request.data else None
+        phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
 
-        if validate_phone(phone):
-            user = get_user_model().objects.get(phone=phone)
+        if phone_number and validate_phone(phone_number):
+            user = get_user_model().objects.get(phone=phone_number)
             request.data['email'] = user.email
-        if validate_email(email):
+        if email and validate_email(email):
             user = get_user_model().objects.get(email=email)
-            request.data['phone'] = user.phone
+            request.data['phone_number'] = user.phone_number
 
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid():
             email = serializer.data['email']
-            phone = serializer.data['phone']
+            phone_number = request.data['phone_number']
 
             try:
                 user = get_user_model().objects.get(email=email)
@@ -257,7 +257,7 @@ class PasswordReset(APIView):
                     password_reset_code = \
                         PasswordResetCode.objects.create_password_reset_code(user)
                     password_reset_code.send_password_reset_email()
-                    sendOTP(password_reset_code, phone)
+                    sendOTP(password_reset_code, phone_number)
                     content = {'email': email, 'message': 'OTP sent to ' + email}
                     return Response(content, status=status.HTTP_201_CREATED)
 
@@ -281,16 +281,19 @@ class PasswordResetVerify(APIView):
         if 'code' not in request.data:
             return Response({'Error':'Code is required'}, 400)
 
-        if 'email' not in request.data and 'phone' not in request.data:
+        if 'email' not in request.data and 'phone_number' not in request.data:
             return Response({'error':'Phone or Email should be provided'}, 400)
 
         email = request.data['email'] if 'email' in request.data else None
-        phone = request.data['phone'] if 'phone' in request.data else None
+        phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
+        try:
+            if phone_number and validate_phone(phone_number):
+                user = get_user_model().objects.get(phone=phone_number)
+            if email and validate_email(email):
+                user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            return Response({'error':'User does not exist'}, 400)
 
-        if validate_phone(phone):
-            user = get_user_model().objects.get(phone=phone)
-        if validate_email(email):
-            user = get_user_model().objects.get(email=email)
 
         code = request.data['code']
 
