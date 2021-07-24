@@ -1,1 +1,1 @@
-OTP for Resetting your password is:<br>  {{ code }}
+Verify your email address

@@ -48,10 +48,10 @@ class CarouselItemsList(generics.ListAPIView):
     queryset = CarouselItem.objects.all()
 
     def get(self, request, *args, **kwargs):
-        carousel_id = self.kwargs['pk']
+        carousel_name = self.kwargs['name']
         current_time = datetime.now()
-        self.queryset = CarouselItem.objects.filter(
-            carousel=carousel_id, status=CarouselItemStatus.ACTIVE.value, start__lte=current_time,
+        self.queryset = CarouselItem.objects.select_related('carousel').filter(
+            carousel__name=carousel_name, status=CarouselItemStatus.ACTIVE.value, start__lte=current_time,
             end__gte=current_time)
         return super().get(request, *args, **kwargs)
 
