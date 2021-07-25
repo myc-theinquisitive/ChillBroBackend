@@ -467,4 +467,23 @@ class RentalProductsTypes(generics.ListAPIView):
         return Response({"results": rental_products_types}, 200)
 
 
+class HotelEntityProducts(generics.RetrieveAPIView):
+    # permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        product_ids = Product.objects.filter(seller_id=kwargs['seller_id']).values_list('id', flat=True)
+
+        hotel_products_details = ProductView().get_by_ids(product_ids)
+
+        return Response({"results": hotel_products_details}, 200)
+
+
+class HotelProductsTypes(generics.ListAPIView):
+
+    def get(self, request, *args, **kwargs):
+        hotel_products_types = ["Near By You", "Trending", "Budget", "All Hotels"]
+
+        return Response({"results": hotel_products_types}, 200)
+
+
 

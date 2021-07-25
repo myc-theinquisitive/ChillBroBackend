@@ -11,6 +11,9 @@ urlpatterns = [
     # urls for amenities
     path('amenities/', AmenitiesList.as_view()),
 
+    # hotel home page entities
+    path('hotel_home_page_categories/', HotelHomePageCategories.as_view()),
+
     # urls for verification
     path('verification/<str:entity_id>/', EntityVerificationDetail.as_view(), name='entity_verification_detail'),
     path('verification_status/<str:status>/', EntityListBasedOnVerificationStatus.as_view()),
