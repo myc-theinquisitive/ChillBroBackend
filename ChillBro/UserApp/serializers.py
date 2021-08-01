@@ -12,7 +12,7 @@ class MyUserSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ['id', 'first_name', 'email', 'password', 'gender', 'phone_number', 'is_verified']
+        fields = ['id', 'first_name', 'email', 'password', 'gender', 'phone_number', 'backup_phone_number', 'backup_email', 'is_verified']
 
 
 class UserSerializer(serializers.Serializer):

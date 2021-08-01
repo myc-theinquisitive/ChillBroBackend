@@ -51,6 +51,8 @@ class Profile(APIView):
         user.last_name = request.data['last_name']
         user.gender = request.data['gender']
         user.set_password(request.data['password'])
+        user.backup_email = request.data['backup_email']
+        user.backup_phone_number = request.data['backup_phone_number']
         user.save()
         return Response({'message': 'Success'}, 200)
 

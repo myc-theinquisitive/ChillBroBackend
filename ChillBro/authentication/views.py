@@ -134,6 +134,14 @@ class Signup(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+def generate_cookie(user, response):
+    token, created = Token.objects.get_or_create(user=user)
+    encoded = jwt.encode(
+        {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
+    response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+    return response
+
+
 class SignupVerify(APIView):
     permission_classes = (AllowAny,)
 
@@ -144,16 +152,9 @@ class SignupVerify(APIView):
         if verified:
             try:
                 signup_code = SignupCode.objects.get(code=code)
-
                 user = signup_code.user
-
-                token, created = Token.objects.get_or_create(user=user)
-
-                encoded = jwt.encode(
-                    {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
-
                 response = Response(status=status.HTTP_200_OK)
-                response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+                response = generate_cookie(user, response)
                 response.data = {'success': _('Email address verified.')}
                 signup_code.delete()
                 return response
@@ -191,11 +192,8 @@ class Login(APIView):
                         elif check_employee(user):
                             user_type = "EMPLOYEE"
 
-                        encoded = jwt.encode(
-                            {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
-
                         response = Response(status=status.HTTP_200_OK)
-                        response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+                        response = generate_cookie(user, response)
                         response.data = {
                             'user': email,
                             'name': user.first_name,
