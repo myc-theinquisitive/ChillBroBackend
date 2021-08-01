@@ -37,6 +37,24 @@ class MyUserList(generics.ListCreateAPIView):
     serializer_class = MyUserSerializer
 
 
+class Profile(APIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = MyUser.objects.all()
+    serializer_class = ProfileSerializer
+
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        profile_serializer = self.serializer_class(data=request.data)
+        if not profile_serializer.is_valid():
+            return Response(profile_serializer.errors)
+        user.first_name = request.data['first_name']
+        user.last_name = request.data['last_name']
+        user.gender = request.data['gender']
+        user.set_password(request.data['password'])
+        user.save()
+        return Response({'message': 'Success'}, 200)
+
+
 class BusinessClientAdd(APIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee,)
     queryset = BusinessClient.objects.all()

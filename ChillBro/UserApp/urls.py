@@ -13,6 +13,7 @@ urlpatterns = [
     path('employee/image/<int:pk>/', EmployeeImageDelete.as_view()),
     path('employee/<str:pk>/', EmployeeDetail.as_view(), name='employee_detail'),
     path('<str:pk>/employee/active/', EmployeeActive.as_view(), name='employee_active'),
+    path('profile/', Profile.as_view())
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

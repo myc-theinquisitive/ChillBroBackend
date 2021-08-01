@@ -6,13 +6,14 @@ from authentication.models import EmailUserManager, EmailAbstractUser
 from .validations import validate_phone
 from .helpers import upload_employee_image
 import uuid
-
+from .constants import GenderTypes
 
 class MyUser(EmailAbstractUser):
     # Custom fields
     date_of_birth = models.DateField(verbose_name='Date of birth', null=True, blank=True)
     phone_number = models.CharField(verbose_name='phone_number', max_length=10, unique=True, null=True, blank=True,
                                     validators=[MinLengthValidator(10), validate_phone])
+    gender = models.CharField(choices=[(gender.name, gender.value) for gender in GenderTypes], max_length=36)
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
 
     # Required

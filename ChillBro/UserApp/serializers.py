@@ -9,6 +9,11 @@ class MyUserSerializer(serializers.ModelSerializer):
         model = MyUser
         fields = ['id', 'first_name', 'email', 'password', 'phone_number', 'is_verified']
 
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ['id', 'first_name', 'email', 'password', 'gender', 'phone_number', 'is_verified']
+
 
 class UserSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=100)

@@ -55,7 +55,8 @@ class Signup(APIView):
         user.last_name = last_name.title().strip()
         if not must_validate_email:
             user.is_verified = True
-            send_multi_format_email.delay('welcome_email', {'email': user.email, }, target_email=user.email)
+            # send_multi_format_email.delay('welcome_email', {'email': user.email, }, target_email=user.email)
+            send_multi_format_email('welcome_email', {'email': user.email, }, target_email=user.email)
         user.save()
 
         create_wallet(user)
@@ -67,7 +68,7 @@ class Signup(APIView):
             signup_code.send_signup_email()
 
         content = {'email': email, 'first_name': first_name,
-                   'last_name': last_name, 'message': 'Verification mail has been sent to ' + email, 'otp':signup_code}
+                   'last_name': last_name, 'message': 'Verification mail has been sent to ' + email}
         return Response(content, status=status.HTTP_201_CREATED)
 
     def phoneSignUp(self, serializer, phone_number, first_name, last_name):
@@ -78,6 +79,9 @@ class Signup(APIView):
             if user.is_verified:
                 content = {'detail': _('Phone number already registered.')}
                 return Response(content, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                user.delete()
+                user = get_user_model().objects.create_user_by_phone(phone_number=phone_number)
             try:
                 # Delete old signup codes
                 signup_code = SignupCode.objects.get(user=user)
@@ -103,10 +107,11 @@ class Signup(APIView):
             # Create and associate signup code
             ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
             signup_code = SignupCode.objects.create_signup_code(user, ipaddr)
+            print(signup_code)
             sendOTP(signup_code, phone_number)
 
         content = {'phone_number': phone_number, 'first_name': first_name,
-                   'last_name': last_name, 'message': 'OTP Sent to ' + phone_number}
+                   'last_name': last_name, 'message': 'OTP Sent to ' + phone_number, 'otp': str(signup_code)}
         return Response(content, status=status.HTTP_201_CREATED)
 
     def post(self, request, mail, phone, format=None):
@@ -133,17 +138,28 @@ class SignupVerify(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request, format=None):
-        code = request.GET.get('code', '')
+        code = request.data['otp']
         verified = SignupCode.objects.set_user_is_verified(code)
 
         if verified:
             try:
                 signup_code = SignupCode.objects.get(code=code)
+
+                user = signup_code.user
+
+                token, created = Token.objects.get_or_create(user=user)
+
+                encoded = jwt.encode(
+                    {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
+
+                response = Response(status=status.HTTP_200_OK)
+                response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+                response.data = {'success': _('Email address verified.')}
                 signup_code.delete()
+                return response
             except SignupCode.DoesNotExist:
-                pass
-            content = {'success': _('Email address verified.')}
-            return Response(content, status=status.HTTP_200_OK)
+                content = {'detail': _('Unable to verify user.')}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
         else:
             content = {'detail': _('Unable to verify user.')}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
@@ -230,7 +246,7 @@ class PasswordReset(APIView):
 
     def post(self, request, format=None):
         if 'email' not in request.data and 'phone_number' not in request.data:
-            return Response({'error':'Phone Number or Email should be provided'}, 400)
+            return Response({'error': 'Phone Number or Email should be provided'}, 400)
         email = request.data['email'] if 'email' in request.data else None
         phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
 
@@ -279,10 +295,10 @@ class PasswordResetVerify(APIView):
     def get(self, request, format=None):
         # code = request.GET.get('code', '')
         if 'code' not in request.data:
-            return Response({'Error':'Code is required'}, 400)
+            return Response({'Error': 'Code is required'}, 400)
 
         if 'email' not in request.data and 'phone_number' not in request.data:
-            return Response({'error':'Phone or Email should be provided'}, 400)
+            return Response({'error': 'Phone or Email should be provided'}, 400)
 
         email = request.data['email'] if 'email' in request.data else None
         phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
@@ -292,13 +308,12 @@ class PasswordResetVerify(APIView):
             if email and validate_email(email):
                 user = get_user_model().objects.get(email=email)
         except get_user_model().DoesNotExist:
-            return Response({'error':'User does not exist'}, 400)
-
+            return Response({'error': 'User does not exist'}, 400)
 
         code = request.data['code']
 
         try:
-            password_reset_code = PasswordResetCode.objects.get(code=code,user=user)
+            password_reset_code = PasswordResetCode.objects.get(code=code, user=user)
 
             # Delete password reset code if older than expiry period
             delta = date.today() - password_reset_code.created_at.date()
