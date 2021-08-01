@@ -1360,10 +1360,10 @@ def create_single_booking(booking_object, product_values):
                 each_booked_product['parent_booked_product']]
     booked_product_serializer_object.bulk_create(product_list)
 
-    current_time = datetime.utcnow()
-    current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
-    cancel_booking_if_not_accepted_by_business_client.apply_async(
-        (booking.id, ), eta=current_time + timedelta(seconds=60))
+    # current_time = datetime.utcnow()
+    # current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
+    # cancel_booking_if_not_accepted_by_business_client.apply_async(
+    #     (booking.id, ), eta=current_time + timedelta(seconds=60))
 
     return True, {}
 

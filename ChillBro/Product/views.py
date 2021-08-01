@@ -267,7 +267,7 @@ class GetProductsByCategory(generics.ListAPIView):
         request.data["category"] = kwargs["slug"]
         request.data["page"] = request.query_params.get('page')
         cache_key = json.dumps(request.data)
-        if cache_key in cache:
+        if cache_key in {}:
             response_data = cache.get(cache_key)
         else:
             try:
@@ -289,7 +289,7 @@ class GetProductsByCategory(generics.ListAPIView):
                 product_ids.append(product["id"])
             response_data["results"] = self.product_view.get_by_ids(product_ids)
             self.sort_results(response_data["results"], sort_filter)
-            cache.set(cache_key, response_data, timeout=CACHE_TTL)
+            # cache.set(cache_key, response_data, timeout=CACHE_TTL)
 
         add_wishlist_status_for_products(request.user.id, response_data["results"])
         return Response(response_data)
@@ -456,13 +456,31 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
                 rental_categories_home_page['New Arrivals'].append(rental_products_details[count])
             count += 1
 
-        return Response({"results": rental_categories_home_page}, 200)
+        rental_home_page_categories = []
+        rental_home_page_categories.append({
+            'name': 'Best Valued',
+            'products': rental_categories_home_page['Best Valued']
+        })
+        rental_home_page_categories.append({
+            'name': "Combo's",
+            'products': rental_categories_home_page["Combo's"]
+        })
+        rental_home_page_categories.append({
+            'name': 'Seasonal Rentals',
+            'products': rental_categories_home_page['Seasonal Rentals']
+        })
+        rental_home_page_categories.append({
+            'name': 'New Arrivals',
+            'products': rental_categories_home_page['New Arrivals']
+        })
+
+        return Response({"results": rental_home_page_categories}, 200)
 
 
 class RentalProductsTypes(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        rental_products_types = ["Best Valued","Combo's", "Seasonal Rentals", "New Arrivals"]
+        rental_products_types = ["Best Valued", "Combo's", "Seasonal Rentals", "New Arrivals"]
 
         return Response({"results": rental_products_types}, 200)
 
@@ -484,6 +502,3 @@ class HotelProductsTypes(generics.ListAPIView):
         hotel_products_types = ["Near By You", "Trending", "Budget", "All Hotels"]
 
         return Response({"results": hotel_products_types}, 200)
-
-
-

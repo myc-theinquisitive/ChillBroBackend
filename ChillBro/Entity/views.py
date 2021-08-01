@@ -27,6 +27,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
     IsEmployee, IsGet, IsEmployeeEntity
 from decimal import Decimal
 from django.conf import settings
+
 from collections import defaultdict
 
 
@@ -34,7 +35,7 @@ def filter_entity_ids_by_city(entity_ids, city):
     from .wrappers import filter_address_ids_by_city
     address_ids = MyEntity.objects.filter(id__in=entity_ids).values_list("address_id", flat=True)
     city_address_ids = filter_address_ids_by_city(address_ids, city)
-    return MyEntity.objects.filter(id__in=entity_ids, address_id__in=city_address_ids)\
+    return MyEntity.objects.filter(id__in=entity_ids, address_id__in=city_address_ids) \
         .values_list("id", flat=True)
 
 
@@ -47,7 +48,7 @@ def entity_ids_for_user(user_id):
 
 
 def get_entity_details(entity_ids):
-    entities_data = MyEntity.objects.filter(id__in=entity_ids)\
+    entities_data = MyEntity.objects.filter(id__in=entity_ids) \
         .values('id', 'name', 'type', 'sub_type', 'address_id')
     add_address_details_to_entities(entities_data)
     return entities_data
@@ -105,7 +106,7 @@ def validate_amenity_ids(amenity_ids):
 
 def validate_entity_available_amenities_ids(entity_id, entity_available_amenity_ids):
     existing_entity_available_amenity_ids \
-        = EntityAvailableAmenities.objects.filter(id__in=entity_available_amenity_ids, entity_id=entity_id)\
+        = EntityAvailableAmenities.objects.filter(id__in=entity_available_amenity_ids, entity_id=entity_id) \
         .values_list('id', flat=True)
     if len(existing_entity_available_amenity_ids) != len(entity_available_amenity_ids):
         return False, set(entity_available_amenity_ids) - set(existing_entity_available_amenity_ids)
@@ -966,7 +967,6 @@ class HotelHomePageCategories(generics.RetrieveAPIView):
             count += 1
 
         hotel_home_page_categories = []
-        
         hotel_home_page_categories.append({
             'name': 'Near By You',
             'products': hotel_categories_home_page['Near By You']
@@ -985,4 +985,3 @@ class HotelHomePageCategories(generics.RetrieveAPIView):
         })
 
         return Response({"results": hotel_home_page_categories}, 200)
-
