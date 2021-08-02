@@ -96,8 +96,20 @@ class GetSpecificCategoriesLevelWise(APIView):
             return Response({"errors": "Invalid Category!!!"}, 400)
 
         sub_categories = get_category_details(category.id)
-        response_data = convert_category_to_dict(category)
-        response_data["sub_categories"] = sub_categories
+        slug_value = kwargs['slug'].lower()
+        if slug_value == 'transport':
+            new_sub_categories = []
+            for each_category in sub_categories:
+                if each_category['name'].lower() == 'place' or each_category['name'].lower() == 'vehicle':
+                    pass
+                else:
+                    new_sub_categories.append(each_category)
+            response_data = convert_category_to_dict(category)
+            response_data["sub_categories"] = new_sub_categories
+        else:
+            response_data = convert_category_to_dict(category)
+            response_data["sub_categories"] = sub_categories
+
         return Response(response_data, 200)
 
 

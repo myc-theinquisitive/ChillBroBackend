@@ -153,7 +153,22 @@ if IS_SERVER:
     MEDIA_ROOT = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
     DEFAULT_FILE_STORAGE = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
 
-    ALLOWED_HOSTS = ["chillbro.co.in"]
+    ALLOWED_HOSTS = ["chillbro.co.in", "184.168.127.251"]
+
+    #MY EMAIL SETTING
+
+    EMAIL_FROM = 'no-reply@chillbro.co.in'
+    EMAIL_BCC = 'team.theinquisitive@gmail.com' # Any mail for BCC can be given
+
+    EMAIL_BACKEND ='django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtpout.secureserver.net'  #Hosted on namecheap Ex: mail.pure.com
+    EMAIL_USE_TLS = False
+    EMAIL_PORT = 80 #This will be different based on your Host, for Namecheap I use this`
+    EMAIL_USE_SSL = False
+    EMAIL_HOST_USER = 'no-reply@chillbro.co.in' # Ex: info@pure.com
+    EMAIL_HOST_PASSWORD = 'MissionImpossible@2020' # for the email you created through cPanel. The password for that
+    DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 
     LOG_PATH = "/home/ffs2imp1oh0k/adminpanel_logs/"
     LOGGING = {
@@ -219,6 +234,16 @@ else:
 
     ALLOWED_HOSTS = []
 
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    # EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587
+    EMAIL_PORT = 587
+    EMAIL_HOST_USER = ' myc.theinquisitive@gmail.com'
+    EMAIL_HOST_PASSWORD = 'MissionMyc'
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+
+
     LOGGING = {
         'version': 1,
         'filters': {
@@ -275,24 +300,11 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
 
 
-EMAIL_FROM = 'myc.theinquisitive@gmail.com'
-EMAIL_BCC = 'team.theinquisitive@gmail.com' # Any mail for BCC can be given
-
-# EMAIL_HOST = os.environ.get('AUTHEMAIL_EMAIL_HOST') or 'smtp.gmail.com'
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587
-EMAIL_PORT = 587
-EMAIL_HOST_USER = ' myc.theinquisitive@gmail.com'
-EMAIL_HOST_PASSWORD = 'MissionMyc'
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-
 TAGGIT_CASE_INSENSITIVE = True
 MYC_ID = "MYC"
 
-BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+BROKER_URL = 'redis://184.168.127.251:6379/'
+CELERY_RESULT_BACKEND = 'redis://184.168.127.251:6379/'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -311,7 +323,7 @@ CHANNEL_LAYERS = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/',
+        'LOCATION': 'redis://184.168.127.251:6379/',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
