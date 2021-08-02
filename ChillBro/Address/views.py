@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Address, UserSavedAddress
 from .serializers import AddressSerializer, AddressIdListSerializer, SavedAddressSerializer
-from rest_framework import generics
+from rest_framework import generics, status
 
 
 class AddressList(generics.ListCreateAPIView):
@@ -55,7 +55,8 @@ class UserSavedAddressView(APIView):
         request.data["address"] = response_dict["address_id"]
         if saved_address_serializer.is_valid():
             saved_address_serializer.save()
-            return Response({"address_id:": response_dict["address_id"]}, 200)
+            return Response({"message": "Address created successfully",
+                             "address_id:": response_dict["address_id"]}, 200)
         else:
             return Response({"message": "Can't create address",
                              "errors": saved_address_serializer.errors}, 400)
@@ -75,7 +76,7 @@ class UserSavedAddressView(APIView):
         return Response({"results": address_detail_dicts}, 200)
 
 
-class UpdateUserSavedAddressView(APIView):
+class UserSavedAddressDetailView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def put(self, request, *args, **kwargs):
@@ -84,7 +85,8 @@ class UpdateUserSavedAddressView(APIView):
             saved_address = UserSavedAddress.objects.get(
                 created_by=request.user, address_id=self.kwargs["address_id"])
         except ObjectDoesNotExist:
-            return Response({"message": "Can't update address", "errors": "Invalid address id for user"})
+            return Response({"message": "Can't update address",
+                             "errors": "Invalid address id for user"}, 400)
 
         from .helpers import update_address
         response_dict = update_address(self.kwargs["address_id"], request.data["address"])
@@ -96,10 +98,23 @@ class UpdateUserSavedAddressView(APIView):
         saved_address_serializer = SavedAddressSerializer(saved_address, data=request.data)
         if saved_address_serializer.is_valid():
             saved_address_serializer.save()
-            return Response({"address_id:": response_dict["address_id"]}, 200)
+            return Response({"message": "Address updated successfully",
+                             "address_id:": response_dict["address_id"]}, 200)
         else:
             return Response({"message": "Can't update address",
                              "errors": saved_address_serializer.errors}, 400)
+
+    def delete(self, request, *args, **kwargs):
+        request.data["created_by"] = request.user.id
+        try:
+            saved_address = UserSavedAddress.objects.get(
+                created_by=request.user, address_id=self.kwargs["address_id"])
+        except ObjectDoesNotExist:
+            return Response({"message": "Can't delete address",
+                             "errors": "Invalid address id for user"}, 400)
+
+        saved_address.delete()
+        return Response({"message": "Address deleted successfully"}, 200)
 
 
 def get_distance(source, destination):
