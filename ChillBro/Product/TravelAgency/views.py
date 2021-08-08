@@ -441,7 +441,6 @@ class TravelAgencyView(ProductInterface):
         return is_valid, errors
 
 
-
 class TravelCharacteristicsList(generics.ListCreateAPIView):
     permission_classes = (IsSuperAdminOrMYCEmployee,)
     queryset = TravelCharacteristics.objects.all()

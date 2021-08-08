@@ -2,7 +2,7 @@ from django.urls import path
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
     ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories, \
-    HotelProductsTypes, HotelEntityProducts
+    HotelProductsTypes, HotelEntityProducts, HireADriverHomePage, HireADriverYearsFilter
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
@@ -86,6 +86,8 @@ urlpatterns = [
     path('product/rental_products_types/', RentalProductsTypes.as_view()),
     path('product/hotel_products_types/', HotelProductsTypes.as_view()),
     path('product/entity/<str:seller_id>/',HotelEntityProducts.as_view()),
+    path('product/hire_a_driver_home_page/',HireADriverHomePage.as_view()),
+    path('product/hire_a_driver_years_filter/', HireADriverYearsFilter.as_view()),
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),

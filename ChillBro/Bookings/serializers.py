@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import *
 from decimal import Decimal
 
+
 class BookingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookings
@@ -15,10 +16,8 @@ class BookedProductsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def bulk_create(self, validated_data):
-        print(validated_data)
         new_products = []
         for product in validated_data:
-            print(product)
             add_booking_product = BookedProducts(
                 booking=product["booking"], product_id=product["product_id"], product_value=Decimal(product["product_value"]),
                 quantity=product["quantity"], net_value=(product["net_value"]["net_price"]), price = Decimal(product["price"]),
@@ -53,7 +52,6 @@ class TransportBookingDistanceDetailsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def create(self, validated_data):
-        print(validated_data)
         if "price" in validated_data:
             return TransportBookingDistanceDetails.objects.create(
                 price=validated_data["price"], km_limit=validated_data["km_limit"],
