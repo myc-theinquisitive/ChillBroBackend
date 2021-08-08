@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import VehicleType, VehicleCharacteristics, VehicleTypeCharacteristics
 from .serializers import VehicleTypeSerializer, VehicleCharacteristicsSerializer, VehicleTypeCharacteristicsSerializer, \
     VehicleTypeCharacteristicsUpdateSerializer
-from ChillBro.permissions import IsSuperAdminOrMYCEmployee
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsGet
 from collections import defaultdict
 from rest_framework.response import Response
 from ..product_interface import ProductInterface
@@ -324,7 +324,7 @@ class VehicleTypeList(generics.ListCreateAPIView):
 
 
 class VehicleTypeDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet)
     queryset = VehicleType.objects.all()
     serializer_class = VehicleTypeSerializer
     vehicle_type_view = VehicleTypeView()

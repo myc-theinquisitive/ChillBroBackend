@@ -100,7 +100,7 @@ class GetSpecificCategoriesLevelWise(APIView):
         if slug_value == 'transport':
             new_sub_categories = []
             for each_category in sub_categories:
-                if each_category['name'].lower() == 'place' or each_category['name'].lower() == 'vehicle':
+                if each_category['name'].lower() == 'place' or each_category['name'].lower() == 'vehicles':
                     pass
                 else:
                     new_sub_categories.append(each_category)
