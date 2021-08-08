@@ -1,6 +1,7 @@
 from django.db import models
-from .constants import Countries, States, Cities
+from .constants import Countries, States, Cities, AddressType
 import uuid
+from django.contrib.auth import get_user_model
 
 
 def get_id():
@@ -27,3 +28,13 @@ class Address(models.Model):
     def __str__(self):
         return "Address Nº{0}".format(self.id)
 
+
+class UserSavedAddress(models.Model):
+    address = models.ForeignKey('Address', on_delete=models.CASCADE, verbose_name="Address")
+    address_type = models.CharField(max_length=15, choices=[(address_type.value, address_type.value)
+                                    for address_type in AddressType], default=AddressType.HOME.value)
+    user_model = get_user_model()
+    created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, verbose_name="User")
+
+    def __str__(self):
+        return "User: {0}, Address Id: {1}".format(self.created_by, self.address_id)

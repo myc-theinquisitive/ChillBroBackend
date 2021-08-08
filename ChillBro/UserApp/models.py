@@ -1,6 +1,5 @@
 from django.core.validators import MinLengthValidator
 from django.db import models
-
 from ChillBro.validations import validate_email
 from ChillBro.helpers import get_storage
 from authentication.models import EmailUserManager, EmailAbstractUser
@@ -9,15 +8,17 @@ from .helpers import upload_employee_image
 import uuid
 from .constants import GenderTypes
 
+
 class MyUser(EmailAbstractUser):
     # Custom fields
     date_of_birth = models.DateField(verbose_name='Date of birth', null=True, blank=True)
     phone_number = models.CharField(verbose_name='phone_number', max_length=10, unique=True, null=True, blank=True,
                                     validators=[MinLengthValidator(10), validate_phone])
     gender = models.CharField(choices=[(gender.name, gender.value) for gender in GenderTypes], max_length=36)
-    backup_phone_number = models.CharField(verbose_name='backup_phone_number', max_length=10, unique=True, null=True, blank=True,
-                                    validators=[MinLengthValidator(10), validate_phone])
-    backup_email = models.CharField(verbose_name='backup_email', max_length=30, unique=True, null=True, blank=True, validators=[validate_email])
+    backup_phone_number = models.CharField(verbose_name='backup_phone_number', max_length=10, unique=True,
+                                           null=True, blank=True, validators=[MinLengthValidator(10), validate_phone])
+    backup_email = models.CharField(verbose_name='backup_email', max_length=30, unique=True, null=True, blank=True,
+                                    validators=[validate_email])
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
 
     # Required
