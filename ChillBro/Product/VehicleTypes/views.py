@@ -368,3 +368,30 @@ class VehicleTypeDetail(generics.RetrieveUpdateDestroyAPIView):
         errors = defaultdict(list)
         return is_valid, errors
 
+
+class GetVehicleTypesByCategory(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = VehicleType.objects.all()
+    serializer_class = VehicleTypeSerializer
+    vehicle_type_view = VehicleTypeView()
+
+    def get(self, request, *args, **kwargs):
+        category = kwargs['category_name']
+        if category.lower() == "all":
+
+            response = super().get(request, args, kwargs)
+
+            vehicle_type_ids = []
+            for vehicle_type in response.data["results"]:
+                vehicle_type_ids.append(vehicle_type["id"])
+            response.data["results"] = self.vehicle_type_view.get_by_ids(vehicle_type_ids)
+        else:
+            self.queryset = VehicleType.objects.filter(category__name__icontains = category)
+            response = super().get(request, args, kwargs)
+
+            vehicle_type_ids = []
+            for vehicle_type in response.data["results"]:
+                vehicle_type_ids.append(vehicle_type["id"])
+            response.data["results"] = self.vehicle_type_view.get_by_ids(vehicle_type_ids)
+
+        return response

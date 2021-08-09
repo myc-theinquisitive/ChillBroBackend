@@ -163,3 +163,11 @@ class CategoryProductPricesDetail(generics.RetrieveUpdateDestroyAPIView):
 
         prices.delete()
         return Response({"message": "Successfully deleted category product prices"}, 200)
+
+
+class GetVehiclesCategoriesList(generics.ListAPIView):
+
+    def get(self, request, *args, **kwargs):
+        vehicles_categories = Category.objects.filter(parent_category__name__icontains="vehicles").values_list('name',flat=True)
+        return Response({"results":vehicles_categories},200)
+        pass
