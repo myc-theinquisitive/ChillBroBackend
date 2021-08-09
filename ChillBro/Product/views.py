@@ -581,6 +581,7 @@ class HireADriverHomePage(generics.ListAPIView):
 
 
 class HireADriverYearsFilter(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
         hire_a_driver_experience_filter = [{"max":None,"min":15 }, {"max":15,"min":10}, {"max":10,"min":5}, {"max":5,"min":0}]

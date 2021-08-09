@@ -341,7 +341,7 @@ class SelfRentalView(ProductInterface):
         result = defaultdict()
 
         for each_self_rental in self_rentals:
-            each_self_rental_details = product_details_with_ids[each_self_rental.product_id]
+            each_self_rental_details = product_details_with_ids[each_self_rental.id]
             start_time_date_object = each_self_rental_details['start_time']
             end_time_date_object = each_self_rental_details['end_time']
             quantity = each_self_rental_details["quantity"]

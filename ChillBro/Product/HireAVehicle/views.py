@@ -293,7 +293,7 @@ class HireAVehicleView(ProductInterface):
         result = defaultdict()
 
         for each_hire_a_vehicle in hire_a_vehicles:
-            each_hire_a_vehicle_details = product_details_with_ids[each_hire_a_vehicle.product_id]
+            each_hire_a_vehicle_details = product_details_with_ids[each_hire_a_vehicle.id]
             start_time_date_object = each_hire_a_vehicle_details['start_time']
             end_time_date_object = each_hire_a_vehicle_details['end_time']
             quantity = each_hire_a_vehicle_details["quantity"]
