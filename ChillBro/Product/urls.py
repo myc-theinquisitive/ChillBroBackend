@@ -7,7 +7,7 @@ from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProd
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
     CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail
-from .Hotel.views import AmenitiesList
+from .Hotel.views import AmenitiesList, FindDistance, FindDistanceByAddress, FindDistanceForMultipleAddress
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
@@ -78,6 +78,9 @@ urlpatterns = [
 
     # urls specific to hotels
     path('product/amenities/', AmenitiesList.as_view()),
+    path('product/distance/', FindDistance.as_view()),
+    path('product/distance/address/', FindDistanceByAddress.as_view()),
+    path('product/distance/multiple-address/', FindDistanceForMultipleAddress.as_view()),
 
     # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),

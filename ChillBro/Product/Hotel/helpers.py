@@ -9,3 +9,9 @@ def image_upload_to_amenities(instance, filename):
     file_extension = filename.split(".")[-1]
     new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
     return "static/images/Amenities/%s/%s" % (slug, new_filename)
+
+
+class Point:
+    def __init__(self, latitude, longitude):
+        self.longitude = longitude
+        self.latitude = latitude

@@ -1,14 +1,23 @@
+import requests
+import json
 from datetime import datetime
 from math import ceil
 from typing import List, Dict
+
+from django.http import HttpResponse
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
 from Bookings.helpers import get_date_format
 from ChillBro.constants import PriceTypes
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .helpers import Point
 from .models import Amenities, HotelRoom, HotelAvailableAmenities
 from .serializers import AmenitiesSerializer, HotelAvailableAmenitiesSerializer, HotelRoomSerializer, \
     HotelAvailableAmenitiesUpdateSerializer
+from .wrapper import get_latitude_longitude, get_multiple_latitude_longitude
 from ..BaseProduct.models import Product
 from ..product_interface import ProductInterface
 from collections import defaultdict
@@ -24,17 +33,17 @@ def validate_amenity_ids(amenity_ids: List[int]) -> (bool, List[int]):
 
 
 def validate_hotel_ids(hotel_ids: List[int]) -> (bool, List[int]):
-    existing_hotel_ids = HotelRoom.objects.filter(id__in=hotel_ids)\
+    existing_hotel_ids = HotelRoom.objects.filter(id__in=hotel_ids) \
         .values_list('id', flat=True)
     if len(existing_hotel_ids) != len(hotel_ids):
         return False, set(hotel_ids) - set(existing_hotel_ids)
     return True, []
 
 
-def validate_hotel_available_amenities_ids(hotel_room_id: int, hotel_available_amenity_ids: List[int])\
+def validate_hotel_available_amenities_ids(hotel_room_id: int, hotel_available_amenity_ids: List[int]) \
         -> (bool, List[int]):
     existing_hotel_available_amenity_ids \
-        = HotelAvailableAmenities.objects.filter(id__in=hotel_available_amenity_ids, hotel_room_id=hotel_room_id)\
+        = HotelAvailableAmenities.objects.filter(id__in=hotel_available_amenity_ids, hotel_room_id=hotel_room_id) \
         .values_list('id', flat=True)
     if len(existing_hotel_available_amenity_ids) != len(hotel_available_amenity_ids):
         return False, set(hotel_available_amenity_ids) - set(existing_hotel_available_amenity_ids)
@@ -177,7 +186,7 @@ class HotelView(ProductInterface):
         amenity_ids = []
         hotel_available_amenity_ids = []
         for amenity in self.amenities_data["add"]:
-            hotel_available_amenities_exists = HotelAvailableAmenities.objects\
+            hotel_available_amenities_exists = HotelAvailableAmenities.objects \
                 .filter(hotel_room=self.hotel_room_object, amenity_id=amenity["amenity"]).exists()
             if hotel_available_amenities_exists:
                 is_valid = False
@@ -265,7 +274,7 @@ class HotelView(ProductInterface):
         hotel_room_data = self.hotel_room_serializer.data
         hotel_room_data = self.update_hotel_room_response(hotel_room_data)
 
-        available_amenities = HotelAvailableAmenities.objects.select_related('amenity')\
+        available_amenities = HotelAvailableAmenities.objects.select_related('amenity') \
             .filter(hotel_room=self.hotel_room_object)
 
         available_amenities_data = []
@@ -372,3 +381,115 @@ class HotelView(ProductInterface):
         is_valid = True
         errors = defaultdict(list)
         return is_valid, errors
+
+
+
+
+def calculate_distance_between_two_points(point1, point2):
+    p1_longitude = point1.longitude
+    p1_latitude = point1.latitude
+    p2_longitude = point2.longitude
+    p2_latitude = point2.latitude
+    response = requests.get(
+        'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + p1_latitude + ',' + p1_longitude + '&destinations=' + p2_latitude + ',' + p2_longitude + '&key=AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos')
+    dic = response.json()
+    print(dic)
+    distance = dic['rows'][0]['elements'][0]['distance']['value']
+    duration = dic['rows'][0]['elements'][0]['duration']['value']
+    return {'distance': distance, 'duration': duration}
+
+
+def calculate_distance_between_multiple_points(source_point, destination_points):
+    p1_longitude = source_point.longitude
+    p1_latitude = source_point.latitude
+
+    destinations_string = ''
+    for point in destination_points:
+        destinations_string += point.latitude + ',' + point.longitude + '|'
+
+    response = requests.get(
+        'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + p1_latitude + ',' + p1_longitude + '&destinations=' + destinations_string + '&key=AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos')
+    dic = response.json()
+    all_distances = []
+    for destination in dic['rows'][0]['elements']:
+        distance = destination['distance']['value']
+        duration = destination['duration']['value']
+        all_distances.append({'distance': distance, 'duration': duration})
+    return all_distances
+
+
+class FindDistance(APIView):
+
+    def get(self, request):
+        """
+        :param {
+            "p1_lon":"82.23792259999999",
+            "p1_lat":"16.946006099999998",
+            "p2_lon":"78.46435546875",
+            "p2_lat":"17.35063837604883"
+        }
+        :return {
+            "distance": 491857,
+            "duration": 34002
+            }
+        """
+        p1 = Point(request.data['p1_lat'], request.data['p1_lon'])
+        p2 = Point(request.data['p2_lat'], request.data['p2_lon'])
+        return Response(calculate_distance_between_two_points(p1, p2))
+
+
+class FindDistanceByAddress(APIView):
+
+    def get(self, request):
+        """
+        :param {
+                "source":"f408c10d-c7eb-4ae9-9720-594822eef019",
+                "destination":"f408c10d-c7eb-jd98-9720-594822jf9019"
+            }
+        :return {
+            "distance": 491857,
+            "duration": 34002
+        }
+        """
+        source_address_id = request.data['source']
+        destination_address_id = request.data['destination']
+        source_point = get_latitude_longitude(source_address_id)
+        destination_point = get_latitude_longitude(destination_address_id)
+        if source_point and destination_point:
+            return Response(calculate_distance_between_two_points(source_point, destination_point))
+        else:
+            return Response({'message': 'Invalid Address ID'})
+
+
+class FindDistanceForMultipleAddress(APIView):
+
+    def get(self, request):
+        """
+
+        :param {
+                "source":"f408c10d-c7eb-4ae9-9720-594822eef019",
+                "destination":["1","f408c10d-c7eb-jd98-9720-594822jf9019"]
+            }:
+        :return: {
+            "1": {
+                "distance": 160771,
+                "duration": 14503
+            },
+            "f408c10d-c7eb-jd98-9720-594822jf9019": {
+                "distance": 491857,
+                "duration": 34002
+            }
+        }
+        """
+        source_address_id = request.data['source']
+        destination_address_ids = request.data['destination']
+        source_point = get_latitude_longitude(source_address_id)
+        destination_points = get_multiple_latitude_longitude(destination_address_ids)
+        if source_point and len(destination_points) != 0:
+            output_dict = {}
+            all_distances = calculate_distance_between_multiple_points(source_point, destination_points)
+            for distance in all_distances:
+                output_dict[destination_address_ids.pop(0)] = distance
+            return Response(output_dict)
+        else:
+            return Response({'message': 'Invalid Address ID'})
