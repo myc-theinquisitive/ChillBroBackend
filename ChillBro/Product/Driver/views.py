@@ -1,10 +1,11 @@
 from Product.product_interface import ProductInterface
-from .serializers import DriverSerializer
+from .serializers import DriverSerializer, VehiclesDrivenByDriverSerializer
 from typing import Dict
 from collections import defaultdict
-from .models import Driver
+from .models import Driver, VehiclesDrivenByDriver
 from .wrapper import post_create_address, update_address_for_address_id, get_address_details_for_address_ids, \
-    get_vehicle_type_data_by_id, get_vehicle_type_id_wise_details
+    get_vehicle_type_data_by_id, get_vehicle_type_id_wise_details, get_category_details
+from ..Category.models import Category
 
 
 def add_address_details_to_drivers(driver_list):
@@ -76,6 +77,18 @@ class DriverView(ProductInterface):
         else:
             self.address_data["id"] = address_details['address_id']
 
+        vehicle_categories = Category.objects.filter(id__in= driver_data["vehicles_driven_by_driver"])
+        if len(driver_data["vehicles_driven_by_driver"]) != len(vehicle_categories):
+            is_valid = False
+            errors["vehicle_categories"] = "Invalid Vehicle Type Categories"
+
+        vehicle_category_object = Category.objects.get(name__icontains="vehicles")
+
+        for each_vehicle_category in vehicle_categories:
+            if each_vehicle_category.parent_category != vehicle_category_object:
+                is_valid = False
+                errors["vehicle_category"] = "Invalid Vehicle Type Category {}".format(each_vehicle_category.id)
+
         return is_valid, errors
 
     def create(self, driver_data):
@@ -97,12 +110,15 @@ class DriverView(ProductInterface):
                 "latitude": null,
                 "longitude": null
             },
-            "licensed_from": YYYY
+            "licensed_from": YYYY,
+            "vehicles_driven_by_driver": [category_ids]
         }
         """
+        vehicles_driven_by_driver = driver_data.pop('vehicles_driven_by_driver',None)
         driver_data["address_id"] = self.address_data["id"]
         driver_object = self.driver_serializer.create(driver_data)
-
+        vehicle_driven_serializer = VehiclesDrivenByDriverSerializer()
+        vehicle_driven_serializer.bulk_create({driver_data["product"]:vehicles_driven_by_driver})
         return {
             "id": driver_object.id
         }
@@ -161,15 +177,33 @@ class DriverView(ProductInterface):
         self.driver_object = Driver.objects.get(product_id=product_id)
         self.initialize_product_class(None)
 
+        drivers_vehicles = VehiclesDrivenByDriver.objects.filter(product_id=product_id)
+        all_vehicle_category_ids = []
+        for each_vehicle_category in drivers_vehicles:
+            all_vehicle_category_ids.append(each_vehicle_category.category_id)
+        category_details = get_category_details(all_vehicle_category_ids)
+
         driver_data = self.driver_serializer.data
         vehicle_type_data = get_vehicle_type_data_by_id(driver_data["preferred_vehicle"])
         driver_data["preferred_vehicle"] = vehicle_type_data
+        driver_data['vehicle_category_details'] = category_details
         add_address_details_to_drivers([driver_data])
         return driver_data
 
     def get_by_ids(self, product_ids):
         drivers = Driver.objects.filter(product_id__in=product_ids)
         driver_serializer = DriverSerializer(drivers, many=True)
+
+        drivers_vehicles = VehiclesDrivenByDriver.objects.filter(product_id__in=product_ids)
+        all_vehicle_category_ids = []
+        for each_vehicle_category in drivers_vehicles:
+            all_vehicle_category_ids.append(each_vehicle_category.category_id)
+        drivers_vehicles_categories_ids = list(set(all_vehicle_category_ids))
+        vehicle_category_details = get_category_details(drivers_vehicles_categories_ids)
+        product_wise_vehicle_categories = defaultdict(list)
+        for each_vehicle_category in drivers_vehicles:
+            product_wise_vehicle_categories[each_vehicle_category.product_id]\
+                .append(vehicle_category_details[each_vehicle_category.category_id])
 
         drivers_data = driver_serializer.data
         vehicle_type_ids = []
@@ -179,6 +213,7 @@ class DriverView(ProductInterface):
         vehicle_type_id_wise_details = get_vehicle_type_id_wise_details(vehicle_type_ids)
         for driver_data in drivers_data:
             driver_data["preferred_vehicle"] = vehicle_type_id_wise_details[driver_data["preferred_vehicle"]]
+            driver_data["vehicle_category_details"] = product_wise_vehicle_categories[driver_data["product"]]
 
         add_address_details_to_drivers(drivers_data)
         return drivers_data
@@ -196,3 +231,5 @@ class DriverView(ProductInterface):
         is_valid = True
         errors = defaultdict(list)
         return is_valid, errors
+
+

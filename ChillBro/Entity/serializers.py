@@ -206,3 +206,4 @@ class GetEntitiesBySearchFilters(serializers.Serializer):
     search_text = serializers.CharField(allow_null=True, allow_blank=True)
     sort_filter = serializers.CharField(allow_null=True, allow_blank=True)
     location_filter = LocationFilter()
+    trending_type = serializers.CharField(allow_null=True, allow_blank=True)

@@ -6,6 +6,8 @@ from django.db.models import Subquery, OuterRef, PositiveIntegerField
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from .BaseProduct.serializers import ProductVerificationSerializer, ProductVerificationUpdateInputSerializer
+from .Driver.models import Driver, VehiclesDrivenByDriver
+from .HireAVehicle.models import HireAVehicle
 from .product_view import ProductView
 from .serializers import ProductSerializer, IdsListSerializer, NetPriceSerializer, \
     GetProductsBySearchFilters, GetBusinessClientProductsByStatusSerializer
@@ -26,6 +28,7 @@ from .Category.models import Category
 from django.core.cache import cache
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
+from datetime import date
 
 CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
@@ -193,7 +196,6 @@ class GetProductsByCategory(generics.ListAPIView):
     def apply_filters(category_ids, filter_data):
         # applying category filter
         filter_products = Product.objects.filter(category_id__in=category_ids).active()
-
         # applying search filter
         if filter_data["search_text"]:
             filter_products = filter_products.search(filter_data["search_text"])
@@ -213,6 +215,39 @@ class GetProductsByCategory(generics.ListAPIView):
             city_product_ids = Product.objects.filter(
                 seller_id__in=city_seller_ids, product_id__in=product_ids).values_list("product_id", flat=True)
             filter_products = filter_products.filter(id__in=city_product_ids)
+
+        transport_filter = filter_data["transport_filter"]
+        if transport_filter["hire_a_driver"]["applied"]:
+            product_ids = filter_products.values_list("id", flat=True)
+            todays_date = date.today()
+            current_year = todays_date.year
+            max_year = current_year - transport_filter["hire_a_driver"]["min_experience"]
+            if transport_filter['hire_a_driver']['max_experience']:
+                min_year = current_year - transport_filter["hire_a_driver"]["max_experience"]
+            else:
+                min_year = 0
+
+            drivers_filter_by_experience = Driver.objects.filter(product_id__in=product_ids,\
+                                                                 licensed_from__gte=min_year,\
+                                                                 licensed_from__lt=max_year)
+            drivers_filter_product_ids = drivers_filter_by_experience.values_list("product_id", flat=True)
+
+            if transport_filter['hire_a_driver']['vehicle_category']:
+                vehicle_driven_by_drivers = VehiclesDrivenByDriver.objects.select_related('category')\
+                    .filter(product_id__in=drivers_filter_product_ids,\
+                    category__name=transport_filter['hire_a_driver']['vehicle_category'])
+                vehicle_driven_product_ids = vehicle_driven_by_drivers.values_list("product_id", flat=True)
+                filter_products = filter_products.filter(id__in=vehicle_driven_product_ids)
+            else:
+                filter_products = filter_products.filter(id__in=drivers_filter_product_ids)
+
+        if transport_filter["hire_a_vehicle"]["applied"]:
+            if transport_filter["hire_a_vehicle"]["vehicle_category"]:
+                product_ids = filter_products.values_list("id", flat=True)
+                vehicle_category = HireAVehicle.objects.select_related("vehicle")\
+                    .filter(product_id__in=product_ids, vehicle__category__name=transport_filter["hire_a_vehicle"]["vehicle_category"])
+                vehicle_product_ids = vehicle_category.values_list("product_id", flat=True)
+                filter_products = filter_products.filter(id__in=vehicle_product_ids)
 
         return filter_products.values_list("id", flat=True)
 
@@ -267,15 +302,15 @@ class GetProductsByCategory(generics.ListAPIView):
         request.data["category"] = kwargs["slug"]
         request.data["page"] = request.query_params.get('page')
         cache_key = json.dumps(request.data)
-        if cache_key in cache:
+        if cache_key in {}:
             response_data = cache.get(cache_key)
         else:
             try:
                 category = Category.objects.get(name__icontains=kwargs["slug"])
             except ObjectDoesNotExist:
                 return Response({"errors": "Invalid Category!!!"}, 400)
-            all_category_ids = self.recursively_get_lower_level_categories([category.id])
 
+            all_category_ids = self.recursively_get_lower_level_categories([category.id])
             sort_filter = request.data["sort_filter"]
             product_ids = self.apply_filters(all_category_ids, request.data)
             self.queryset = Product.objects.filter(id__in=product_ids)
@@ -289,7 +324,7 @@ class GetProductsByCategory(generics.ListAPIView):
                 product_ids.append(product["id"])
             response_data["results"] = self.product_view.get_by_ids(product_ids)
             self.sort_results(response_data["results"], sort_filter)
-            cache.set(cache_key, response_data, timeout=CACHE_TTL)
+            # cache.set(cache_key, response_data, timeout=CACHE_TTL)
 
         add_wishlist_status_for_products(request.user.id, response_data["results"])
         return Response(response_data)
@@ -456,13 +491,31 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
                 rental_categories_home_page['New Arrivals'].append(rental_products_details[count])
             count += 1
 
-        return Response({"results": rental_categories_home_page}, 200)
+        rental_home_page_categories = []
+        rental_home_page_categories.append({
+            'name': 'Best Valued',
+            'products': rental_categories_home_page['Best Valued']
+        })
+        rental_home_page_categories.append({
+            'name': "Combo's",
+            'products': rental_categories_home_page["Combo's"]
+        })
+        rental_home_page_categories.append({
+            'name': 'Seasonal Rentals',
+            'products': rental_categories_home_page['Seasonal Rentals']
+        })
+        rental_home_page_categories.append({
+            'name': 'New Arrivals',
+            'products': rental_categories_home_page['New Arrivals']
+        })
+
+        return Response({"results": rental_home_page_categories}, 200)
 
 
 class RentalProductsTypes(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        rental_products_types = ["Best Valued","Combo's", "Seasonal Rentals", "New Arrivals"]
+        rental_products_types = ["Best Valued", "Combo's", "Seasonal Rentals", "New Arrivals"]
 
         return Response({"results": rental_products_types}, 200)
 
@@ -486,4 +539,51 @@ class HotelProductsTypes(generics.ListAPIView):
         return Response({"results": hotel_products_types}, 200)
 
 
+class HireADriverHomePage(generics.ListAPIView):
 
+    def get(self, request, *args, **kwargs):
+        driver_product_ids = Product.objects.filter(type=ProductTypes.Driver.value).values_list("id", flat=True)
+
+        driver_details = ProductView().get_by_ids(driver_product_ids)
+        driver_products = defaultdict(list)
+        todays_date = date.today()
+        current_year = todays_date.year
+        for each_driver in driver_details:
+            experience = current_year - each_driver["driver"]["licensed_from"]
+            if(experience >=15):
+                driver_products[">15"].append(each_driver)
+            elif(experience>=10 and experience<15):
+                driver_products["10-15"].append(each_driver)
+            elif(experience>=5 and experience<10):
+                driver_products["5-10"].append(each_driver)
+            elif(experience>=0 and experience<5):
+                driver_products["0-5"].append(each_driver)
+
+        hire_a_driver_home_page_products = []
+        hire_a_driver_home_page_products.append({
+            "name": ">15",
+            "products": driver_products[">15"]
+        })
+        hire_a_driver_home_page_products.append({
+            "name": "10-15",
+            "products": driver_products["10-15"]
+        })
+        hire_a_driver_home_page_products.append({
+            "name": "5-10",
+            "products": driver_products["5-10"]
+        })
+        hire_a_driver_home_page_products.append({
+            "name": "0-5",
+            "products": driver_products["0-5"]
+        })
+
+        return Response({"results": hire_a_driver_home_page_products}, 200)
+
+
+class HireADriverYearsFilter(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        hire_a_driver_experience_filter = [{"max":None,"min":15 }, {"max":15,"min":10}, {"max":10,"min":5}, {"max":5,"min":0}]
+
+        return Response({"results": hire_a_driver_experience_filter}, 200)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Driver
+from .models import Driver, VehiclesDrivenByDriver
 
 
 class DriverSerializer(serializers.ModelSerializer):
@@ -28,3 +28,22 @@ class DriverSerializer(serializers.ModelSerializer):
         instance.address_id = validated_data["address_id"]
         instance.licensed_from = validated_data["licensed_from"]
         instance.save()
+
+
+class VehiclesDrivenByDriverSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = VehiclesDrivenByDriver
+        fields = '__all__'
+
+    def bulk_create(self, validated_data):
+        new_driven_vehicles = []
+        for each_product in validated_data:
+            for each_vehicle in validated_data[each_product]:
+                add_driven_vehicle = VehiclesDrivenByDriver(
+                    product_id=each_product, category_id = each_vehicle
+                )
+                new_driven_vehicles.append(add_driven_vehicle)
+        return VehiclesDrivenByDriver.objects.bulk_create(new_driven_vehicles)
+
+

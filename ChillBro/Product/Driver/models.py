@@ -15,3 +15,8 @@ class Driver(models.Model):
 
     def __str__(self):
         return "Product: {0}".format(self.product.name)
+
+
+class VehiclesDrivenByDriver(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Product")
+    category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
