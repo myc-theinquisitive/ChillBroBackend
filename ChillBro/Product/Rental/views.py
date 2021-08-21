@@ -12,6 +12,7 @@ from typing import Dict
 from Product.BaseProduct.models import Product
 from ChillBro.constants import PriceTypes
 
+
 class RentalView(ProductInterface):
 
     # define all required instance variables
@@ -127,7 +128,7 @@ class RentalView(ProductInterface):
         products = Product.objects.filter(id__in=product_ids)
         starting_prices = defaultdict()
         for each_product in products:
-            each_rental_details = product_details_with_ids[each_product.product_id]
+            each_rental_details = product_details_with_ids[each_product.id]
             start_time_date_object = each_rental_details['start_time']
             end_time_date_object = each_rental_details['end_time']
             quantity = each_rental_details["quantity"]

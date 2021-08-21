@@ -1,6 +1,5 @@
 import json
 from collections import defaultdict
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Subquery, OuterRef, PositiveIntegerField
 from rest_framework.permissions import IsAuthenticated
@@ -128,9 +127,7 @@ class ProductList(APIView):
     product_view = ProductView()
 
     def post(self, request):
-
         request.data['created_by'] = request.user.id
-
         is_valid, errors = self.product_view.validate_create_data(request.data)
         if not is_valid:
             return Response(errors, 400)
@@ -153,6 +150,7 @@ class ProductDetail(APIView):
 
     def put(self, request, id):
         request.data["id"] = id
+        request.data['created_by'] = request.user.id
         is_valid, errors = self.product_view.validate_update_data(request.data)
         if not is_valid:
             return Response(errors, 400)
@@ -227,15 +225,14 @@ class GetProductsByCategory(generics.ListAPIView):
             else:
                 min_year = 0
 
-            drivers_filter_by_experience = Driver.objects.filter(product_id__in=product_ids,\
-                                                                 licensed_from__gte=min_year,\
-                                                                 licensed_from__lt=max_year)
+            drivers_filter_by_experience = Driver.objects.filter(
+                product_id__in=product_ids, licensed_from__gte=min_year, licensed_from__lt=max_year)
             drivers_filter_product_ids = drivers_filter_by_experience.values_list("product_id", flat=True)
 
             if transport_filter['hire_a_driver']['vehicle_category']:
                 vehicle_driven_by_drivers = VehiclesDrivenByDriver.objects.select_related('category')\
-                    .filter(product_id__in=drivers_filter_product_ids,\
-                    category__name=transport_filter['hire_a_driver']['vehicle_category'])
+                    .filter(product_id__in=drivers_filter_product_ids,
+                            category__name=transport_filter['hire_a_driver']['vehicle_category'])
                 vehicle_driven_product_ids = vehicle_driven_by_drivers.values_list("product_id", flat=True)
                 filter_products = filter_products.filter(id__in=vehicle_driven_product_ids)
             else:
@@ -245,7 +242,8 @@ class GetProductsByCategory(generics.ListAPIView):
             if transport_filter["hire_a_vehicle"]["vehicle_category"]:
                 product_ids = filter_products.values_list("id", flat=True)
                 vehicle_category = HireAVehicle.objects.select_related("vehicle")\
-                    .filter(product_id__in=product_ids, vehicle__category__name=transport_filter["hire_a_vehicle"]["vehicle_category"])
+                    .filter(product_id__in=product_ids,
+                            vehicle__category__name=transport_filter["hire_a_vehicle"]["vehicle_category"])
                 vehicle_product_ids = vehicle_category.values_list("product_id", flat=True)
                 filter_products = filter_products.filter(id__in=vehicle_product_ids)
 
@@ -471,7 +469,7 @@ class ProductVerificationDetail(APIView):
 
 
 class RentalHomePageCategories(generics.RetrieveAPIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
         product_ids = Product.objects.filter(type=ProductTypes.Rental.value).values_list('id', flat=True)
@@ -491,23 +489,19 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
                 rental_categories_home_page['New Arrivals'].append(rental_products_details[count])
             count += 1
 
-        rental_home_page_categories = []
-        rental_home_page_categories.append({
+        rental_home_page_categories = [{
             'name': 'Best Valued',
             'products': rental_categories_home_page['Best Valued']
-        })
-        rental_home_page_categories.append({
+        }, {
             'name': "Combo's",
             'products': rental_categories_home_page["Combo's"]
-        })
-        rental_home_page_categories.append({
+        }, {
             'name': 'Seasonal Rentals',
             'products': rental_categories_home_page['Seasonal Rentals']
-        })
-        rental_home_page_categories.append({
+        }, {
             'name': 'New Arrivals',
             'products': rental_categories_home_page['New Arrivals']
-        })
+        }]
 
         return Response({"results": rental_home_page_categories}, 200)
 
@@ -550,32 +544,28 @@ class HireADriverHomePage(generics.ListAPIView):
         current_year = todays_date.year
         for each_driver in driver_details:
             experience = current_year - each_driver["driver"]["licensed_from"]
-            if(experience >=15):
+            if experience >= 15:
                 driver_products[">15"].append(each_driver)
-            elif(experience>=10 and experience<15):
+            elif 10 <= experience < 15:
                 driver_products["10-15"].append(each_driver)
-            elif(experience>=5 and experience<10):
+            elif 5 <= experience < 10:
                 driver_products["5-10"].append(each_driver)
-            elif(experience>=0 and experience<5):
+            elif 0 <= experience < 5:
                 driver_products["0-5"].append(each_driver)
 
-        hire_a_driver_home_page_products = []
-        hire_a_driver_home_page_products.append({
+        hire_a_driver_home_page_products = [{
             "name": ">15",
             "products": driver_products[">15"]
-        })
-        hire_a_driver_home_page_products.append({
+        }, {
             "name": "10-15",
             "products": driver_products["10-15"]
-        })
-        hire_a_driver_home_page_products.append({
+        }, {
             "name": "5-10",
             "products": driver_products["5-10"]
-        })
-        hire_a_driver_home_page_products.append({
+        }, {
             "name": "0-5",
             "products": driver_products["0-5"]
-        })
+        }]
 
         return Response({"results": hire_a_driver_home_page_products}, 200)
 
@@ -583,6 +573,10 @@ class HireADriverHomePage(generics.ListAPIView):
 class HireADriverYearsFilter(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        hire_a_driver_experience_filter = [{"max":None,"min":15 }, {"max":15,"min":10}, {"max":10,"min":5}, {"max":5,"min":0}]
+        hire_a_driver_experience_filter = [
+            {"max": None, "min": 15},
+            {"max": 15, "min": 10},
+            {"max": 10, "min": 5},
+            {"max": 5, "min": 0}]
 
         return Response({"results": hire_a_driver_experience_filter}, 200)

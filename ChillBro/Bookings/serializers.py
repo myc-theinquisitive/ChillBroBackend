@@ -271,6 +271,7 @@ class ProductAvailabilitySerializer(serializers.Serializer):
     product_id = serializers.CharField(max_length=36)
     start_time = serializers.DateTimeField()
     end_time = serializers.DateTimeField()
+    product_size = serializers.CharField(allow_blank=True, allow_null=True)
 
 
 class BusinessClientBookingApproval(serializers.ModelSerializer):

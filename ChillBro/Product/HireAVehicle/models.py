@@ -28,6 +28,7 @@ class HireAVehicleDurationDetails(models.Model):
     day_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_hour_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_day_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+
     min_hour_duration = models.PositiveIntegerField(default=1)
     max_hour_duration = models.PositiveIntegerField(default=24)
     min_day_duration = models.PositiveIntegerField(default=1)

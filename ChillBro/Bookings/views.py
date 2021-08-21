@@ -1,7 +1,7 @@
 import json
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Sum, Count
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,13 +13,8 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
     IsEmployee, IsBookingBusinessClient, IsBusinessClientEntityById, IsEmployeeEntityById, IsBookingEmployee, \
     IsBusinessClientEntities, IsEmployeeEntities
 import threading
-from .tasks import cancel_booking_if_not_accepted_by_business_client
 from datetime import datetime, timedelta
-import pytz
 from django.utils import timezone
-
-
-# Lock for creating a new booking or updating the booking timings
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_transaction_details_by_booking_id, \
     business_client_review_on_customer, get_product_details, get_entity_details, is_product_valid, \
@@ -27,6 +22,8 @@ from .wrapper import get_product_id_wise_product_details, create_refund_transact
     check_valid_duration, check_valid_address, combine_all_products, entity_id_and_entity_type, get_coupon_value, \
     get_product_price_values
 
+
+# Lock for creating a new booking or updating the booking timings
 _booking_lock = threading.Lock()
 
 
@@ -113,7 +110,8 @@ def valid_booking(booking_products_list, start_time, end_time):
         product_ids.append(product['product_id'])
     products_quantity = get_product_id_wise_product_details(product_ids)
 
-    is_valid, errors = valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time)
+    is_valid, errors = valid_booking_with_product_details(
+        products_quantity, booking_products_list, start_time, end_time)
     if not is_valid:
         return is_valid, errors
 
@@ -183,13 +181,19 @@ def get_complete_booking_details_by_ids(booking_ids):
 
     complete_bookings_details = []
     for booking in bookings:
-        booking_dict = {'id': booking.id, 'entity_type': booking.entity_type, 'booked_at': booking.booking_date,
-                        'booking_status': booking.booking_status, 'total_money': booking.total_money,
-                        'total_net_value': booking.total_net_value,
-                        'total_coupon_discount': booking.total_coupon_discount, 'from_date': booking.start_time,
-                        'to_date': booking.end_time,
-                        'total_days': get_total_time_period(booking.end_time, booking.start_time),
-                        'ago': get_total_time_period(datetime.now(), booking.booking_date)}
+        booking_dict = {
+            'id': booking.id,
+            'entity_type': booking.entity_type,
+            'booked_at': booking.booking_date,
+            'booking_status': booking.booking_status,
+            'total_money': booking.total_money,
+            'total_net_value': booking.total_net_value,
+            'total_coupon_discount': booking.total_coupon_discount,
+            'from_date': booking.start_time,
+            'to_date': booking.end_time,
+            'total_days': get_total_time_period(booking.end_time, booking.start_time),
+            'ago': get_total_time_period(datetime.now(), booking.booking_date)
+        }
 
         check_in_flag = True
         try:
@@ -236,7 +240,7 @@ def are_overlapping_time_spans(start_time1, end_time1, start_time2, end_time2):
     return False
 
 
-def product_availability(product_id, start_time, end_time, product_size):
+def product_availability_per_hour(product_id, start_time, end_time, product_size):
     booked_products = get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size)
     if not booked_products:
         booked_products = []
@@ -279,6 +283,18 @@ def product_availability(product_id, start_time, end_time, product_size):
     return Response({"availabilities": availabilities}, 200)
 
 
+def product_availability_in_duration(product_id, start_time, end_time, product_size):
+    total_bookings_count = get_total_bookings_count_of_product_in_duration(
+        product_id, start_time, end_time, product_size)
+
+    products_details = get_product_id_wise_product_details([product_id])
+    product_quantity = products_details[product_id]["quantity"]
+
+    is_available = total_bookings_count < product_quantity
+    available_count = product_quantity - total_bookings_count
+    return is_available, available_count
+
+
 def get_check_in_details(check_in_object):
     response_data = {
         'is_caution_deposit_collected': True,
@@ -300,7 +316,7 @@ def get_check_in_details(check_in_object):
 class GetProductAvailability(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         serializer = ProductAvailabilitySerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, 400)
@@ -310,8 +326,30 @@ class GetProductAvailability(APIView):
         end_time = serializer.data["end_time"]
         product_size = serializer.data["product_size"]
 
-        return product_availability(product_id=product_id, start_time=start_time, end_time=end_time,
-                                    product_size=product_size)
+        return product_availability_per_hour(
+            product_id=product_id, start_time=start_time, end_time=end_time, product_size=product_size)
+
+
+class GetProductAvailabilityForGivenDuration(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        serializer = ProductAvailabilitySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        product_id = serializer.data["product_id"]
+        start_time = serializer.data["start_time"]
+        end_time = serializer.data["end_time"]
+        product_size = serializer.data["product_size"]
+
+        is_available, available_count = product_availability_in_duration(
+            product_id=product_id, start_time=start_time, end_time=end_time, product_size=product_size)
+        response_data = {
+            "is_available": is_available,
+            "available_count": available_count
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetDateFilters(APIView):
@@ -333,12 +371,20 @@ class CreateBooking(generics.ListCreateAPIView):
         if not new_booking_serializer.is_valid():
             return Response(new_booking_serializer.errors, 400)
 
-        product_id = request.data.pop('product_id',None)
-        quantity = request.data.pop('quantity',None)
-        size = request.data.pop('size',None)
-        combo_product_details = request.data.pop('combo_product_details',None)
-        transport_details = request.data.pop('transport_details',None)
-        data= request.data
+        # TODO: Not working for multiple products
+        products = request.data.pop("products", [])
+        if len(products) < 0:
+            return Response({"message": "Can't create booking",
+                             "errors": "Booking should have more than one product"})
+
+        # TODO: Temporary implementation for single product, should change it to multiple products
+        first_product = products[0]
+        product_id = first_product.pop('product_id', None)
+        quantity = first_product.pop('quantity', None)
+        size = first_product.pop('size', None)
+        combo_product_details = first_product.pop('combo_product_details', None)
+        transport_details = request.data.pop('transport_details', None)
+        data = request.data
         data['entity_id'], data['entity_type'] = entity_id_and_entity_type(product_id)
 
         # Get product values
@@ -346,22 +392,22 @@ class CreateBooking(generics.ListCreateAPIView):
 
         is_valid, errors = is_product_valid(product_details, product_id, quantity, size, combo_product_details)
         if not is_valid:
-            return Response({"message": "Can't add product to cart", "errors": errors})
+            return Response({"message": "Can't create booking", "errors": errors})
 
         is_valid, errors = check_valid_duration([product_id], data['start_time'], data['end_time'])
         if not is_valid:
-            return Response({"message": "Can't add product to cart", "errors": errors})
+            return Response({"message": "Can't create booking", "errors": errors})
 
-        if len(transport_details) > 0:
+        if transport_details:
             if transport_details['km_limit_choosen'] > 0:
                 if transport_details['km_limit_choosen'] not in product_details[product_id]['transport_details']['price_details']:
-                    return Response({"message": "Can't Add Product to Cart", "errors": "Invalid km limit choosen"}, 400)
+                    return Response({"message": "Can't create booking", "errors": "Invalid km limit choosen"}, 400)
             is_valid, errors = check_valid_address(transport_details['pickup_location'])
             if not is_valid:
-                return Response({"message": "Can't add product to cart", "errors": errors})
+                return Response({"message": "Can't create booking", "errors": errors})
             is_valid, errors = check_valid_address(transport_details['drop_location'])
             if not is_valid:
-                return Response({"message": "Can't add product to cart", "errors": errors})
+                return Response({"message": "Can't create booking", "errors": errors})
 
         all_product_ids, products = combine_all_products(product_id, size, quantity, combo_product_details,\
                                                          product_details)
@@ -371,25 +417,32 @@ class CreateBooking(generics.ListCreateAPIView):
             return Response({"message": "Can't create booking", "errors": errors}, 400)
 
         product_details = get_product_id_wise_product_details(all_product_ids)
+        trip_type = transport_details["trip_type"] if transport_details else ""
+        km_limit_choosen = transport_details["km_limit_choosen"] if transport_details else 0
 
-
-
-        product_price_values = get_product_price_values({data['entity_type']:[product_id]}, \
-                                                {data['entity_type'] : {
-                                                    product_id: {
-                                                        "quantity": data['quantity'],
-                                                        "size": data['size'],
-                                                        "start_time": data['start_time'].strptime(get_date_format()),
-                                                        "end_time": data['end_time'].strptime(get_date_format()),
-                                                        "trip_type": transport_details["trip_type"],
-                                                        "discount_percentage": product_details[product_id]["discount"],
-                                                        "km_limit_choosen": transport_details["km_limit_choosen"]
-                                                    }
-                                                }})
+        product_price_values = get_product_price_values(
+            {
+                data['entity_type']: [product_id]
+            },
+            {
+                data['entity_type']: {
+                    product_id: {
+                        "quantity": quantity,
+                        "size": size,
+                        "start_time": datetime.strptime(data['start_time'], get_date_format()),
+                        "end_time": datetime.strptime(data['end_time'], get_date_format()),
+                        "trip_type": trip_type,
+                        "discount_percentage": product_details[product_id]["discount"],
+                        "km_limit_choosen": km_limit_choosen
+                    }
+                }
+            }
+        )
 
         if len(data['coupon']) == 0:
-            coupon_value = get_coupon_value(data['coupon'],request.user.id, [data['entity_id']], [product_id], \
-                           data['entity_type'], product_price_values[product_id]['discounted_price'])
+            coupon_value = get_coupon_value(
+                data['coupon'], request.user.id, [data['entity_id']], [product_id],
+                data['entity_type'], product_price_values[product_id]['discounted_price'])
         else:
             coupon_value = 0
 
@@ -444,7 +497,6 @@ class CancelBookingView(generics.ListAPIView):
 
     def post(self, request, *args, **kwargs):
         # TODO: Should handle refund and update payment details to be payed to entity
-
         booking = Bookings.objects.filter(id=kwargs['booking_id'])
         if len(booking) == 0:
             return Response({"message": "Can't update booking status", "errors": "Booking does'nt exist"}, 400)
@@ -479,7 +531,8 @@ class BookingsStatistics(generics.RetrieveAPIView):
 
         received_bookings = Bookings.objects.received_bookings(from_date, to_date, entity_filter, entity_id) \
             .aggregate(count=Count('id'))['count']
-        cancelled_bookings = CancelledDetails.objects.cancelled_bookings(from_date, to_date, entity_filter, entity_id) \
+        cancelled_bookings = CancelledDetails.objects.cancelled_bookings(
+            from_date, to_date, entity_filter, entity_id) \
             .aggregate(count=Count('id'))['count']
         ongoing_bookings = Bookings.objects.ongoing_bookings(entity_filter, entity_id) \
             .aggregate(count=Count('id'))['count']
@@ -697,7 +750,8 @@ class GetSpecificBookingDetails(APIView):
 
 
 class BusinessClientBookingApproval(generics.UpdateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBookingBusinessClient | IsBookingEmployee)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBookingBusinessClient
+                          | IsBookingEmployee)
     serializer_class = BusinessClientBookingApproval
     queryset = Bookings.objects.all()
     lookup_url_kwarg = "booking_id"
@@ -713,8 +767,9 @@ class BusinessClientBookingApproval(generics.UpdateAPIView):
 
         current_time = timezone.now() - timedelta(minutes=BookingApprovalTime)
         if current_time > booking.booking_date :
-            return Response({"message": "Can't approve the booking", "errors":"this booking is already canclled"})
-        # print(request.data['booking_status']) --- data also not coming
+            return Response({"message": "Can't approve the booking",
+                             "errors": "This booking is already cancelled"})
+
         return super().put(request, *args, **kwargs)
 
 
@@ -738,7 +793,7 @@ class ProceedToPayment(APIView):
     def post(self, request, *args, **kwargs):
         input_serializer = ProceedToPaymentSerializer(data=request.data)
         if not input_serializer.is_valid():
-            return Response({"message": "Can't make transaction", "errors": input_serializer.errors},400)
+            return Response({"message": "Can't make transaction", "errors": input_serializer.errors}, 400)
         payment_mode = request.data['payment_mode']
         booking_id = request.data['booking_id']
         transaction_money = request.data['transaction_money']
@@ -757,7 +812,8 @@ class ProceedToPayment(APIView):
             create_booking_transaction(
                 {
                     'booking_id': booking.id, 'entity_id': booking.entity_id,
-                    'entity_type': booking.entity_type, 'total_money': booking.total_money - booking.total_net_value,
+                    'entity_type': booking.entity_type,
+                    'total_money': booking.total_money - booking.total_net_value,
                     'booking_date': booking.booking_date, 'booking_start': booking.start_time,
                     'paid_to': PaymentUser.myc.value, 'paid_by': PaymentUser.customer.value
                 }
@@ -902,7 +958,8 @@ class BookingStart(APIView):
 
 
 class BookingEnd(APIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,
+                          IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
         booking = Bookings.objects.get(id=request.data['booking_id'])
@@ -936,7 +993,8 @@ class BookingEnd(APIView):
 
 
 class GetBookingEndDetailsView(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,
+                          IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
         '''
@@ -1041,7 +1099,8 @@ class GetBookingEndDetailsView(generics.RetrieveAPIView):
 
 
 class ReportCustomerForBooking(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee, IsBookingBusinessClient | IsBookingEmployee)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,
+                          IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
         try:
@@ -1119,7 +1178,8 @@ class ProductStatisticsDetails(generics.ListAPIView):
         statistics_details_type = request.data['statistics_details_type']
 
         if date_filter == 'Custom':
-            from_date, to_date = request.data['custom_dates']['from_date'], request.data['custom_dates']['to_date']
+            from_date, to_date = request.data['custom_dates']['from_date'], \
+                                 request.data['custom_dates']['to_date']
         else:
             from_date, to_date = get_time_period(date_filter)
 
@@ -1161,7 +1221,8 @@ class ReportCustomerReasonsDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 class GetBookingDetailsOfProductId(generics.ListAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBookingBusinessClient | IsBookingEmployee)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee |
+                          IsBookingBusinessClient | IsBookingEmployee)
     serializer_class = BookingsSerializer
     queryset = Bookings.objects.order_by('booking_date').all()
 
@@ -1185,11 +1246,11 @@ class BusinessClientProductCancellationDetails(APIView):
     def post(self, request, *args, **kwargs):
         input_serializer = BusinessClientProductCancellationSerializer(data=request.data)
         if input_serializer.is_valid():
-            booked_product = BookedProducts.objects.filter(booking=request.data['booking_id'], \
+            booked_product = BookedProducts.objects.filter(booking=request.data['booking_id'],
                                                            product_id=request.data['product_id'])
             if len(booked_product) == 0:
                 return Response(
-                    {"message": "Can't cancel the product", "errors": "There is no product{}in booking id {}" \
+                    {"message": "Can't cancel the product", "errors": "There is no product{}in booking id {}"
                         .format(request.data['product_id'], request.data['booking_id'])}, 400)
             request.data['cancelled_by'] = request.user.id
             input_serializer.save()
@@ -1205,7 +1266,7 @@ class BusinessClientProductCancellationDetails(APIView):
 def create_multiple_bookings_while_checkout(all_booking):
     overall_is_valid = True
     all_errors = defaultdict(list)
-    product_details = all_booking.pop('all_product_details',None)
+    product_details = all_booking.pop('all_product_details', None)
 
     after_grouping_of_bookings = {}
 
@@ -1230,7 +1291,8 @@ def create_multiple_bookings_while_checkout(all_booking):
     with _booking_lock:
         for each_booking in all_booking:
             is_valid, errors = valid_booking_with_product_quantity(
-                product_details, after_grouping_of_bookings[each_booking], all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
+                product_details, after_grouping_of_bookings[each_booking],
+                all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
 
             if not is_valid:
                 overall_is_valid = False
@@ -1378,10 +1440,11 @@ def combine_products(all_cart_products):
         try:
             form_together[each_product['product_id'] + "," + size] = {
                 "product_id": each_product['product_id'],
-                "quantity": form_together[each_product['product_id'] + "," + size]['quantity']+each_product['quantity'],
+                "quantity": form_together[each_product['product_id'] + "," + size]['quantity']
+                        + each_product['quantity'],
                 "size": each_product['size']
             }
-        except:
+        except KeyError:
             form_together[each_product['product_id'] + "," + size] = {
                 "product_id": each_product['product_id'],
                 "quantity": each_product['quantity'],
@@ -1422,7 +1485,8 @@ def get_transport_details(product_ids):
                     "km_day_limit": each_product_transport_data.distance_details.km_day_limit,
                     "excess_km_price": each_product_transport_data.distance_details.excess_km_price,
                     "is_infinity": each_product_transport_data.distance_details.is_infinity,
-                    "single_trip_return_value_per_km": each_product_transport_data.distance_details.single_trip_return_value_per_km,
+                    "single_trip_return_value_per_km":
+                        each_product_transport_data.distance_details.single_trip_return_value_per_km,
                     "price": each_product_transport_data.distance_details.price,
                     "km_limit": each_product_transport_data.distance_details.km_limit
                 }
@@ -1432,8 +1496,10 @@ def get_transport_details(product_ids):
                     {"duration_details": {
                         "hour_price": each_product_transport_data.duration_details.hour_price,
                         "day_price": each_product_transport_data.duration_details.day_price,
-                        "excess_hour_duration_price": each_product_transport_data.duration_details.excess_hour_duration_price,
-                        "excess_day_duration_price": each_product_transport_data.duration_details.excess_day_duration_price
+                        "excess_hour_duration_price":
+                            each_product_transport_data.duration_details.excess_hour_duration_price,
+                        "excess_day_duration_price":
+                            each_product_transport_data.duration_details.excess_day_duration_price
                     }}
                 )
             else:
