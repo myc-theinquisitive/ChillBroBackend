@@ -218,6 +218,25 @@ def add_products_to_cart(products, product_id, quantity, size, cart, product_det
     return True
 
 
+def convert_combo_products_list_to_dict_of_dictionaries(list_of_combo_products):
+    dict_of_combo_products = defaultdict()
+    for each_combo_product in list_of_combo_products:
+        dict_of_sizes = defaultdict()
+        for each_size in each_combo_product['sizes']:
+            dict_of_sizes[each_size['size']] = each_size['quantity']
+        dict_of_combo_products[each_combo_product['product_id']] = dict_of_sizes
+
+    return dict_of_combo_products
+
+
+def convert_sizes_list_to_dict(list_of_sizes):
+    dict_of_sizes = defaultdict()
+    for each_size in list_of_sizes:
+        dict_of_sizes[each_size['size']] = each_size['quantity']
+
+    return dict_of_sizes
+
+
 class AddProductToCart(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -287,8 +306,8 @@ class AddProductToCart(APIView):
 
         product_id = request.data['product_id']
         quantity = request.data['quantity']
-        size = request.data['size']
-        combo_product_details = request.data['combo_product_details']
+        size = convert_sizes_list_to_dict(request.data['sizes'])
+        combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(request.data['combo_product_details'])
         transport_details = request.data['transport_details']
         entity_id, entity_type = check_valid_product(product_id)
 
@@ -380,10 +399,10 @@ class UpdateCartProductQuantity(APIView):
     def put(self, request, *args, **kwargs):
         product_id = request.data['product_id']
         quantity = request.data['quantity']
-        size = request.data['size']
+        size = convert_sizes_list_to_dict(request.data['sizes'])
 
         product_details = get_product_id_wise_product_details([product_id])
-        combo_product_details = request.data['combo_product_details']
+        combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(request.data['combo_product_details'])
         cart_products = CartProducts.objects.select_related('cart').filter(cart=request.data['cart'])
         if len(cart_products) == 0:
             return Response({"message": "Can't update the product quantity",
@@ -500,7 +519,6 @@ class CartDetails(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        total_carts = Cart.objects.filter(created_by=request.user)
         cart_id_wise_product_details = defaultdict(list)
         total_carts_products = CartProducts.objects.select_related('cart').filter(cart__created_by=request.user)
         if len(total_carts_products) == 0:
@@ -513,20 +531,33 @@ class CartDetails(generics.ListAPIView):
 
         sub_products_details = defaultdict(list)
         for each_cart_product in total_carts_products:
+            each_product_details = product_id_wise_product_details[each_cart_product.product_id]
+            each_product_details.pop('featured',None)
+            each_product_details.pop('features',None)
+            each_product_details.pop('seller',None)
+            each_product_details.pop('rating',None)
             if each_cart_product.hidden:
                 sub_products_details[
                     each_cart_product.cart_id + "," + each_cart_product.parent_cart_product.product_id].append(
                     {
-                        "product_id": each_cart_product.product_id,
-                        "quantity": each_cart_product.quantity,
-                        "size": each_cart_product.size,
-                        "sub_products": []
+                        "selected_details":{
+                            "product_id": each_cart_product.product_id,
+                            "product_name": each_product_details['name'],
+                            "quantity": each_cart_product.quantity,
+                            "size": each_cart_product.size
+                        },
+                        "product_details":each_product_details
                     }
                 )
 
         for each_product in total_carts_products:
             sub_products = []
             if each_product.hidden is False:
+                each_product_details = product_id_wise_product_details[each_product.product_id]
+                each_product_details.pop('featured', None)
+                each_product_details.pop('features',None)
+                each_product_details.pop('seller', None)
+                each_product_details.pop('rating', None)
                 if each_product.is_combo or each_product.has_sub_products:
                     sub_products = sub_products_details[each_product.cart_id + "," + each_product.product_id]
                 try:
@@ -535,29 +566,23 @@ class CartDetails(generics.ListAPIView):
                     image_url = ''
                 cart_id_wise_product_details[each_product.cart_id].append(
                     {
-                        'id': each_product.id,
-                        'product_id': each_product.product_id,
-                        'quantity': each_product.quantity,
-                        'size': each_product.size,
-                        'is_combo': each_product.is_combo,
-                        'has_sub_products': each_product.has_sub_products,
-                        'sub_products': sub_products,
-                        'product_details':product_id_wise_product_details[each_product.product_id],
-                        'product_name': product_id_wise_product_details[each_product.product_id]['name'],
-                        'product_image_url': image_url
+                        "selected_details":{
+                            'id': each_product.id,
+                            'product_id': each_product.product_id,
+                            'quantity': each_product.quantity,
+                            'size': each_product.size,
+                            'start_time': each_product.cart.start_time,
+                            'end_time': each_product.cart.end_time,
+                            'is_combo': each_product.is_combo,
+                            'has_sub_products': each_product.has_sub_products,
+                            'sub_products': sub_products
+                        },
+                        "product_details": each_product_details
+
                     }
                 )
 
-        all_carts = []
-        for each_cart in total_carts:
-            each_cart_details = \
-                {
-                    'cart_id': each_cart.id, 'type': each_cart.entity_type,
-                    'start_time': each_cart.start_time, 'end_time': each_cart.end_time,
-                    'products': cart_id_wise_product_details[each_cart.id]
-                }
-            all_carts.append(each_cart_details)
-        return Response({"results": all_carts}, 200)
+        return Response({"results": cart_id_wise_product_details}, 200)
 
 
 class DeleteProductFromCart(generics.RetrieveDestroyAPIView):
