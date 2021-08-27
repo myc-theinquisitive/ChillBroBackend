@@ -51,7 +51,7 @@ def is_product_valid(product_details, product_id, quantity, all_sizes, combo_pro
             errors[product_id].append("Invalid combo product data")
 
         # combo sub products sizes will be checked in booking validation
-        # TODO: Better to validate sizes here as well
+        # TODO: Better to validate sizes here as well  --- booking validation means checking in adding cart only sir
         for each_combo_product in combo_product_details:
             try:
                 product_quantity = combo_products_data[each_combo_product]['quantity']
@@ -542,6 +542,7 @@ class CartDetails(generics.ListAPIView):
                         'is_combo': each_product.is_combo,
                         'has_sub_products': each_product.has_sub_products,
                         'sub_products': sub_products,
+                        'product_details':product_id_wise_product_details[each_product.product_id],
                         'product_name': product_id_wise_product_details[each_product.product_id]['name'],
                         'product_image_url': image_url
                     }
