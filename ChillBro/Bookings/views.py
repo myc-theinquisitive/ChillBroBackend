@@ -283,6 +283,7 @@ def product_availability_per_hour(product_id, start_time, end_time, product_size
     return Response({"availabilities": availabilities}, 200)
 
 
+# TODO: change this to include size logic
 def product_availability_in_duration(product_id, start_time, end_time, product_size):
     total_bookings_count = get_total_bookings_count_of_product_in_duration(
         product_id, start_time, end_time, product_size)
@@ -400,7 +401,8 @@ class CreateBooking(generics.ListCreateAPIView):
 
         if transport_details:
             if transport_details['km_limit_choosen'] > 0:
-                if transport_details['km_limit_choosen'] not in product_details[product_id]['transport_details']['price_details']:
+                if transport_details['km_limit_choosen'] not in \
+                        product_details[product_id]['transport_details']['price_details']:
                     return Response({"message": "Can't create booking", "errors": "Invalid km limit choosen"}, 400)
             is_valid, errors = check_valid_address(transport_details['pickup_location'])
             if not is_valid:
