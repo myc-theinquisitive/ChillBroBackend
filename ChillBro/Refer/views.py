@@ -29,13 +29,13 @@ class ShareApp(APIView):
 
 
 class SignUpRequestCreate(generics.CreateAPIView):
-    serializer_class = SignUpRequestSerialiser
+    serializer_class = SignUpRequestSerializer
     queryset = SignUpRequest.objects.all()
 
 
 class SignUpRequestList(generics.ListAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
-    serializer_class = SignUpRequestSerialiser
+    serializer_class = SignUpRequestSerializer
     queryset = SignUpRequest.objects.all()
 
     def get(self, request, *args, **kwargs):
@@ -45,5 +45,5 @@ class SignUpRequestList(generics.ListAPIView):
 
 class SignUpRequestDetail(generics.UpdateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
-    serializer_class = SignUpRequestApprovalSerialiser
+    serializer_class = SignUpRequestApprovalSerializer
     queryset = SignUpRequest.objects.all()

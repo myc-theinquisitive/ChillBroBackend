@@ -7,13 +7,15 @@ class ReferBusinessClientSerializer(serializers.ModelSerializer):
         model = ReferBusinessClient
         fields = "__all__"
 
-class SignUpRequestSerialiser(serializers.ModelSerializer):
+
+class SignUpRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = SignUpRequest
         fields = "__all__"
-        readonly_fields = ('status')
+        read_only_fields = ('status', )
 
-class SignUpRequestApprovalSerialiser(serializers.ModelSerializer):
+
+class SignUpRequestApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = SignUpRequest
-        fields = ('id','status')
+        fields = ('id', 'status')

@@ -11,6 +11,8 @@ import json
 
 
 class SendNotification(generics.ListAPIView):
+    # TODO: change with appropriate serializer
+    serializer_class = NotificationSerializer
 
     def post(self, request, *args, **kwargs):
         tokens = ["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbiI6ImM2YzkwZmFiMDAwMGI4ODNlMDNjNTY4NDliZGM4MDI5ODQxMzFlNTEifQ.vZ5UrrfsVs-a-S0u1U33I-HRAXse-e2FUULiDeP82oQ"]
@@ -155,6 +157,8 @@ class ChangeSetting(APIView):
 
 
 class AddOrUpdateFirebaseToken(generics.ListAPIView):
+    # TODO: change with appropriate serializer
+    serializer_class = NotificationSerializer
 
     def post(self, request, *args, **kwargs):
         request.data['created_by'] = request.user
