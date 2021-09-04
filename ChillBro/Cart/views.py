@@ -311,7 +311,8 @@ class AddProductToCart(APIView):
         product_id = request.data['product_id']
         quantity = request.data['quantity']
         size = convert_sizes_list_to_dict(request.data['sizes'])
-        combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(request.data['combo_product_details'])
+        combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(
+            request.data['combo_product_details'])
         transport_details = request.data['transport_details']
         entity_id, entity_type = check_valid_product(product_id)
 
@@ -406,7 +407,8 @@ class UpdateCartProductQuantity(APIView):
         size = convert_sizes_list_to_dict(request.data['sizes'])
 
         product_details = get_product_id_wise_product_details([product_id])
-        combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(request.data['combo_product_details'])
+        combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(
+            request.data['combo_product_details'])
         cart_products = CartProducts.objects.select_related('cart').filter(cart=request.data['cart'])
         if len(cart_products) == 0:
             return Response({"message": "Can't update the product quantity",
@@ -438,7 +440,6 @@ class UpdateCartProductQuantity(APIView):
                 continue
             if not each_product.is_combo and not each_product.has_sub_products and \
                     each_product.parent_cart_product != cart_product:
-
                 all_cart_products.append({
                     "product_id": each_product.product_id,
                     "quantity": each_product.quantity,
@@ -484,7 +485,8 @@ class UpdateCartProductQuantity(APIView):
             add_products_to_cart(products, product_id, quantity, size, cart, product_details, transport_details)
         else:
             cart_products = CartProducts.objects.filter(Q(cart=request.data['cart']) & Q(Q(product_id=product_id) |
-                                                        Q(parent_cart_product=cart_product)))
+                                                                                         Q(
+                                                                                             parent_cart_product=cart_product)))
 
             update_cart_products = []
             for each_product in cart_products:
@@ -527,8 +529,9 @@ class CartDetails(generics.ListAPIView):
         if kwargs['entity_type'] == 'ALL':
             total_carts_products = CartProducts.objects.select_related('cart').filter(cart__created_by=request.user)
         else:
-            total_carts_products = CartProducts.objects.select_related('cart').filter(cart__created_by=request.user,\
-                                                                                      cart__entity_type=kwargs['entity_type'])
+            total_carts_products = CartProducts.objects.select_related('cart').filter(cart__created_by=request.user, \
+                                                                                      cart__entity_type=kwargs[
+                                                                                          'entity_type'])
         if len(total_carts_products) == 0:
             return Response({"message": "Sorry, There are no carts"}, 200)
 
@@ -542,57 +545,70 @@ class CartDetails(generics.ListAPIView):
         sizes_combination_for_all_products = defaultdict(list)
         quantity_for_all_products = defaultdict()
         for each_cart_product in total_carts_products:
-            if len(sizes_combination_for_all_products[each_cart_product.cart_id+","+each_cart_product.product_id+","+\
-                    str(each_cart_product.hidden)]) == 0 :
+            if len(sizes_combination_for_all_products[
+                       each_cart_product.cart_id + "," + each_cart_product.product_id + "," + \
+                       str(each_cart_product.hidden)]) == 0:
                 cart_products_after_removing_duplicate_products.append(each_cart_product)
                 quantity_for_all_products[each_cart_product.cart_id + "," + each_cart_product.product_id + "," + \
                                           str(each_cart_product.hidden)] = 0
-            sizes_combination_for_all_products[each_cart_product.cart_id+","+each_cart_product.product_id+","+\
-                str(each_cart_product.hidden)].append({
-                "quantity": each_cart_product.quantity,
-                "size": each_cart_product.size
-            })
-            quantity_for_all_products[each_cart_product.cart_id+","+each_cart_product.product_id+","+\
-                str(each_cart_product.hidden)] = quantity_for_all_products[each_cart_product.cart_id+","+\
-                each_cart_product.product_id+","+str(each_cart_product.hidden)] + each_cart_product.quantity;
+            if (each_cart_product.size == "" or each_cart_product.size == None):
+                pass
+            else:
+                sizes_combination_for_all_products[
+                    each_cart_product.cart_id + "," + each_cart_product.product_id + "," + \
+                    str(each_cart_product.hidden)].append({
+                    "quantity": each_cart_product.quantity,
+                    "size": each_cart_product.size
+                })
+
+            quantity_for_all_products[each_cart_product.cart_id + "," + each_cart_product.product_id + "," + \
+                                      str(each_cart_product.hidden)] = quantity_for_all_products[
+                                                                           each_cart_product.cart_id + "," + \
+                                                                           each_cart_product.product_id + "," + str(
+                                                                               each_cart_product.hidden)] + each_cart_product.quantity;
 
         sub_products_details = defaultdict(list)
         for each_cart_product in cart_products_after_removing_duplicate_products:
             each_product_details = product_id_wise_product_details[each_cart_product.product_id]
-            each_product_details.pop('featured',None)
-            each_product_details.pop('features',None)
-            each_product_details.pop('seller',None)
-            each_product_details.pop('rating',None)
+            each_product_details.pop('featured', None)
+            each_product_details.pop('features', None)
+            each_product_details.pop('seller', None)
+            each_product_details.pop('rating', None)
             if each_cart_product.hidden:
-                sub_product_cart_details ={
-                    "selected_details":{
-                        "product_name": each_product_details['name'],
-                        "sizes": sizes_combination_for_all_products[each_cart_product.cart_id+","+\
-                                                    each_cart_product.product_id+","+str(each_cart_product.hidden)]
+                sub_product_cart_details = {
+                    "selected_details": {
+                        "combo_quantity": quantity_for_all_products[each_cart_product.cart_id + "," + \
+                                                                    each_cart_product.product_id + "," + str(
+                            each_cart_product.hidden)],
+                        "sizes": sizes_combination_for_all_products[each_cart_product.cart_id + "," + \
+                                                                    each_cart_product.product_id + "," + str(
+                            each_cart_product.hidden)]
                     }
                 }
                 sub_product_cart_details.update(each_product_details)
                 sub_products_details[
-                    each_cart_product.cart_id + "," + each_cart_product.parent_cart_product.product_id].append(sub_product_cart_details)
+                    each_cart_product.cart_id + "," + each_cart_product.parent_cart_product.product_id].append(
+                    sub_product_cart_details)
 
         for each_product in cart_products_after_removing_duplicate_products:
             sub_products = []
             if each_product.hidden is False:
                 each_product_details = product_id_wise_product_details[each_product.product_id]
                 each_product_details.pop('featured', None)
-                each_product_details.pop('features',None)
+                each_product_details.pop('features', None)
                 each_product_details.pop('seller', None)
                 each_product_details.pop('rating', None)
                 if each_product.is_combo or each_product.has_sub_products:
                     sub_products = sub_products_details[each_product.cart_id + "," + each_product.product_id]
 
                 cart_product_details = {
-                    "selected_details":{
+                    "selected_details": {
                         'id': each_product.id,
-                        'quantity': quantity_for_all_products[each_product.cart_id+","+\
-                                                    each_product.product_id+","+str(each_product.hidden)],
-                        'size':sizes_combination_for_all_products[each_product.cart_id+","+\
-                                                    each_product.product_id+","+str(each_product.hidden)],
+                        'quantity': quantity_for_all_products[each_product.cart_id + "," + \
+                                                              each_product.product_id + "," + str(each_product.hidden)],
+                        'size': sizes_combination_for_all_products[each_product.cart_id + "," + \
+                                                                   each_product.product_id + "," + str(
+                            each_product.hidden)],
                         'start_time': each_product.cart.start_time,
                         'end_time': each_product.cart.end_time,
                         'sub_products': sub_products
@@ -622,10 +638,10 @@ class CheckAvailabilityOfAllProducts(APIView):
     def get(self, request, *args, **kwargs):
         if kwargs['entity_type'] == "ALL":
             all_cart_products = CartProducts.objects.select_related('cart') \
-            .filter(cart__created_by=request.user)
+                .filter(cart__created_by=request.user)
         else:
             all_cart_products = CartProducts.objects.select_related('cart') \
-                .filter(cart__created_by=request.user,cart__entity_type=kwargs['entity_type'])
+                .filter(cart__created_by=request.user, cart__entity_type=kwargs['entity_type'])
         out_of_stock_products = defaultdict(list)
 
         sub_products_details = defaultdict(list)
@@ -750,7 +766,7 @@ def combine_products(all_cart_products):
             form_together[each_product['product_id'] + "," + size] = {
                 "product_id": each_product['product_id'],
                 "quantity": form_together[each_product['product_id'] + "," + size]['quantity']
-                        + each_product['quantity'],
+                            + each_product['quantity'],
                 "size": each_product['size']
             }
         except KeyError:
@@ -768,7 +784,6 @@ def combine_products(all_cart_products):
 
 def form_each_cart_all_products(cart_items, transport_details, product_price_values,
                                 product_details, total_products_value, total_coupon_value):
-
     cart_products_for_bookings = defaultdict(list)
     for each_cart_product in cart_items:
         if each_cart_product.hidden:
@@ -803,10 +818,10 @@ def form_each_cart_all_products(cart_items, transport_details, product_price_val
                 "product_value": product_price_values[each_cart_product.product_id]["discounted_price"],
                 "is_combo": each_cart_product.is_combo,
                 "has_sub_products": each_cart_product.has_sub_products,
-                "transport_details":{
-                    "trip_type" : transport_data["trip_type"],
-                    "pickup_location" : transport_data["pickup_location"],
-                    "drop_location" : transport_data["drop_location"],
+                "transport_details": {
+                    "trip_type": transport_data["trip_type"],
+                    "pickup_location": transport_data["pickup_location"],
+                    "drop_location": transport_data["drop_location"],
                     "km_limit_choosen": transport_data["km_limit_choosen"]
                 }
             })
@@ -815,7 +830,6 @@ def form_each_cart_all_products(cart_items, transport_details, product_price_val
 
 
 def calculate_total_products_value(cart_products, product_details, transport_details):
-
     group_product_details_by_type = defaultdict(dict)
     group_product_ids_by_type = defaultdict(list)
 
@@ -831,7 +845,7 @@ def calculate_total_products_value(cart_products, product_details, transport_det
                     each_cart_product.product_id: {
                         "quantity": each_cart_product.quantity,
                         "size": each_cart_product.size,
-                        "start_time":each_cart_product.cart.start_time,
+                        "start_time": each_cart_product.cart.start_time,
                         "end_time": each_cart_product.cart.end_time,
                         "trip_type": transport_data["trip_type"],
                         "discount_percentage": product_details[each_cart_product.product_id]["discount"],
