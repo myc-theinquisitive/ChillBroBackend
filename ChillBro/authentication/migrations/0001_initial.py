@@ -7,6 +7,7 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
+from ChillBro.validations import validate_phone
 
 
 class Migration(migrations.Migration):
@@ -22,10 +23,10 @@ class Migration(migrations.Migration):
             name='OTPCode',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('phone', models.CharField(max_length=10, unique=True, validators=[django.core.validators.MinLengthValidator(10), authentication.validations.validate_phone], verbose_name='phone_number')),
+                ('phone', models.CharField(max_length=10, unique=True, validators=[django.core.validators.MinLengthValidator(10), validate_phone], verbose_name='phone_number')),
                 ('otp', models.TextField(default=authentication.models.random_string, max_length=6)),
                 ('time', models.DateTimeField(default=django.utils.timezone.now)),
-                ('expiry_time', models.DateTimeField(default=authentication.models.getExpiryTime)),
+                ('expiry_time', models.DateTimeField(default=authentication.models.get_expiry_time)),
             ],
         ),
         migrations.CreateModel(

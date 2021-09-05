@@ -1,12 +1,10 @@
 from django.utils import timezone
 import datetime, random
 from datetime import date, timedelta
-
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import csrf_exempt
-
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,7 +13,7 @@ from rest_framework.views import APIView
 from .models import SignupCode, EmailChangeCode, PasswordResetCode, OTPCode
 from .tasks import send_multi_format_email
 from .serializers import LoginSerializer, OTPCreateSerializer, OTPValidateSerializer, \
-    MailSignUpSerializer, PhoneSignUpSerializer
+    MailSignUpSerializer, PhoneSignUpSerializer, MailOrPhoneNumberSerializer
 from .serializers import PasswordResetSerializer
 from .serializers import PasswordResetVerifiedSerializer
 from .serializers import EmailChangeSerializer
@@ -24,6 +22,47 @@ from .serializers import UserSerializer
 import jwt
 from .wrapper import sendOTP, check_business_client, check_employee, create_wallet
 from ChillBro.validations import validate_phone, validate_email
+from django.db.models import ObjectDoesNotExist
+
+
+def generate_cookie(user, response):
+    token, created = Token.objects.get_or_create(user=user)
+    encoded = jwt.encode(
+        {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
+    response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+    return response
+
+
+class MailOrPhoneNumberExists(APIView):
+    permission_classes = (AllowAny,)
+    serializer = MailOrPhoneNumberSerializer
+
+    @staticmethod
+    def check_email_exists(email):
+        return get_user_model().objects.filter(email=email).exists()
+
+    @staticmethod
+    def check_phone_number_exists(phone_number):
+        return get_user_model().objects.filter(phone_number=phone_number).exists()
+
+    def post(self, request):
+        serializer = self.serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.data["email"]
+        phone_number = serializer.data["phone_number"]
+
+        is_email_valid = is_phone_number_valid = False
+        if email:
+            is_email_valid = not self.check_email_exists(email)
+        if phone_number:
+            is_phone_number_valid = not self.check_phone_number_exists(phone_number)
+
+        if is_email_valid or is_phone_number_valid:
+            return Response({"message": "Email or Phone Number is valid"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "Email or Phone Number already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Signup(APIView):
@@ -31,34 +70,37 @@ class Signup(APIView):
     mail_serializer_class = MailSignUpSerializer
     phone_serializer_class = PhoneSignUpSerializer
 
-    def mailSignUp(self, serializer, email, password, first_name, last_name):
+    @staticmethod
+    def delete_signup_codes(user):
+        try:
+            # Delete old signup codes
+            signup_code = SignupCode.objects.get(user=user)
+            signup_code.delete()
+        except SignupCode.DoesNotExist:
+            pass
+
+    def mail_sign_up(self, serializer, email, password, first_name, last_name):
         must_validate_email = getattr(settings, "AUTH_VERIFICATION", True)
         email = email.lower().strip()
         try:
             user = get_user_model().objects.get(email=email)
             if user.is_verified:
-                content = {'detail': _('Email address already taken.')}
+                content = {'message': 'Email address already taken.'}
                 return Response(content, status=status.HTTP_400_BAD_REQUEST)
-            try:
-                # Delete old signup codes
-                signup_code = SignupCode.objects.get(user=user)
-                signup_code.delete()
-            except SignupCode.DoesNotExist:
-                pass
-
+            self.delete_signup_codes(user)
         except get_user_model().DoesNotExist:
             user = get_user_model().objects.create_user(email=email)
 
         # Set user fields provided
         user.set_password(password)
-        user.first_name = first_name.title().strip()
-        user.last_name = last_name.title().strip()
+        user.first_name = first_name
+        user.last_name = last_name
         if not must_validate_email:
             user.is_verified = True
             # send_multi_format_email.delay('welcome_email', {'email': user.email, }, target_email=user.email)
             send_multi_format_email('welcome_email', {'email': user.email, }, target_email=user.email)
-        user.save()
 
+        user.save()
         create_wallet(user)
 
         if must_validate_email:
@@ -71,43 +113,35 @@ class Signup(APIView):
                    'last_name': last_name, 'message': 'Verification mail has been sent to ' + email}
         return Response(content, status=status.HTTP_201_CREATED)
 
-    def phoneSignUp(self, serializer, phone_number, first_name, last_name):
+    def phone_sign_up(self, serializer, phone_number, first_name, last_name):
         must_validate_phone = getattr(settings, "AUTH_VERIFICATION", True)
 
         try:
             user = get_user_model().objects.get(phone_number=phone_number)
             if user.is_verified:
-                content = {'detail': _('Phone number already registered.')}
+                content = {'message': 'Phone number already registered.'}
                 return Response(content, status=status.HTTP_400_BAD_REQUEST)
             else:
                 user.delete()
                 user = get_user_model().objects.create_user_by_phone(phone_number=phone_number)
-            try:
-                # Delete old signup codes
-                signup_code = SignupCode.objects.get(user=user)
-                signup_code.delete()
-            except SignupCode.DoesNotExist:
-                pass
-
+            self.delete_signup_codes(user)
         except get_user_model().DoesNotExist:
             user = get_user_model().objects.create_user_by_phone(phone_number=phone_number)
 
         # Set user fields provided
-        user.first_name = first_name.title().strip()
-        user.last_name = last_name.title().strip()
+        user.first_name = first_name
+        user.last_name = last_name
         if not must_validate_phone:
             user.is_verified = True
-            # send_multi_format_email('welcome_email',{'email': user.email, },target_email=user.email)
+            send_multi_format_email('welcome_email', {'email': user.email, }, target_email=user.email)
 
         user.save()
-
         create_wallet(user)
 
         if must_validate_phone:
             # Create and associate signup code
             ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
             signup_code = SignupCode.objects.create_signup_code(user, ipaddr)
-            print(signup_code)
             sendOTP(signup_code, phone_number)
 
         content = {'phone_number': phone_number, 'first_name': first_name,
@@ -119,50 +153,41 @@ class Signup(APIView):
             serializer = self.mail_serializer_class(data=request.data)
         else:
             serializer = self.phone_serializer_class(data=request.data)
+
         if serializer.is_valid():
-            first_name = serializer.data['first_name']
-            last_name = serializer.data['last_name']
+            first_name = serializer.data['first_name'].title().strip()
+            last_name = serializer.data['last_name'].title().strip()
 
             if mail:
                 email = serializer.data['email']
                 password = serializer.data['password']
-                return self.mailSignUp(serializer, email, password, first_name, last_name)
+                return self.mail_sign_up(serializer, email, password, first_name, last_name)
             elif phone:
                 phone_number = serializer.data['phone_number']
-                return self.phoneSignUp(serializer, phone_number, first_name, last_name)
+                return self.phone_sign_up(serializer, phone_number, first_name, last_name)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-def generate_cookie(user, response):
-    token, created = Token.objects.get_or_create(user=user)
-    encoded = jwt.encode(
-        {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
-    response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
-    return response
 
 
 class SignupVerify(APIView):
     permission_classes = (AllowAny,)
 
-    def get(self, request, format=None):
+    def post(self, request, format=None):
         code = request.data['otp']
-        verified = SignupCode.objects.set_user_is_verified(code)
 
-        if verified:
-            try:
-                signup_code = SignupCode.objects.get(code=code)
-                user = signup_code.user
-                response = Response(status=status.HTTP_200_OK)
-                response = generate_cookie(user, response)
-                response.data = {'success': _('Email address verified.')}
-                signup_code.delete()
-                return response
-            except SignupCode.DoesNotExist:
-                content = {'detail': _('Unable to verify user.')}
-                return Response(content, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            content = {'detail': _('Unable to verify user.')}
+        try:
+            signup_code = SignupCode.objects.get(code=code)
+            signup_code.user.is_verified = True
+            signup_code.user.save()
+            user = signup_code.user
+            signup_code.delete()
+
+            response = Response(status=status.HTTP_200_OK)
+            response = generate_cookie(user, response)
+            response.data = {'message': 'Email verified successfully'}
+            return response
+        except SignupCode.DoesNotExist:
+            content = {'message': 'Unable to verify user'}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -174,50 +199,43 @@ class Login(APIView):
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid():
-            email = serializer.data['email'].lower().strip()
-            password = serializer.data['password']
-            user = authenticate(email=email, password=password)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            if user:
-                if user.is_verified:
-                    if user.is_active:
-                        token, created = Token.objects.get_or_create(user=user)
+        email = serializer.data['email'].lower().strip()
+        password = serializer.data['password']
+        user = authenticate(email=email, password=password)
 
-                        user_type = "CUSTOMER"
-                        if user.is_superuser:
-                            user_type = "Super Admin"
-                        elif check_business_client(user):
-                            user_type = "BUSINESS CLIENT"
-                        elif check_employee(user):
-                            user_type = "EMPLOYEE"
+        if not user:
+            content = {'message': 'Unable to login with provided credentials.'}
+            return Response(content, status=status.HTTP_401_UNAUTHORIZED)
 
-                        response = Response(status=status.HTTP_200_OK)
-                        response = generate_cookie(user, response)
-                        response.data = {
-                            'user': email,
-                            'name': user.first_name,
-                            'id': user.id,
-                            "user_type": user_type,
-                            'message': "Login Successful"
-                        }
-                        return response
-                    else:
-                        content = {'detail': _('User account not active.'), "user": ""}
-                        return Response(content,
-                                        status=status.HTTP_401_UNAUTHORIZED)
-                else:
-                    content = {'detail':
-                                   _('User account not verified.'), "user": ""}
-                    return Response(content, status=status.HTTP_401_UNAUTHORIZED)
-            else:
-                content = {'detail':
-                               _('Unable to login with provided credentials.'), "user": ""}
-                return Response(content, status=status.HTTP_401_UNAUTHORIZED)
+        if not user.is_verified:
+            content = {'detail': 'User account is not verified.'}
+            return Response(content, status=status.HTTP_401_UNAUTHORIZED)
 
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        if not user.is_active:
+            content = {'detail': 'User account is not active.'}
+            return Response(content, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_type = "CUSTOMER"
+        if user.is_superuser:
+            user_type = "Super Admin"
+        elif check_business_client(user):
+            user_type = "BUSINESS CLIENT"
+        elif check_employee(user):
+            user_type = "EMPLOYEE"
+
+        response = Response(status=status.HTTP_200_OK)
+        response = generate_cookie(user, response)
+        response.data = {
+            'user': email,
+            'name': user.first_name,
+            'id': user.id,
+            "user_type": user_type,
+            'message': "Login Successful"
+        }
+        return response
 
 
 class Logout(APIView):
@@ -233,60 +251,55 @@ class Logout(APIView):
         response = Response(status=status.HTTP_200_OK)
         response.delete_cookie('token')
         response.data = {
-            "message": "logged out"
+            "message": "Logged out successfully."
         }
         return response
 
 
+# TODO: Handle cases when the generated code already exists in the db
 class PasswordReset(APIView):
     permission_classes = (AllowAny,)
     serializer_class = PasswordResetSerializer
 
     def post(self, request, format=None):
-        if 'email' not in request.data and 'phone_number' not in request.data:
-            return Response({'error': 'Phone Number or Email should be provided'}, 400)
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         email = request.data['email'] if 'email' in request.data else None
         phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
 
-        if phone_number and validate_phone(phone_number):
-            user = get_user_model().objects.get(phone=phone_number)
-            request.data['email'] = user.email
-        if email and validate_email(email):
-            user = get_user_model().objects.get(email=email)
-            request.data['phone_number'] = user.phone_number
+        user = None
+        if phone_number:
+            try:
+                user = get_user_model().objects.get(phone=phone_number)
+            except get_user_model().DoesNotExist:
+                return Response({'message': "Can't reset password", 'error': 'Invalid Phone number'}, 400)
 
-        serializer = self.serializer_class(data=request.data)
-
-        if serializer.is_valid():
-            email = serializer.data['email']
-            phone_number = request.data['phone_number']
-
+        if email:
             try:
                 user = get_user_model().objects.get(email=email)
-
-                # Delete all unused password reset codes
-                PasswordResetCode.objects.filter(user=user).delete()
-
-                if user.is_verified and user.is_active:
-                    password_reset_code = \
-                        PasswordResetCode.objects.create_password_reset_code(user)
-                    password_reset_code.send_password_reset_email()
-                    sendOTP(password_reset_code, phone_number)
-                    content = {'email': email, 'message': 'OTP sent to ' + email}
-                    return Response(content, status=status.HTTP_201_CREATED)
-
             except get_user_model().DoesNotExist:
-                pass
+                return Response({'message': "Can't reset password", 'error': 'Invalid Email'}, 400)
 
-            # Since this is AllowAny, don't give away error.
-            content = {'detail': _('Password reset not allowed.')}
-            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+        phone_number = user.phone_number
+        # Delete all unused password reset codes
+        PasswordResetCode.objects.filter(user=user).delete()
 
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        if user.is_verified and user.is_active:
+            password_reset_code = \
+                PasswordResetCode.objects.create_password_reset_code(user)
+            password_reset_code.send_password_reset_email()
+            sendOTP(password_reset_code, phone_number)
+            content = {'message': 'OTP sent successfully'}
+            return Response(content, status=status.HTTP_201_CREATED)
+
+        # Since this is AllowAny, don't give away error.
+        content = {'message': 'Password reset not allowed.'}
+        return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
 
+# TODO: what is this API for??
 class PasswordResetVerify(APIView):
     permission_classes = (AllowAny,)
 
@@ -333,27 +346,25 @@ class PasswordResetVerified(APIView):
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid():
-            code = serializer.data['code']
-            password = serializer.data['password']
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                password_reset_code = PasswordResetCode.objects.get(code=code)
-                password_reset_code.user.set_password(password)
-                password_reset_code.user.save()
+        code = serializer.data['code']
+        password = serializer.data['password']
 
-                # Delete password reset code just used
-                password_reset_code.delete()
+        try:
+            password_reset_code = PasswordResetCode.objects.get(code=code)
+            password_reset_code.user.set_password(password)
+            password_reset_code.user.save()
 
-                content = {'success': _('Password reset.')}
-                return Response(content, status=status.HTTP_200_OK)
-            except PasswordResetCode.DoesNotExist:
-                content = {'detail': _('Unable to verify user.')}
-                return Response(content, status=status.HTTP_400_BAD_REQUEST)
+            # Delete password reset code just used
+            password_reset_code.delete()
 
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+            content = {'message': 'Password reset successfully.'}
+            return Response(content, status=status.HTTP_200_OK)
+        except PasswordResetCode.DoesNotExist:
+            content = {'message': 'Unable to verify user.', 'error': 'Invalid code'}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EmailChange(APIView):
@@ -362,36 +373,28 @@ class EmailChange(APIView):
 
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if serializer.is_valid():
-            user = request.user
+        user = request.user
+        # Delete all unused email change codes
+        EmailChangeCode.objects.filter(user=user).delete()
 
-            # Delete all unused email change codes
-            EmailChangeCode.objects.filter(user=user).delete()
+        email_new = serializer.data['email']
+        try:
+            user_with_email = get_user_model().objects.get(email=email_new)
+            if user_with_email.is_verified:
+                content = {'message': 'Email address already taken.'}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                raise get_user_model().DoesNotExist
 
-            email_new = serializer.data['email']
+        except get_user_model().DoesNotExist:
+            email_change_code = EmailChangeCode.objects.create_email_change_code(user, email_new)
+            email_change_code.send_email_change_emails()
 
-            try:
-                user_with_email = get_user_model().objects.get(email=email_new)
-                if user_with_email.is_verified:
-                    content = {'detail': _('Email address already taken.')}
-                    return Response(content, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    # If the account with this email address is not verified,
-                    # give this user a chance to verify and grab this email address
-                    raise get_user_model().DoesNotExist
-
-            except get_user_model().DoesNotExist:
-                email_change_code = EmailChangeCode.objects.create_email_change_code(user, email_new)
-
-                email_change_code.send_email_change_emails()
-
-                content = {'email': email_new, 'message': 'Verification link sent to ' + email_new}
-                return Response(content, status=status.HTTP_201_CREATED)
-
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+            content = {'email': email_new, 'message': 'Verification link sent to ' + email_new}
+            return Response(content, status=status.HTTP_201_CREATED)
 
 
 class EmailChangeVerify(APIView):
@@ -403,42 +406,42 @@ class EmailChangeVerify(APIView):
         try:
             # Check if the code exists.
             email_change_code = EmailChangeCode.objects.get(code=code)
-
-            # Check if the code has expired.
-            delta = date.today() - email_change_code.created_at.date()
-            if delta.days > EmailChangeCode.objects.get_expiry_period():
-                email_change_code.delete()
-                raise EmailChangeCode.DoesNotExist()
-
-            # Check if the email address is being used by a verified user.
-            try:
-                user_with_email = get_user_model().objects.get(email=email_change_code.email)
-                if user_with_email.is_verified:
-                    # Delete email change code since won't be used
-                    email_change_code.delete()
-
-                    content = {'detail': _('Email address already taken.')}
-                    return Response(content, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    # If the account with this email address is not verified,
-                    # delete the account (and signup code) because the email
-                    # address will be used for the user who just verified.
-                    user_with_email.delete()
-            except get_user_model().DoesNotExist:
-                pass
-
-            # If all is well, change the email address.
-            email_change_code.user.email = email_change_code.email
-            email_change_code.user.save()
-
-            # Delete email change code just used
-            email_change_code.delete()
-
-            content = {'success': _('Email address changed.')}
-            return Response(content, status=status.HTTP_200_OK)
         except EmailChangeCode.DoesNotExist:
-            content = {'detail': _('Unable to verify user.')}
+            content = {'message': "Can't update Email.", 'error': 'Invalid Code'}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the code has expired.
+        delta = date.today() - email_change_code.created_at.date()
+        if delta.days > EmailChangeCode.objects.get_expiry_period():
+            content = {'message': "Can't update Email.", 'error': 'Code Expired, Try again.'}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the email address is being used by a verified user.
+        try:
+            user_with_email = get_user_model().objects.get(email=email_change_code.email)
+            if user_with_email.is_verified:
+                # Delete email change code since won't be used
+                email_change_code.delete()
+                content = {'message': "Can't update Email.", 'error': 'Email address already taken.'}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # If the account with this email address is not verified,
+                # delete the account (and signup code) because the email
+                # address will be used for the user who just verified.
+                user_with_email.delete()
+
+        except get_user_model().DoesNotExist:
+            pass
+
+        # If all is well, change the email address.
+        email_change_code.user.email = email_change_code.email
+        email_change_code.user.save()
+
+        # Delete email change code just used
+        email_change_code.delete()
+
+        content = {'message': 'Email address changed successfully.'}
+        return Response(content, status=status.HTTP_200_OK)
 
 
 class PasswordChange(APIView):
@@ -447,44 +450,32 @@ class PasswordChange(APIView):
 
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if serializer.is_valid():
-            user = request.user
-            email = user.email
-            old_password = serializer.data['old_password']
-            new_password = serializer.data['new_password']
-            user = authenticate(email=email, password=old_password)
-            if user:
-                user.set_password(new_password)
-                user.save()
-            else:
-                content = {"message": "Password Incorrect"}
-                return Response(content, status=status.HTTP_400_BAD_REQUEST)
-
-            content = {'success': _('Password changed.')}
-            return Response(content, status=status.HTTP_200_OK)
-
+        user = request.user
+        email = user.email
+        old_password = serializer.data['old_password']
+        new_password = serializer.data['new_password']
+        user = authenticate(email=email, password=old_password)
+        if user:
+            user.set_password(new_password)
+            user.save()
         else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+            content = {"message": "Can't update password", "error": "Invalid Old Password"}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+        content = {'message': 'Password changed successfully.'}
+        return Response(content, status=status.HTTP_200_OK)
 
 
 class UserMe(APIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = UserSerializer
 
-    # authentication_classes = [JWTAuthentication]
-
     def get(self, request, format=None):
-        return Response(self.serializer_class(request.user).data)
-
-
-def checkPhoneExists(phone):
-    try:
-        user = get_user_model().objects.get(phone_number=phone)
-        return True
-    except:
-        return False
+        response_data = self.serializer_class(request.user).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class OTPLogin(APIView):
@@ -492,16 +483,16 @@ class OTPLogin(APIView):
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            phone = request.data['phone']
-            if checkPhoneExists(phone):
-                serializer.save()
-                sendOTP(serializer.data['otp'], phone)
-                return Response({'otp': serializer.data['otp']}, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
-        else:
+        if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        phone = request.data['phone']
+        if not MailOrPhoneNumberExists.check_phone_number_exists(phone):
+            return Response({"message": "Phone no. not registered"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer.save()
+        sendOTP(serializer.data['otp'], phone)
+        return Response({'otp': serializer.data['otp']}, status=status.HTTP_200_OK)
 
 
 class OTPValidate(APIView):
@@ -512,43 +503,42 @@ class OTPValidate(APIView):
         phone = request.data['phone']
         try:
             phone_user_object = OTPCode.objects.get(phone=request.data['phone'])
-        except:
+        except ObjectDoesNotExist:
             return Response({"message", "Phone No. not found"}, status=status.HTTP_400_BAD_REQUEST)
-        if phone_user_object.otp == request.data['otp']:
-            now = datetime.datetime.now()
 
-            if now < phone_user_object.expiry_time:
-                try:
-                    user = get_user_model().objects.get(phone_number=phone)
-                except:
-                    return Response({"message": "Phone No. not registered"}, status=status.HTTP_400_BAD_REQUEST)
-                if user.is_active:
-                    token, created = Token.objects.get_or_create(user=user)
-                    user.is_verified = True
-
-                    token, created = Token.objects.get_or_create(user=user)
-
-                    encoded = jwt.encode(
-                        {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
-
-                    response = Response(status=status.HTTP_200_OK)
-                    response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
-                    response.data = {
-                        "authenticate": True,
-                        "message": "Successfully OTP Validated",
-                    }
-                    return response
-                    # return Response({"authenticate": True, "message": "Sucessfully OTP Validated", 'token': token.key},
-                    #                 status=status.HTTP_200_OK)
-                else:
-                    content = {'detail': _('User account not active.'), "authenticate": False,
-                               "message": "User not active"}
-                    return Response(content,
-                                    status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({"authenticate": True, "message": "OTP has been expired"})
-        else:
+        if not phone_user_object.otp == request.data['otp']:
             return Response({"authenticate": False, "message": "Incorrect OTP"}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = datetime.datetime.now()
+        if now >= phone_user_object.expiry_time:
+            return Response({"authenticate": True, "message": "OTP has been expired"})
+
+        try:
+            user = get_user_model().objects.get(phone_number=phone)
+        except ObjectDoesNotExist:
+            return Response({"message": "Phone No. not registered"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.is_active:
+            token, created = Token.objects.get_or_create(user=user)
+            user.is_verified = True
+
+            token, created = Token.objects.get_or_create(user=user)
+
+            encoded = jwt.encode(
+                {'token': token.key}, settings.SECRET_KEY, algorithm='HS256')
+
+            response = Response(status=status.HTTP_200_OK)
+            response.set_cookie(key='token', value=encoded, httponly=True, samesite='strict', path='/')
+            response.data = {
+                "authenticate": True,
+                "message": "Successfully OTP Validated",
+            }
+            return response
+        else:
+            content = {'detail': _('User account not active.'), "authenticate": False,
+                       "message": "User not active"}
+            return Response(content,
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 def random_string():
@@ -562,18 +552,18 @@ class OTPResend(APIView):
         phone = request.data['phone']
         try:
             phone_user_object = OTPCode.objects.get(phone=request.data['phone'])
-        except:
+        except ObjectDoesNotExist:
             return Response({"message", "Phone No. not found"}, status=status.HTTP_400_BAD_REQUEST)
-        if not phone_user_object:
-            return Response({'message': 'Phone no. not registered'}, status=status.HTTP_400_BAD_REQUEST)
-        if (not checkPhoneExists(phone)):
+
+        if not MailOrPhoneNumberExists.check_phone_number_exists(phone):
             return Response({"message": "Phone no. not registered"}, status=status.HTTP_400_BAD_REQUEST)
 
         request.data['otp'] = random_string()
         request.data['time'] = timezone.now()
         request.data['expiry_time'] = timezone.now() + timedelta(minutes=5)
         serializer = self.serializer_class(phone_user_object, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

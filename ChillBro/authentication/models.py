@@ -10,7 +10,7 @@ from datetime import timedelta
 from django.utils.translation import ugettext_lazy as _
 from django.core.mail import send_mail
 from django.core.validators import MinLengthValidator
-from .validations import validate_phone
+from ChillBro.validations import validate_phone
 from .tasks import send_multi_format_email
 
 
@@ -107,8 +107,10 @@ class EmailAbstractUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+
 def random_string():
     return str(random.randint(100000, 999999))
+
 
 class SignupCodeManager(models.Manager):
     def create_signup_code(self, user, ipaddr):
@@ -116,18 +118,6 @@ class SignupCodeManager(models.Manager):
         signup_code = self.create(user=user, code=code, ipaddr=ipaddr)
 
         return signup_code
-
-    def set_user_is_verified(self, code):
-        try:
-            signup_code = SignupCode.objects.get(code=code)
-            signup_code.user.is_verified = True
-            signup_code.user.save()
-            return True
-        except SignupCode.DoesNotExist:
-            pass
-
-        return False
-
 
 
 class PasswordResetCodeManager(models.Manager):
@@ -167,7 +157,7 @@ class AbstractBaseCode(models.Model):
             'last_name': self.user.last_name,
             'code': self.code
         }
-        send_multi_format_email.delay(prefix, ctxt, target_email=self.user.email)
+        send_multi_format_email(prefix, ctxt, target_email=self.user.email)
 
     def __str__(self):
         return self.code
@@ -175,7 +165,6 @@ class AbstractBaseCode(models.Model):
 
 class SignupCode(AbstractBaseCode):
     ipaddr = models.GenericIPAddressField(_('ip address'))
-
     objects = SignupCodeManager()
 
     def send_signup_email(self):
@@ -206,7 +195,8 @@ class EmailChangeCode(AbstractBaseCode):
             'code': self.code
         }
 
-        send_multi_format_email.delay(prefix, ctxt, target_email=self.email)
+        send_multi_format_email(prefix, ctxt, target_email=self.email)
+
 
 def random_string():
     return str(random.randint(100000, 999999))
@@ -217,16 +207,15 @@ class AutoDateTimeField(models.DateTimeField):
         return timezone.now()
 
 
-def getExpiryTime():
+def get_expiry_time():
     return timezone.now() + timedelta(minutes=5)
 
 
 class OTPCode(models.Model):
-    phone=models.CharField('phone_number',max_length=10,unique=True,validators=[MinLengthValidator(10),validate_phone])
-    otp=models.TextField(max_length=6,default=random_string)
-    time=models.DateTimeField(default=timezone.now)
-    expiry_time=models.DateTimeField(default=getExpiryTime)
+    phone = models.CharField('phone_number',max_length=10,unique=True,validators=[MinLengthValidator(10),validate_phone])
+    otp = models.TextField(max_length=6,default=random_string)
+    time = models.DateTimeField(default=timezone.now)
+    expiry_time = models.DateTimeField(default=get_expiry_time)
 
     def __str__(self):
         return self.phone
-
