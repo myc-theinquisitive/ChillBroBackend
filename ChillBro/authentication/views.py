@@ -24,6 +24,8 @@ from .wrapper import sendOTP, check_business_client, check_employee, create_wall
 from ChillBro.validations import validate_phone, validate_email
 from django.db.models import ObjectDoesNotExist
 
+from UserApp.models import MyUser
+
 
 def generate_cookie(user, response):
     token, created = Token.objects.get_or_create(user=user)
@@ -169,14 +171,43 @@ class Signup(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+def checkAndGetUserId(request):
+    user_id = None
+    if 'otp' not in request.data:
+        return Response({'message': 'OTP is required'}, status=status.HTTP_400_BAD_REQUEST), False
+    if 'email' not in request.data and 'phone_number' not in request.data:
+        return Response({'message': 'Email or Phone number is required'}, status=status.HTTP_400_BAD_REQUEST), False
+    code = request.data['otp']
+    email = request.data['email'] if 'email' in request.data else None
+    phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
+
+    if phone_number:
+        try:
+            user = get_user_model().objects.get(phone=phone_number)
+        except get_user_model().DoesNotExist:
+            return Response({'message': "Can't verify", 'error': 'Invalid Phone number'}, 400), False
+
+    if email:
+        try:
+            user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            return Response({'message': "Can't verify", 'error': 'Invalid Email'}, 400), False
+
+    return user, True
+
+
 class SignupVerify(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request, format=None):
+        response, is_valid = checkAndGetUserId(request)
+        if not is_valid:
+            return response
+        user_id = response.id
         code = request.data['otp']
 
         try:
-            signup_code = SignupCode.objects.get(code=code)
+            signup_code = SignupCode.objects.get(code=code, user_id=user_id)
             signup_code.user.is_verified = True
             signup_code.user.save()
             user = signup_code.user
@@ -184,7 +215,7 @@ class SignupVerify(APIView):
 
             response = Response(status=status.HTTP_200_OK)
             response = generate_cookie(user, response)
-            response.data = {'message': 'Email verified successfully'}
+            response.data = {'message': 'User verified successfully'}
             return response
         except SignupCode.DoesNotExist:
             content = {'message': 'Unable to verify user'}
@@ -296,7 +327,7 @@ class PasswordReset(APIView):
 
         # Since this is AllowAny, don't give away error.
         content = {'message': 'Password reset not allowed.'}
-        return Response(content, status=status.HTTP_400_BAD_REQUEST)
+        return Response(content)
 
 
 # TODO: what is this API for??
@@ -304,23 +335,11 @@ class PasswordResetVerify(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request, format=None):
-        # code = request.GET.get('code', '')
-        if 'code' not in request.data:
-            return Response({'Error': 'Code is required'}, 400)
 
-        if 'email' not in request.data and 'phone_number' not in request.data:
-            return Response({'error': 'Phone or Email should be provided'}, 400)
-
-        email = request.data['email'] if 'email' in request.data else None
-        phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
-        try:
-            if phone_number and validate_phone(phone_number):
-                user = get_user_model().objects.get(phone=phone_number)
-            if email and validate_email(email):
-                user = get_user_model().objects.get(email=email)
-        except get_user_model().DoesNotExist:
-            return Response({'error': 'User does not exist'}, 400)
-
+        response, is_valid = checkAndGetUserId(request)
+        if not is_valid:
+            return response
+        user = response
         code = request.data['code']
 
         try:
@@ -349,11 +368,16 @@ class PasswordResetVerified(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        response, is_valid = checkAndGetUserId(request)
+        if not is_valid:
+            return response
+        user_id = response.id
+
         code = serializer.data['code']
         password = serializer.data['password']
 
         try:
-            password_reset_code = PasswordResetCode.objects.get(code=code)
+            password_reset_code = PasswordResetCode.objects.get(code=code, user_id=user_id)
             password_reset_code.user.set_password(password)
             password_reset_code.user.save()
 
