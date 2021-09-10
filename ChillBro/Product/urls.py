@@ -1,14 +1,15 @@
 from django.urls import path
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
-    ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories
+    ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories, \
+    HotelProductsTypes, HotelEntityProducts, HireADriverHomePage, HireADriverYearsFilter
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
-    CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail
+    CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
 from .Hotel.views import AmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
-    VehicleCharacteristicsDetail
+    VehicleCharacteristicsDetail, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
@@ -25,6 +26,8 @@ urlpatterns = [
     path('category/level_wise/<str:slug>/', GetSpecificCategoriesLevelWise.as_view()),
     path('category/top_level/', CategoryTopLevelList.as_view()),
 
+    path('category/vehicles_names/', GetVehiclesCategoriesList.as_view()),
+
     path('category/product/', CategoryProductList.as_view()),
     path('category/product/<str:pk>/', CategoryProductDetail.as_view()),
     path('category/product/prices/', CategoryProductPricesList.as_view()),
@@ -33,7 +36,9 @@ urlpatterns = [
 
     # urls for vehicle
     path('vehicle/type/', VehicleTypeList.as_view()),
+    path('vehicle/type/category/<str:category_name>/', GetVehicleTypesByCategory.as_view()),
     path('vehicle/type/<str:pk>/', VehicleTypeDetail.as_view()),
+
 
     path('vehicle/characteristics/', VehicleCharacteristicsList.as_view()),
     path('vehicle/characteristics/<int:pk>/', VehicleCharacteristicsDetail.as_view()),
@@ -83,6 +88,10 @@ urlpatterns = [
 
     path('product/rental_home_page_categories/', RentalHomePageCategories.as_view()),
     path('product/rental_products_types/', RentalProductsTypes.as_view()),
+    path('product/hotel_products_types/', HotelProductsTypes.as_view()),
+    path('product/entity/<str:seller_id>/',HotelEntityProducts.as_view()),
+    path('product/hire_a_driver_home_page/',HireADriverHomePage.as_view()),
+    path('product/hire_a_driver_years_filter/', HireADriverYearsFilter.as_view()),
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),

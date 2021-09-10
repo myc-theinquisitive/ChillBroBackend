@@ -100,7 +100,7 @@ class GetSpecificCategoriesLevelWise(APIView):
         if slug_value == 'transport':
             new_sub_categories = []
             for each_category in sub_categories:
-                if each_category['name'].lower() == 'place' or each_category['name'].lower() == 'vehicle':
+                if each_category['name'].lower() == 'place' or each_category['name'].lower() == 'vehicles':
                     pass
                 else:
                     new_sub_categories.append(each_category)
@@ -163,3 +163,11 @@ class CategoryProductPricesDetail(generics.RetrieveUpdateDestroyAPIView):
 
         prices.delete()
         return Response({"message": "Successfully deleted category product prices"}, 200)
+
+
+class GetVehiclesCategoriesList(generics.ListAPIView):
+
+    def get(self, request, *args, **kwargs):
+        vehicles_categories = Category.objects.filter(parent_category__name__icontains="vehicles").values_list('name',flat=True)
+        return Response({"results":vehicles_categories},200)
+        pass

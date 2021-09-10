@@ -307,7 +307,7 @@ class HotelView(ProductInterface):
         products = Product.objects.filter(id__in=product_ids)
         starting_prices = defaultdict()
         for each_product in products:
-            each_hire_a_vehicle_details = product_details_with_ids[each_product.product_id]
+            each_hire_a_vehicle_details = product_details_with_ids[each_product.id]
             start_time_date_object = each_hire_a_vehicle_details['start_time']
             end_time_date_object = each_hire_a_vehicle_details['end_time']
             quantity = each_hire_a_vehicle_details["quantity"]

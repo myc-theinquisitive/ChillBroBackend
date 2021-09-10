@@ -7,6 +7,7 @@ from Product.BaseProduct.serializers import ProductSerializer, ProductImageSeria
 from Product.Hotel.views import HotelView
 from Product.Rental.views import RentalView
 from Product.Vehicle.views import VehicleView
+from Product.Events.views import EventView
 from Product.HireAVehicle.views import HireAVehicleView
 from Product.SelfRental.views import SelfRentalView
 from Product.Driver.views import DriverView
@@ -62,6 +63,8 @@ class ProductView(ProductInterface):
             return SelfRentalView(), "self_rental"
         elif product_type == "PAID_AMENITIES":
             return PaidAmenitiesView(), "paid_amenities"
+        elif product_type == "EVENT":
+            return EventView(), "event"
         return None, None
 
     # initialize the instance variables before accessing
@@ -298,7 +301,7 @@ class ProductView(ProductInterface):
                 if not product_sizes_valid:
                     is_valid = False
                     errors["sizes"].append(product_sizes_serializer.errors)
-            # TODO: unique constraints are not handled in update case
+        # TODO: unique constraints are not handled in update case
 
         # Validating product specific data
         if not self.product_specific_view:
@@ -721,7 +724,3 @@ class ProductView(ProductInterface):
                 overall_errors[type] = errors
 
         return overall_is_valid, overall_errors
-
-
-
-

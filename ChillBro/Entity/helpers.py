@@ -19,14 +19,14 @@ def upload_image_for_entity(instance, filename):
     id = instance.entity_id
     file_extension = filename.split(".")[-1]
     new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
-    return get_media_root() + "static/images/entity/%s/%s" % (id, new_filename)
+    return "static/images/entity/%s/%s" % (id, new_filename)
 
 
 def upload_image_for_entity_type(instance, filename, type):
     id = instance.id
     file_extension = filename.split(".")[-1]
     new_filename = "%s.%s" % (str(uuid.uuid4()), file_extension)
-    return get_media_root() + "static/images/entity/%s/%s/%s" % (id, type, new_filename)
+    return "static/images/entity/%s/%s/%s" % (id, type, new_filename)
 
 
 def image_upload_to_amenities(instance, filename):

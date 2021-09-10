@@ -59,7 +59,7 @@ class AddProductToCartSerializer(serializers.Serializer):
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     # TODO: add validation for transport details and other inputs for add to cart
-    transport_details = AddtoCartTransportDetailsSerializer(allow_null=True)
+    # transport_details = AddtoCartTransportDetailsSerializer(allow_null=True)
 
 
 class CheckoutCartSerializer(serializers.Serializer):

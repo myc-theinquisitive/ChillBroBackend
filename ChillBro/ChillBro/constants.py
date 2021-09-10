@@ -11,6 +11,10 @@ class States(enum.Enum):
 
 class Cities(enum.Enum):
    VSKP = "VISAKHAPATNAM"
+   SRKL = "SRIKAKULAM"
+   VYZY = "VIJAYANAGARAM"
+   EG = "EAST GODAVARI"
+   WG = "WEST GODAVARI"
 
 
 class EntityType(enum.Enum):

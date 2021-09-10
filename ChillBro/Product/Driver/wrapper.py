@@ -32,3 +32,8 @@ def update_address_for_address_id(address_id, address_data):
 
 def get_address_details_for_address_ids(address_ids):
     return get_address_details(address_ids)
+
+
+def get_category_details(category_ids):
+    from ..Category.export_apis import category_details
+    return category_details(category_ids)
