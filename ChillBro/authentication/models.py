@@ -12,10 +12,10 @@ from django.core.mail import send_mail
 from django.core.validators import MinLengthValidator
 from ChillBro.validations import validate_phone
 from .tasks import send_multi_format_email
-
+from django.db import IntegrityError
 
 # Make part of the model eventually, so it can be edited
-EXPIRY_PERIOD = 3    # days
+EXPIRY_PERIOD = 3  # days
 
 
 def _generate_code(length=None):
@@ -47,8 +47,14 @@ class EmailUserManager(BaseUserManager):
                                  **extra_fields)
 
     def create_user_by_phone(self, phone_number, password=None, **extra_fields):
-        return self._create_user(phone_number, password, False, False, False,
-                                 **extra_fields)
+        now = timezone.now()
+        user = self.model(phone_number=phone_number,
+                          is_staff=False, is_active=True,
+                          is_superuser=False, is_verified=False,
+                          last_login=now, date_joined=now, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
     def create_superuser(self, email, password, **extra_fields):
         return self._create_user(email, password, True, True, True,
@@ -63,7 +69,7 @@ class EmailAbstractUser(AbstractBaseUser, PermissionsMixin):
     """
     first_name = models.CharField(_('first name'), max_length=30, blank=True)
     last_name = models.CharField(_('last name'), max_length=30, blank=True)
-    email = models.EmailField(_('email address'), max_length=255, unique=True,null=True,blank=True)
+    email = models.EmailField(_('email address'), max_length=255, unique=True, null=True, blank=True)
     is_staff = models.BooleanField(
         _('staff status'), default=False,
         help_text=_('Designates whether the user can log into this '
@@ -113,11 +119,26 @@ def random_string():
 
 
 class SignupCodeManager(models.Manager):
+    def checkSignupCodeExists(self, signup_code):
+        try:
+            signup_code = SignupCode.objects.get(code=signup_code)
+            return True
+        except SignupCode.DoesNotExist:
+            return False
+
     def create_signup_code(self, user, ipaddr):
         code = random_string()
-        signup_code = self.create(user=user, code=code, ipaddr=ipaddr)
-
-        return signup_code
+        iteration = 0
+        while True:
+            try:
+                signup_code = self.create(user=user, code=code, ipaddr=ipaddr)
+            except IntegrityError:
+                iteration += 1
+                if iteration > 5:
+                    break
+                continue
+            return signup_code
+        return None
 
 
 class PasswordResetCodeManager(models.Manager):
@@ -212,8 +233,9 @@ def get_expiry_time():
 
 
 class OTPCode(models.Model):
-    phone = models.CharField('phone_number',max_length=10,unique=True,validators=[MinLengthValidator(10),validate_phone])
-    otp = models.TextField(max_length=6,default=random_string)
+    phone = models.CharField('phone_number', max_length=10, unique=True,
+                             validators=[MinLengthValidator(10), validate_phone])
+    otp = models.TextField(max_length=6, default=random_string)
     time = models.DateTimeField(default=timezone.now)
     expiry_time = models.DateTimeField(default=get_expiry_time)
 
