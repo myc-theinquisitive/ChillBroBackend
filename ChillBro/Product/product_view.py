@@ -15,6 +15,7 @@ from Product.TravelPackageVehicle.views import TravelPackageVehicleView
 from Product.TravelAgency.views import TravelAgencyView
 from Product.MakeYourOwnTrip.views import MakeYourOwnTripView
 from Product.PaidAmenities.views import PaidAmenitiesView
+from Product.PG.views import PGView
 from Product.product_interface import ProductInterface
 from Product.taggable_wrapper import key_value_content_type_model, key_value_tag_model
 from typing import Dict
@@ -65,6 +66,8 @@ class ProductView(ProductInterface):
             return PaidAmenitiesView(), "paid_amenities"
         elif product_type == "EVENT":
             return EventView(), "event"
+        elif product_type == "PG":
+            return PGView(), "pg_room"
         return None, None
 
     # initialize the instance variables before accessing

@@ -1,17 +1,16 @@
 from django.contrib import admin
-from .models import Amenities, HotelAvailableAmenities, HotelRoom
+from .models import PGAvailableAmenities, PGRoom, PGAmenities
 
 
-@admin.register(Amenities)
-class AmenitiesAdmin(admin.ModelAdmin):
+@admin.register(PGAmenities)
+class PGAmenitiesAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(PGAvailableAmenities)
+class PGAvailableAmenitiesAdmin(admin.ModelAdmin):
     pass
 
 
-@admin.register(HotelAvailableAmenities)
-class HotelAvailableAmenitiesAdmin(admin.ModelAdmin):
-    pass
-
-
-@admin.register(HotelRoom)
-class HotelRoomAdmin(admin.ModelAdmin):
+@admin.register(PGRoom)
+class PGRoomAdmin(admin.ModelAdmin):
     pass

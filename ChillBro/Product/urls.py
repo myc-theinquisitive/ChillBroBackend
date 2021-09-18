@@ -1,4 +1,5 @@
 from django.urls import path
+
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
     ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories, \
@@ -8,6 +9,7 @@ from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDele
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
     CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
 from .Hotel.views import AmenitiesList
+from .PG.views import PGAmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
@@ -82,6 +84,7 @@ urlpatterns = [
 
     # urls specific to hotels
     path('product/amenities/', AmenitiesList.as_view()),
+    path('product/pg_amenities/', PGAmenitiesList.as_view()),
 
     # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),

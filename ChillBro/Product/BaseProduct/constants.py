@@ -14,6 +14,7 @@ class ProductTypes(enum.Enum):
     Self_Rental = "SELF_RENTAL"
     Paid_Amenities = "PAID_AMENITIES"
     Event = "EVENT"
+    PG = "PG"
 
 
 class ActivationStatus(enum.Enum):
