@@ -340,7 +340,7 @@ class PasswordResetVerify(APIView):
         if not is_valid:
             return response
         user = response
-        code = request.data['code']
+        code = request.data['otp']
 
         try:
             password_reset_code = PasswordResetCode.objects.get(code=code, user=user)
@@ -373,7 +373,7 @@ class PasswordResetVerified(APIView):
             return response
         user_id = response.id
 
-        code = serializer.data['code']
+        code = serializer.data['otp']
         password = serializer.data['password']
 
         try:
@@ -387,7 +387,7 @@ class PasswordResetVerified(APIView):
             content = {'message': 'Password reset successfully.'}
             return Response(content, status=status.HTTP_200_OK)
         except PasswordResetCode.DoesNotExist:
-            content = {'message': 'Unable to verify user.', 'error': 'Invalid code'}
+            content = {'message': 'Unable to verify user.', 'error': 'Invalid OTP'}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -425,13 +425,13 @@ class EmailChangeVerify(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request, format=None):
-        code = request.GET.get('code', '')
+        code = request.GET.get('otp', '')
 
         try:
             # Check if the code exists.
             email_change_code = EmailChangeCode.objects.get(code=code)
         except EmailChangeCode.DoesNotExist:
-            content = {'message': "Can't update Email.", 'error': 'Invalid Code'}
+            content = {'message': "Can't update Email.", 'error': 'Invalid OTP'}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if the code has expired.
