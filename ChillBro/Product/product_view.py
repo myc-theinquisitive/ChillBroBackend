@@ -24,6 +24,9 @@ from Product.wrapper import is_entity_id_valid, get_seller_id_wise_seller_detail
     get_booked_count_of_product_id
 from datetime import date, timedelta
 
+from Product.Dormitory.views import DormitoryView
+from Product.Resort.views import ResortView
+
 
 class ProductView(ProductInterface):
 
@@ -68,6 +71,10 @@ class ProductView(ProductInterface):
             return EventView(), "event"
         elif product_type == "PG":
             return PGView(), "pg_room"
+        elif product_type == "PG":
+            return ResortView(), "resort_room"
+        elif product_type == "PG":
+            return DormitoryView(), "dormitory_room"
         return None, None
 
     # initialize the instance variables before accessing

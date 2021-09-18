@@ -15,6 +15,8 @@ class ProductTypes(enum.Enum):
     Paid_Amenities = "PAID_AMENITIES"
     Event = "EVENT"
     PG = "PG"
+    DORMITORY = "DORMITORY"
+    RESORT = "RESORT"
 
 
 class ActivationStatus(enum.Enum):
