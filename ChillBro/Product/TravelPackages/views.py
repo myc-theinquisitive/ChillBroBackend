@@ -92,6 +92,7 @@ class TravelPackageView(ProductInterface):
             category_product: id-string,
             duration_in_days: int,
             duration_in_nights: int,
+            starting_point: STRING
             places: [
                 {
                     'place': string,
@@ -173,6 +174,7 @@ class TravelPackageView(ProductInterface):
             category_product: id-string,
             duration_in_days: int,
             duration_in_nights: int,
+            starting_point: STRING,
             'places': {
                 'add': [
                     {

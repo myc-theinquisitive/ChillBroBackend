@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import TravelCharacteristics, TravelAgencyImage, TravelAgencyPlaces, TravelAgency, get_id, TravelAgencyCharacteristics
+from .models import TravelCharacteristics, TravelAgencyImage, TravelAgencyPlaces, TravelAgency, get_id, \
+    TravelAgencyCharacteristics
 import json
 
 
@@ -25,7 +26,8 @@ class TravelAgencySerializer(serializers.ModelSerializer):
             product_id=validated_data["product"],
             tags=validated_data["tags"],
             duration_in_days=validated_data["duration_in_days"],
-            duration_in_nights=validated_data["duration_in_nights"])
+            duration_in_nights=validated_data["duration_in_nights"],
+            starting_point=validated_data["starting_point"])
 
     def update(self, instance, validated_data):
         if "tags" in validated_data:
@@ -35,6 +37,7 @@ class TravelAgencySerializer(serializers.ModelSerializer):
         instance.duration_in_days = validated_data["duration_in_days"]
         instance.duration_in_nights = validated_data["duration_in_nights"]
         instance.tags = validated_data["tags"]
+        instance.starting_point = validated_data["starting_point"]
         instance.save()
 
 
@@ -76,7 +79,7 @@ class TravelAgencyPlacesSerializer(serializers.ModelSerializer):
                 place_id=agency_place['place'],
                 type=agency_place['type'],
                 order=agency_place['order'],
-                day_number = agency_place['day_number']
+                day_number=agency_place['day_number']
             )
             all_agency_places.append(agency_place_obj)
         TravelAgencyPlaces.objects.bulk_create(all_agency_places)
@@ -116,6 +119,7 @@ class TravelCharacteristicsSerializer(serializers.ModelSerializer):
         model = TravelCharacteristics
         fields = "__all__"
 
+
 class TravelAgencyCharacteristicsSerializer(serializers.ModelSerializer):
     # overriding to avoid checks
     travel_agency = serializers.IntegerField(default=0)
@@ -153,4 +157,5 @@ class TravelAgencyCharacteristicsSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def bulk_delete(travel_agency_id, characteristics_ids):
-        TravelAgencyCharacteristics.objects.filter(travel_agency_id=travel_agency_id, travel_characteristics_id__in=characteristics_ids).delete()
+        TravelAgencyCharacteristics.objects.filter(travel_agency_id=travel_agency_id,
+                                                   travel_characteristics_id__in=characteristics_ids).delete()

@@ -105,6 +105,7 @@ class TravelAgencyView(ProductInterface):
              "travel_agency":{
                 duration_in_days: int,
                 duration_in_nights: int,
+                starting_point: string,
                 places: [
                     {
                         'place': string,
@@ -197,6 +198,7 @@ class TravelAgencyView(ProductInterface):
 
             duration_in_days: int,
             duration_in_nights: int,
+            starting_point: string,
             'places': {
                 'add': [
                     {

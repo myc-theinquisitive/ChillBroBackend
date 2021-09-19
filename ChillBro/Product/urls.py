@@ -10,6 +10,8 @@ from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDele
     CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
 from .Hotel.views import AmenitiesList
 from .PG.views import PGAmenitiesList
+from .Dormitory.views import DormitoryAmenitiesList
+from .Resort.views import ResortAmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
@@ -85,6 +87,8 @@ urlpatterns = [
     # urls specific to hotels
     path('product/amenities/', AmenitiesList.as_view()),
     path('product/pg_amenities/', PGAmenitiesList.as_view()),
+    path('product/resort_amenities/', ResortAmenitiesList.as_view()),
+    path('product/dormitory_amenities/', DormitoryAmenitiesList.as_view()),
 
     # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
