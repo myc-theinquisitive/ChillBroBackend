@@ -1,3 +1,4 @@
+import requests
 import json
 from collections import defaultdict
 
@@ -6,12 +7,13 @@ from django.db.models import Subquery, OuterRef, PositiveIntegerField
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from .BaseProduct.serializers import ProductVerificationSerializer, ProductVerificationUpdateInputSerializer
+from .Hotel.helpers import LatLong
 from .product_view import ProductView
 from .serializers import ProductSerializer, IdsListSerializer, NetPriceSerializer, \
     GetProductsBySearchFilters, GetBusinessClientProductsByStatusSerializer
 from .wrapper import filter_seller_ids_by_city, average_rating_query_for_product, get_product_id_wise_average_rating, \
     get_product_id_wise_wishlist_status, get_rating_wise_review_details_for_product, \
-    get_rating_type_wise_average_rating_for_product, get_latest_ratings_for_product
+    get_rating_type_wise_average_rating_for_product, get_latest_ratings_for_product, get_address_id_of_product
 from rest_framework import status, generics
 from .constants import COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, GST_PERCENT, FIXED_FEE_PERCENT
 from .BaseProduct.models import Product, ProductVerification
@@ -19,7 +21,7 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
     IsBusinessClientEntities, IsEmployeeEntities
 from .BaseProduct.constants import ActivationStatus, ProductTypes
 from datetime import datetime
-from .helpers import get_date_format, get_status
+from .helpers import get_date_format, get_status, calculate_distance_between_two_points
 from decimal import Decimal
 from rest_framework.response import Response
 from .Category.models import Category
@@ -106,7 +108,6 @@ def add_verification_details_to_product(products_list):
             "updated_at": product_verification.updated_at.strftime(get_date_format())
         }
 
-
 class BusinessClientProductDetails(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
@@ -157,9 +158,10 @@ class ProductDetail(APIView):
         response_data = self.product_view.update(request.data)
         return Response(data=response_data, status=201)
 
-    def get(self, request, id, format=None, *args):
+    def post(self, request, id, format=None, *args):
+        print(request, 'request data here')
         try:
-            response_data = self.product_view.get(id)
+            response_data = self.product_view.get(id, request)
         except ObjectDoesNotExist:
             return Response({"errors": "Product does not Exist!!!"}, 400)
 
@@ -217,7 +219,7 @@ class GetProductsByCategory(generics.ListAPIView):
         return filter_products.values_list("id", flat=True)
 
     @staticmethod
-    def apply_sort_filter(query_set, sort_filter):
+    def apply_sort_filter(query_set, sort_filter, data):
         if sort_filter == "PRICE_LOW_TO_HIGH":
             return query_set.order_by('discounted_price')
         elif sort_filter == "PRICE_HIGH_TO_LOW":
@@ -230,10 +232,15 @@ class GetProductsByCategory(generics.ListAPIView):
                     output_field=PositiveIntegerField()
                 )
             ).order_by('-average_rating')
+        elif sort_filter == "DISTANCE":
+            if "location" in data:
+                location = data["location"]
+                if "longitude" and "latitude" in location:
+                    return query_set.annotate(distance=distance_for_sort_products(location, 'id')).order_by('distance')
         return query_set
 
     @staticmethod
-    def sort_results(products_response, sort_filter):
+    def sort_results(products_response, sort_filter, data):
         if sort_filter == "PRICE_LOW_TO_HIGH":
             products_response.sort(key=lambda product_response: Decimal(product_response['discounted_price']))
         elif sort_filter == "PRICE_HIGH_TO_LOW":
@@ -242,6 +249,9 @@ class GetProductsByCategory(generics.ListAPIView):
         elif sort_filter == "AVERAGE_RATING":
             products_response.sort(
                 key=lambda product_response: Decimal(product_response['rating']['avg_rating']), reverse=True)
+        elif sort_filter == "DISTANCE":
+            products_response.sort(
+                key=lambda product_response: product_response['distance'])
 
     def recursively_get_lower_level_categories(self, category_ids):
         if not category_ids:
@@ -279,7 +289,7 @@ class GetProductsByCategory(generics.ListAPIView):
             sort_filter = request.data["sort_filter"]
             product_ids = self.apply_filters(all_category_ids, request.data)
             self.queryset = Product.objects.filter(id__in=product_ids)
-            self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
+            self.queryset = self.apply_sort_filter(self.queryset, sort_filter, request.data)
 
             response = super().get(request, args, kwargs)
             response_data = response.data
@@ -287,13 +297,29 @@ class GetProductsByCategory(generics.ListAPIView):
             product_ids = []
             for product in response_data["results"]:
                 product_ids.append(product["id"])
-            response_data["results"] = self.product_view.get_by_ids(product_ids)
-            self.sort_results(response_data["results"], sort_filter)
+            response_data["results"] = self.product_view.get_by_ids(product_ids, request)
+            self.sort_results(response_data["results"], sort_filter, request.data)
             cache.set(cache_key, response_data, timeout=CACHE_TTL)
 
         add_wishlist_status_for_products(request.user.id, response_data["results"])
         return Response(response_data)
 
+
+def distance_for_sort_products(location, product_id):
+    print(location, product_id,'product id from annotate id')
+    source = LatLong(location["latitude"], location["longitude"])
+    destination = get_address_id_of_product(product_id)
+    destination = LatLong(destination["latitude"], destination["longitude"])
+    distance_data = calculate_distance_between_two_points(source, destination)
+    return distance_data['distance']
+
+# 0a0a7110-d8e1-4fae-a6f3-36164ec8722c
+# 1
+# kakinada    hotel id ecb21ca1-38fb-47cd-9363-97f003f13b85
+# rajahmundy  hotel id 279b2862-048b-4563-b46d-77cb6c24cbed
+#  vizag      hotel id 71d300ff-e6d4-4bbf-a91c-8ff63e7e5099
+
+# a79d6a41-0fc4-44b1-895b-136611f97e5f category id
 
 class SearchProducts(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
@@ -462,7 +488,7 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
 class RentalProductsTypes(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        rental_products_types = ["Best Valued","Combo's", "Seasonal Rentals", "New Arrivals"]
+        rental_products_types = ["Best Valued", "Combo's", "Seasonal Rentals", "New Arrivals"]
 
         return Response({"results": rental_products_types}, 200)
 
@@ -484,6 +510,3 @@ class HotelProductsTypes(generics.ListAPIView):
         hotel_products_types = ["Near By You", "Trending", "Budget", "All Hotels"]
 
         return Response({"results": hotel_products_types}, 200)
-
-
-

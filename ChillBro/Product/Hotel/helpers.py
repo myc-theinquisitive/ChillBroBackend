@@ -11,7 +11,7 @@ def image_upload_to_amenities(instance, filename):
     return "static/images/Amenities/%s/%s" % (slug, new_filename)
 
 
-class Point:
+class LatLong:
     def __init__(self, latitude, longitude):
         self.longitude = longitude
         self.latitude = latitude

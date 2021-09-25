@@ -6,7 +6,9 @@ from ReviewsRatings.exportapi import average_rating_query_for_secondary_related_
     get_secondary_related_id_wise_average_rating, get_rating_stats_for_secondary_related_id, \
     get_rating_type_wise_average_rating_for_secondary_related_id, get_latest_ratings_for_secondary_related_id
 from WishList.exportapis import get_wishlist_product_ids
-from  django.conf import settings
+from django.conf import settings
+from .models import Product
+
 
 def get_booked_count_of_product_id(product_id, from_date, to_date):
     return booked_count_of_product_id(product_id, from_date, to_date)
@@ -19,7 +21,6 @@ def is_entity_id_valid(entity_id):
 
 
 def get_seller_id_wise_seller_details(seller_ids):
-
     sellers_details = get_entity_details_for_entity_ids(seller_ids)
     seller_id_wise_seller_details = defaultdict(dict)
     for seller_details in sellers_details:
@@ -68,3 +69,25 @@ def get_rating_type_wise_average_rating_for_product(product_id):
 
 def get_latest_ratings_for_product(product_id):
     return get_latest_ratings_for_secondary_related_id(product_id)
+
+
+def get_address_id_of_product(product_id):
+    try:
+        products = Product.objects.filter(id__in=product_id) # .values_list('seller_id')
+        entity_ids = []
+        entity_product = {}
+        for product in products:
+            entity_product[product.seller_id] = product.id
+            entity_ids.append(product.seller_id)
+
+        entity_details = get_entity_details_for_entity_ids(entity_ids)
+        if len(entity_details) != 0:
+            for entity in entity_details:
+                entity_product[entity['id']] = entity['address']
+
+
+
+            return product_ids, list(map(lambda x: x['address'], entity_details))
+        return None
+    except Product.DoesNotExist:
+        return None

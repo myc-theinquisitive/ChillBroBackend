@@ -491,7 +491,8 @@ class ProductView(ProductInterface):
 
         return product_id_wise_combo_products_dict
 
-    def get(self, product_id):
+    def get(self, product_id, request):
+        print(request.data,'request data in first func')
         self.product_object = Product.objects.select_related("category", "category_product").get(id=product_id)
         self.initialize_product_class(None)
 
@@ -529,13 +530,13 @@ class ProductView(ProductInterface):
                 "name": ""
             }
 
-        product_specific_data = self.product_specific_view.get(self.product_object.id)
+        product_specific_data = self.product_specific_view.get(self.product_object.id, request)
         product_specific_data.pop("product", None)
         product_data[self.product_specific_key] = product_specific_data
 
         return product_data
 
-    def get_by_ids(self, product_ids):
+    def get_by_ids(self, product_ids, request):
         from .views import add_average_rating_for_products
 
         products = Product.objects.select_related("category").filter(id__in=product_ids)
@@ -581,7 +582,7 @@ class ProductView(ProductInterface):
             for product_dict in group_products_by_type[type]:
                 product_specific_ids.append(product_dict["id"])
 
-            product_specific_data = product_specific_view.get_by_ids(product_specific_ids)
+            product_specific_data = product_specific_view.get_by_ids(product_specific_ids, request)
 
             # combine product data with product specific data
             product_id_product_specific_data_dict = defaultdict(dict)

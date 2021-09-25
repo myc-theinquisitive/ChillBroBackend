@@ -1,5 +1,3 @@
-import requests
-import json
 from datetime import datetime
 from math import ceil
 from typing import List, Dict
@@ -13,16 +11,19 @@ from ChillBro.constants import PriceTypes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .helpers import Point
+from .helpers import LatLong
 from .models import Amenities, HotelRoom, HotelAvailableAmenities
 from .serializers import AmenitiesSerializer, HotelAvailableAmenitiesSerializer, HotelRoomSerializer, \
     HotelAvailableAmenitiesUpdateSerializer
-from .wrapper import get_latitude_longitude, get_multiple_latitude_longitude
+from .wrapper import get_latitude_longitude
 from ..BaseProduct.models import Product
+from ..helpers import calculate_distance_between_two_points, calculate_distance_between_multiple_points
 from ..product_interface import ProductInterface
 from collections import defaultdict
 from django.conf import settings
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsGet
+
+from ..wrapper import get_address_id_of_product
 
 
 def validate_amenity_ids(amenity_ids: List[int]) -> (bool, List[int]):
@@ -267,7 +268,13 @@ class HotelView(ProductInterface):
         # response.pop("product", None)
         return response
 
-    def get(self, product_id):
+    def get(self, product_id, request):
+        """
+        :param request: "location":{
+                "longitude":int,
+                "latitude":int
+            }
+        """
         self.hotel_room_object = HotelRoom.objects.get(product_id=product_id)
         self.initialize_product_class(None)
 
@@ -283,9 +290,27 @@ class HotelView(ProductInterface):
             available_amenities_data.append(available_amenity_data)
 
         hotel_room_data["available_amenities"] = available_amenities_data
+
+        hotel_room_data["distance"] = None
+        hotel_room_data['duration'] = None
+
+        if "location" in request.data:
+            print("location" in request.data,"location in request.data")
+            location = request.data["location"]
+            if "longitude" and "latitude" in location:
+                source = LatLong(location["latitude"], location["longitude"])
+                destination = get_address_id_of_product([product_id])
+                if(not destination):
+                    return hotel_room_data
+                destination=destination[0]
+                destination = LatLong(destination["latitude"], destination["longitude"])
+                distance_data = calculate_distance_between_two_points(source, destination)
+                hotel_room_data["distance"] = distance_data['distance']
+                hotel_room_data['duration'] = distance_data['duration']
         return hotel_room_data
 
-    def get_by_ids(self, product_ids):
+    def get_by_ids(self, product_ids, request):
+        print(request.data,'request.data')
         hotel_rooms = HotelRoom.objects.filter(product_id__in=product_ids)
 
         hotel_rooms_serializer = HotelRoomSerializer(hotel_rooms, many=True)
@@ -303,6 +328,23 @@ class HotelView(ProductInterface):
             available_amenity_data = self.convert_available_amenities_to_dict(available_amenity)
             hotel_room_wise_available_amenities_dict[available_amenity.hotel_room_id].append(
                 available_amenity_data)
+
+        if "location" in request.data:
+            print("location" in request.data,"location in request.data")
+            location = request.data["location"]
+            if "longitude" and "latitude" in location:
+                source = LatLong(location["latitude"], location["longitude"])
+                # calculate_distance_between_multiple_points()
+
+                destination_address_ids = get_address_id_of_product(product_ids)
+                print(destination_address_ids,'distination object')
+                if destination_address_ids:
+                    destination_points = list(map(lambda x: LatLong(x['latitude'], x['longitude']), destination_address_ids))
+                    distance_data = calculate_distance_between_multiple_points(source, destination_points)
+                    for hotel_room_data in hotel_rooms_data:
+                        distance_item = distance_data.pop(0)
+                        hotel_room_data["distance"] = distance_item["distance"]
+                        hotel_room_data["dduration"] = distance_item["duration"]
 
         for hotel_room_data in hotel_rooms_data:
             hotel_room_data["available_amenities"] = hotel_room_wise_available_amenities_dict[hotel_room_data["id"]]
@@ -383,41 +425,6 @@ class HotelView(ProductInterface):
         return is_valid, errors
 
 
-
-
-def calculate_distance_between_two_points(point1, point2):
-    p1_longitude = point1.longitude
-    p1_latitude = point1.latitude
-    p2_longitude = point2.longitude
-    p2_latitude = point2.latitude
-    response = requests.get(
-        'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + p1_latitude + ',' + p1_longitude + '&destinations=' + p2_latitude + ',' + p2_longitude + '&key=AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos')
-    dic = response.json()
-    print(dic)
-    distance = dic['rows'][0]['elements'][0]['distance']['value']
-    duration = dic['rows'][0]['elements'][0]['duration']['value']
-    return {'distance': distance, 'duration': duration}
-
-
-def calculate_distance_between_multiple_points(source_point, destination_points):
-    p1_longitude = source_point.longitude
-    p1_latitude = source_point.latitude
-
-    destinations_string = ''
-    for point in destination_points:
-        destinations_string += point.latitude + ',' + point.longitude + '|'
-
-    response = requests.get(
-        'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + p1_latitude + ',' + p1_longitude + '&destinations=' + destinations_string + '&key=AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos')
-    dic = response.json()
-    all_distances = []
-    for destination in dic['rows'][0]['elements']:
-        distance = destination['distance']['value']
-        duration = destination['duration']['value']
-        all_distances.append({'distance': distance, 'duration': duration})
-    return all_distances
-
-
 class FindDistance(APIView):
 
     def get(self, request):
@@ -433,8 +440,8 @@ class FindDistance(APIView):
             "duration": 34002
             }
         """
-        p1 = Point(request.data['p1_lat'], request.data['p1_lon'])
-        p2 = Point(request.data['p2_lat'], request.data['p2_lon'])
+        p1 = LatLong(request.data['p1_lat'], request.data['p1_lon'])
+        p2 = LatLong(request.data['p2_lat'], request.data['p2_lon'])
         return Response(calculate_distance_between_two_points(p1, p2))
 
 
@@ -465,7 +472,6 @@ class FindDistanceForMultipleAddress(APIView):
 
     def get(self, request):
         """
-
         :param {
                 "source":"f408c10d-c7eb-4ae9-9720-594822eef019",
                 "destination":["1","f408c10d-c7eb-jd98-9720-594822jf9019"]
