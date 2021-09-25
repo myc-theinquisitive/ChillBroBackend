@@ -67,6 +67,43 @@ class MailOrPhoneNumberExists(APIView):
             return Response({"message": "Email or Phone Number already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ResendSignupOtp(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
+        email = request.data['email'] if 'email' in request.data else None
+
+        if not phone_number and not email:
+            return Response({'message':'Phone Number or Mail is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = get_user_model().objects.get(email=email)
+            if user.is_verified:
+                content = {'message': 'User already verified.'}
+                return Response(content, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                if email:
+                    user = get_user_model().objects.get(email=email)
+                elif phone_number:
+                    user = get_user_model().objects.get(phone_number=phone_number)
+                signup_code = SignupCode.objects.get(user=user)
+                signup_code.delete()
+                ipaddr = self.request.META.get('REMOTE_ADDR', '0.0.0.0')
+                signup_code = SignupCode.objects.create_signup_code(user, ipaddr)
+                if email:
+                    send_multi_format_email('welcome_email', {'email': email, }, target_email=email)
+                if phone_number:
+                    sendOTP(signup_code, phone_number)
+                return Response({'success': True, 'message':"OTP is resent."})
+        except get_user_model().DoesNotExist:
+            content = {'success': False, 'message': "User doesn't exist."}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+        except SignupCode.DoesNotExist:
+            content = {'success': False, 'message': "Signup code doesn't exist."}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+        return
+
+
 class Signup(APIView):
     permission_classes = (AllowAny,)
     mail_serializer_class = MailSignUpSerializer
@@ -208,17 +245,24 @@ class SignupVerify(APIView):
 
         try:
             signup_code = SignupCode.objects.get(code=code, user_id=user_id)
+            now = timezone.now()
+            if now >= signup_code.expiry_time:
+                return Response({"success": False, "message": "OTP has been expired"},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+
             signup_code.user.is_verified = True
             signup_code.user.save()
             user = signup_code.user
+
             signup_code.delete()
 
             response = Response(status=status.HTTP_200_OK)
             response = generate_cookie(user, response)
-            response.data = {'message': 'User verified successfully'}
+            response.data = {"success": True, 'message': 'User verified successfully'}
             return response
         except SignupCode.DoesNotExist:
-            content = {'message': 'Unable to verify user'}
+            content = {"success": False, 'message': 'Unable to verify user, Incorrect OTP'}
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -11,10 +11,10 @@ logger = get_task_logger(__name__)
 
 @task(name="send_email")
 def send_multi_format_email(template_prefix, template_ctxt, target_email):
-    current_time = datetime.utcnow()
-    current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
-    debug_task.apply_async((), eta=current_time + timedelta(seconds=50))
-    logger.info("Sent feedback email" + str(current_time))
+    # current_time = datetime.utcnow()
+    # current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
+    # debug_task.apply_async((), eta=current_time + timedelta(seconds=50))
+    # logger.info("Sent feedback email" + str(current_time))
 
     subject_file = 'authentication/%s_subject.txt' % template_prefix
     txt_file = 'authentication/%s.txt' % template_prefix
