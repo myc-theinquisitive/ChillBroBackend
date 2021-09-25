@@ -233,7 +233,7 @@ class AutoDateTimeField(models.DateTimeField):
         return timezone.now()
 
 class OTPCode(models.Model):
-    phone = models.CharField('phone_number', max_length=10, unique=True,
+    phone_number = models.CharField('phone_number', max_length=10, unique=True,
                              validators=[MinLengthValidator(10), validate_phone])
     otp = models.TextField(max_length=6, default=random_string)
     time = models.DateTimeField(default=timezone.now)
