@@ -233,11 +233,10 @@ class AutoDateTimeField(models.DateTimeField):
         return timezone.now()
 
 class OTPCode(models.Model):
-    phone_number = models.CharField('phone_number', max_length=10, unique=True,
-                             validators=[MinLengthValidator(10), validate_phone])
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     otp = models.TextField(max_length=6, default=random_string)
     time = models.DateTimeField(default=timezone.now)
     expiry_time = models.DateTimeField(default=get_expiry_time)
 
     def __str__(self):
-        return self.phone
+        return self.user
