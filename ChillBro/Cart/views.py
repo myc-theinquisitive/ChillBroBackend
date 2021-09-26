@@ -241,6 +241,110 @@ def convert_sizes_list_to_dict(list_of_sizes):
     return dict_of_sizes
 
 
+def check_availability_of_product(new_product_details, user_id):
+    required_objects = defaultdict()
+    product_id = new_product_details['product_id']
+    quantity = new_product_details['quantity']
+    size = convert_sizes_list_to_dict(new_product_details['sizes'])
+    combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(
+        new_product_details['combo_product_details'])
+    transport_details = new_product_details['transport_details']
+
+    entity_id, entity_type = check_valid_product(product_id)
+    if entity_id is None and entity_type is None:
+        return False, "Invalid Product"
+    required_objects["entity_id"] = entity_id
+    required_objects["entity_type"] = entity_type
+
+    product_ids = [product_id]
+    product_details = get_product_id_wise_product_details(product_ids)
+    required_objects["product_details"] = product_details
+    required_objects["product_id"] = product_id
+    required_objects["quantity"] = quantity
+    required_objects["size"] = size
+    required_objects["transport_details"] = transport_details
+
+    is_valid, errors = is_product_valid(product_details, product_id, quantity, size, combo_product_details)
+    if not is_valid:
+        return is_valid, errors
+
+    is_valid, errors = check_valid_duration([product_id], new_product_details['start_time'], \
+                                            new_product_details['end_time'])
+    if not is_valid:
+        return is_valid, errors
+
+    if len(transport_details) > 0:
+        if transport_details['km_limit_choosen'] > 0:
+            if transport_details['km_limit_choosen'] not in \
+                    product_details[product_id]['transport_details']['price_details']:
+                return False, "Invalid km limit choosen"
+
+        is_valid, errors = check_valid_address(transport_details['pickup_location'])
+        if not is_valid:
+            return is_valid, errors
+        is_valid, errors = check_valid_address(transport_details['drop_location'])
+        if not is_valid:
+            return is_valid, errors
+
+    all_product_ids, products = combine_all_products(product_id, size, quantity, \
+                                                     combo_product_details, product_details)
+    required_objects["products"] = products
+
+    cart = None
+    try:
+        cart = Cart.objects.get(entity_id=entity_id, entity_type=entity_type, \
+                                start_time=new_product_details['start_time'], \
+                                end_time=new_product_details['end_time'], created_by=user_id)
+        is_cart_exist = True
+    except ObjectDoesNotExist:
+        is_cart_exist = False
+    required_objects["is_cart_exist"] = is_cart_exist
+
+    if not is_cart_exist:
+        is_valid, errors = check_valid_booking(products, new_product_details['start_time'], \
+                                               new_product_details['end_time'])
+    else:
+        cart_products = CartProducts.objects.filter(cart=cart, product_id__in=all_product_ids)
+        all_cart_products = []
+
+        for each_product in cart_products:
+            if each_product.product_id == product_id and each_product.parent_cart_product_id is None:
+                return False, "Product already exists in cart"
+
+            if not each_product.is_combo and not each_product.has_sub_products:
+                all_cart_products.append(
+                    {
+                        "product_id": each_product.product_id,
+                        "quantity": each_product.quantity,
+                        "size": each_product.size
+                    }
+                )
+        all_cart_products += products
+        is_valid, errors = check_valid_booking(combine_products(all_cart_products), \
+                                               new_product_details['start_time'], \
+                                               new_product_details['end_time'])
+
+    if is_valid:
+        return is_valid, required_objects
+    return is_valid, errors
+
+
+class CheckAvailability(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        input_serializer = AddProductToCartSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't add product to cart", "errors": input_serializer.errors}, 400)
+
+        is_valid, required_objects = \
+            check_availability_of_product(request.data, request.user)
+
+        if not is_valid:
+            return Response({"message": "Product not available!!", "errors": required_objects}, 400)
+        return Response({"message": "Product is available"}, 200)
+
+
 class AddProductToCart(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -308,100 +412,43 @@ class AddProductToCart(APIView):
         if not input_serializer.is_valid():
             return Response({"message": "Can't add product to cart", "errors": input_serializer.errors}, 400)
 
-        product_id = request.data['product_id']
-        quantity = request.data['quantity']
-        size = convert_sizes_list_to_dict(request.data['sizes'])
-        combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(
-            request.data['combo_product_details'])
-        transport_details = request.data['transport_details']
-        entity_id, entity_type = check_valid_product(product_id)
+        is_valid, required_objects = \
+            check_availability_of_product(request.data, request.user)
 
-        # TODO: Move all validation things to a function
-        if entity_id is None and entity_type is None:
-            return Response({"message": "Can't add product to cart", "errors": "Invalid Product"})
-
-        product_ids = [product_id]
-        product_details = get_product_id_wise_product_details(product_ids)
-
-        is_valid, errors = is_product_valid(product_details, product_id, quantity, size, combo_product_details)
         if not is_valid:
-            return Response({"message": "Can't add product to cart", "errors": errors})
+            return Response({"message": "Can't add product to cart", "errors": required_objects}, 400)
 
-        is_valid, errors = check_valid_duration([product_id], request.data['start_time'], request.data['end_time'])
-        if not is_valid:
-            return Response({"message": "Can't add product to cart", "errors": errors})
-
-        # TODO: allow null for transport details so that from front end we don't need to send them every time
-        if len(transport_details) > 0:
-            if transport_details['km_limit_choosen'] > 0:
-                if transport_details['km_limit_choosen'] not in \
-                        product_details[product_id]['transport_details']['price_details']:
-                    return Response({"message": "Can't Add Product to Cart", "errors": "Invalid km limit choosen"}, 400)
-
-            is_valid, errors = check_valid_address(transport_details['pickup_location'])
-            if not is_valid:
-                return Response({"message": "Can't add product to cart", "errors": errors})
-            is_valid, errors = check_valid_address(transport_details['drop_location'])
-            if not is_valid:
-                return Response({"message": "Can't add product to cart", "errors": errors})
-
-        all_product_ids, products = combine_all_products(product_id, size, quantity,
-                                                         combo_product_details, product_details)
-
-        cart = None
-        try:
-            cart = Cart.objects.get(entity_id=entity_id, entity_type=entity_type, start_time=request.data['start_time'],
-                                    end_time=request.data['end_time'], created_by=request.user)
-            is_cart_exist = True
-        except ObjectDoesNotExist:
-            is_cart_exist = False
-
-        if not is_cart_exist:
-            is_valid, errors = check_valid_booking(products, request.data['start_time'], request.data['end_time'])
-        else:
-            cart_products = CartProducts.objects.filter(cart=cart, product_id__in=all_product_ids)
-            all_cart_products = []
-
-            for each_product in cart_products:
-                if each_product.product_id == product_id and each_product.parent_cart_product_id is None:
-                    return Response({"message": "Product already exists in cart", "cart_id": cart.id}, 200)
-
-                if not each_product.is_combo and not each_product.has_sub_products:
-                    all_cart_products.append(
-                        {
-                            "product_id": each_product.product_id,
-                            "quantity": each_product.quantity,
-                            "size": each_product.size
-                        }
-                    )
-            all_cart_products += products
-            is_valid, errors = check_valid_booking(combine_products(all_cart_products), request.data['start_time'],
-                                                   request.data['end_time'])
-        if not is_valid:
-            return Response({"message": "Can't add product to cart", "errors": errors}, 400)
-
-        if not is_cart_exist:
+        if not required_objects["is_cart_exist"]:
             serializer = CartSerializer()
             cart = serializer.create(
                 {
-                    'entity_id': entity_id,
-                    'entity_type': entity_type,
+                    'entity_id': required_objects["entity_id"],
+                    'entity_type': required_objects["entity_type"],
                     'start_time': request.data['start_time'],
                     'end_time': request.data['end_time'],
                     'created_by': request.user
                 }
             )
+        else:
+            cart = Cart.objects.get(entity_id=required_objects["entity_id"], \
+                                    entity_type=required_objects["entity_type"], \
+                                    start_time=request.data['start_time'], \
+                                    end_time=request.data['end_time'], created_by=request.user)
 
-        add_products_to_cart(products, product_id, quantity, size, cart, product_details, transport_details)
+        add_products_to_cart(required_objects["products"], required_objects["product_id"], required_objects["quantity"], \
+                             required_objects["size"], cart, \
+                             required_objects["product_details"], required_objects["transport_details"])
 
         return Response({"message": "Product added to cart successfully", "cart_id": cart.id}, 200)
 
 
-class UpdateCartProductQuantity(APIView):
+class UpdateCartProduct(APIView):
     permission_classes = (IsAuthenticated,)
 
     # TODO: Use serializer for validating the data and move all validations to a separate function
     def put(self, request, *args, **kwargs):
+        start_time = request.data['start_time']
+        end_time = request.data['end_time']
         product_id = request.data['product_id']
         quantity = request.data['quantity']
         size = convert_sizes_list_to_dict(request.data['sizes'])
@@ -447,11 +494,21 @@ class UpdateCartProductQuantity(APIView):
                 })
         all_cart_products += products
 
-        is_valid, errors = check_valid_booking(combine_products(all_cart_products),
-                                               cart_product.cart.start_time.strftime(get_date_format()),
-                                               cart_product.cart.end_time.strftime(get_date_format()))
+        is_valid, errors = check_valid_booking(combine_products(all_cart_products), start_time, end_time)
         if not is_valid:
             return Response({"message": "Can't update the product quantity", "errors": errors}, 400)
+
+        try:
+            new_cart = Cart.objects.get(entity_id=cart_product.cart.entity_id, \
+                                        entity_type=cart_product.cart.entity_type, \
+                                        start_time=request.data['start_time'], \
+                                        end_time=request.data['end_time'], created_by=request.user)
+        except ObjectDoesNotExist:
+            cart_serializer = CartSerializer()
+            new_cart = cart_serializer.create({'entity_id': cart_product.cart.entity_id, \
+                                               'entity_type': cart_product.cart.entity_type, \
+                                               'start_time': request.data['start_time'], \
+                                               'end_time': request.data['end_time'], 'created_by': request.user})
 
         is_product_with_sizes = 0
         if product_details[product_id]["is_combo"]:
@@ -476,7 +533,7 @@ class UpdateCartProductQuantity(APIView):
         cart = cart_product[0].cart
         cart_product = cart_product[0]
 
-        if "transport_details" in request.data:
+        if request.data['is_transport']:
             transport_details = request.data["transport_details"]
         else:
             transport_details = {}
@@ -496,26 +553,29 @@ class UpdateCartProductQuantity(APIView):
                 elif product_details[product_id]["has_sub_products"]:
                     sub_products_details = product_details[product_id]["sub_products"]
                 if each_product.parent_cart_product is None:
-                    update_cart_products.append({"id": each_product.id, "quantity": quantity, "size": None})
+                    update_cart_products.append({"id": each_product.id, "cart": new_cart, \
+                                                 "quantity": quantity, "size": None})
                 else:
                     update_cart_products.append(
                         {
                             "id": each_product.id,
+                            "cart": new_cart,
                             "quantity": quantity * sub_products_details[each_product.product_id]['quantity'],
                             "size": None
                         }
                     )
             bulk_update_serializer = CartProductsSerializer()
             bulk_update_serializer.bulk_update(update_cart_products)
-
-            previous_transport_data = TransportDetails.objects.get(cart_product=cart_product)
-            if transport_details['is_pickup_location_updated']:
-                update_address_details(previous_transport_data.pickup_location, transport_details['pickup_location'])
-            if transport_details['is_drop_location_updated']:
-                update_address_details(previous_transport_data.drop_location, transport_details['drop_location'])
-            previous_transport_data.trip_type = transport_details['trip_type']
-            previous_transport_data.km_limit_choosen = transport_details['km_limit_choosen']
-            previous_transport_data.save()
+            
+            if request.data['is_transport']:
+                previous_transport_data = TransportDetails.objects.get(cart_product=cart_product)
+                if transport_details['is_pickup_location_updated']:
+                    update_address_details(previous_transport_data.pickup_location, transport_details['pickup_location'])
+                if transport_details['is_drop_location_updated']:
+                    update_address_details(previous_transport_data.drop_location, transport_details['drop_location'])
+                previous_transport_data.trip_type = transport_details['trip_type']
+                previous_transport_data.km_limit_choosen = transport_details['km_limit_choosen']
+                previous_transport_data.save()
 
         return Response(
             {"message": "Product Quantity is updated to {} and size is updated to {}".format(quantity, size)}, 200)

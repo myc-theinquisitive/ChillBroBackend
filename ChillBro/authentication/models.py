@@ -178,6 +178,7 @@ class AbstractBaseCode(models.Model):
             'last_name': self.user.last_name,
             'code': self.code
         }
+        # send_multi_format_email.delay(prefix, ctxt, target_email=self.user.email)
         send_multi_format_email(prefix, ctxt, target_email=self.user.email)
 
     def __str__(self):
@@ -216,6 +217,7 @@ class EmailChangeCode(AbstractBaseCode):
             'code': self.code
         }
 
+        # send_multi_format_email.delay(prefix, ctxt, target_email=self.email)
         send_multi_format_email(prefix, ctxt, target_email=self.email)
 
 
