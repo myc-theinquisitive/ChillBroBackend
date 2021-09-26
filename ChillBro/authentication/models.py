@@ -18,6 +18,10 @@ from django.db import IntegrityError
 EXPIRY_PERIOD = 3  # days
 
 
+def get_expiry_time():
+    return timezone.now() + timedelta(minutes=1)
+
+
 def _generate_code(length=None):
     if length:
         return binascii.hexlify(os.urandom(20)).decode('utf-8')[:length]
@@ -68,7 +72,7 @@ class EmailAbstractUser(AbstractBaseUser, PermissionsMixin):
     Email and password are required. Other fields are optional.
     """
     first_name = models.CharField(_('first name'), max_length=30, blank=True)
-    last_name = models.CharField(_('last name'), max_length=30, blank=True)
+    last_name = models.CharField(_('last name'), max_length=30, blank=True, null=True)
     email = models.EmailField(_('email address'), max_length=255, unique=True, null=True, blank=True)
     is_staff = models.BooleanField(
         _('staff status'), default=False,
@@ -167,6 +171,7 @@ class AbstractBaseCode(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     code = models.CharField(_('code'), max_length=40, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    expiry_time = models.DateTimeField(default=get_expiry_time)
 
     class Meta:
         abstract = True
@@ -229,17 +234,11 @@ class AutoDateTimeField(models.DateTimeField):
     def pre_save(self, model_instance, add):
         return timezone.now()
 
-
-def get_expiry_time():
-    return timezone.now() + timedelta(minutes=5)
-
-
 class OTPCode(models.Model):
-    phone = models.CharField('phone_number', max_length=10, unique=True,
-                             validators=[MinLengthValidator(10), validate_phone])
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     otp = models.TextField(max_length=6, default=random_string)
     time = models.DateTimeField(default=timezone.now)
     expiry_time = models.DateTimeField(default=get_expiry_time)
 
     def __str__(self):
-        return self.phone
+        return self.user

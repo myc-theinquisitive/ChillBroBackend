@@ -141,7 +141,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-IS_SERVER = True
+IS_SERVER = False
 
 if IS_SERVER:
     DEBUG = True
@@ -233,6 +233,9 @@ else:
     STATIC_ROOT = 'static/'
 
     ALLOWED_HOSTS = []
+
+    EMAIL_FROM = 'myc.theinquisitive@gmail.com'
+    EMAIL_BCC = 'team.theinquisitive@gmail.com'  # Any mail for BCC can be given
 
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'

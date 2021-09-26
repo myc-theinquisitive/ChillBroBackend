@@ -46,11 +46,12 @@ class Profile(APIView):
         user = request.user
         profile_serializer = self.serializer_class(data=request.data)
         if not profile_serializer.is_valid():
-            return Response(profile_serializer.errors)
+            return Response(profile_serializer.errors, 400)
         user.first_name = request.data['first_name']
-        user.last_name = request.data['last_name']
+        user.last_name = request.data['last_name'] if 'last_name' in request.data else None
         user.gender = request.data['gender']
         user.set_password(request.data['password'])
+        user.phone_number = request.data['phone_number'] if 'phone_number' in request.data else None
         user.backup_email = request.data['backup_email'] if 'backup_email' in request.data else None
         user.backup_phone_number = request.data['backup_phone_number'] if 'backup_phone_number' in request.data else None
         user.save()
