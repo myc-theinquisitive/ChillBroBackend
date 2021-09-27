@@ -37,6 +37,7 @@ urlpatterns = [
     path('<str:pk>/', EntityDetail.as_view(), name='entity_detail'),
 
     # urls for user
+
     path('category/<str:slug>/', GetEntitiesBySubType.as_view()),
     path('user/<str:pk>/', GetEntitiesDetailsForUser.as_view()),
 ]

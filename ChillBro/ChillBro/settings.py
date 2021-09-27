@@ -234,6 +234,9 @@ else:
 
     ALLOWED_HOSTS = []
 
+    EMAIL_FROM = 'myc.theinquisitive@gmail.com'
+    EMAIL_BCC = 'team.theinquisitive@gmail.com'  # Any mail for BCC can be given
+
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'
     # EMAIL_PORT = os.environ.get('AUTHEMAIL_EMAIL_PORT') or 587

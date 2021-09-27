@@ -2,19 +2,20 @@ from django.urls import path
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
     ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories, \
-    HotelProductsTypes, HotelEntityProducts
+    HotelProductsTypes, HotelEntityProducts, HireADriverHomePage, HireADriverYearsFilter
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
-    CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail
-from .Hotel.views import AmenitiesList, FindDistance, FindDistanceByAddress, FindDistanceForMultipleAddress
+    CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
+from .Hotel.views import AmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
-    VehicleCharacteristicsDetail
+    VehicleCharacteristicsDetail, GetVehicleTypesDetailsByCategory, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
 from .TravelPackageVehicle.views import TravelPackageVehiclesList
 from  .TravelAgency.views import TravelCharacteristicsList,TravelCharacteristicsDetail
+
 
 urlpatterns = [
 
@@ -34,6 +35,8 @@ urlpatterns = [
 
     # urls for vehicle
     path('vehicle/type/', VehicleTypeList.as_view()),
+    path('vehicle/type/category/<str:category_name>/', GetVehicleTypesByCategory.as_view()),
+    path('vehicle/type/complete_details/category/<str:category_name>/', GetVehicleTypesDetailsByCategory.as_view()),
     path('vehicle/type/<str:pk>/', VehicleTypeDetail.as_view()),
 
     path('vehicle/characteristics/', VehicleCharacteristicsList.as_view()),
@@ -78,9 +81,6 @@ urlpatterns = [
 
     # urls specific to hotels
     path('product/amenities/', AmenitiesList.as_view()),
-    path('product/distance/', FindDistance.as_view()),
-    path('product/distance/address/', FindDistanceByAddress.as_view()),
-    path('product/distance/multiple-address/', FindDistanceForMultipleAddress.as_view()),
 
     # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
@@ -89,6 +89,8 @@ urlpatterns = [
     path('product/rental_products_types/', RentalProductsTypes.as_view()),
     path('product/hotel_products_types/', HotelProductsTypes.as_view()),
     path('product/entity/<str:seller_id>/',HotelEntityProducts.as_view()),
+    path('product/hire_a_driver_home_page/',HireADriverHomePage.as_view()),
+    path('product/hire_a_driver_years_filter/', HireADriverYearsFilter.as_view()),
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),

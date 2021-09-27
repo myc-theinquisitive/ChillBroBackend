@@ -29,15 +29,17 @@ class CartProductsSerializer(serializers.ModelSerializer):
         return CartProducts.objects.bulk_create(new_products)
 
     def bulk_update(self, validated_data):
+        print("validated_date", validated_data)
         cart_products = []
         for each_cart_product in validated_data:
             update_cart_product_quantity = CartProducts(
                 id=each_cart_product['id'],
+                cart = each_cart_product['cart'],
                 quantity=each_cart_product['quantity'],
                 size=each_cart_product['size']
             )
             cart_products.append(update_cart_product_quantity)
-        return CartProducts.objects.bulk_update(cart_products, ['quantity', 'size'])
+        return CartProducts.objects.bulk_update(cart_products, ['cart','quantity', 'size'])
 
 
 class TransportDetailsSerializer(serializers.ModelSerializer):
@@ -59,7 +61,7 @@ class AddProductToCartSerializer(serializers.Serializer):
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     # TODO: add validation for transport details and other inputs for add to cart
-    transport_details = AddtoCartTransportDetailsSerializer(allow_null=True)
+    # transport_details = AddtoCartTransportDetailsSerializer(allow_null=True)
 
 
 class CheckoutCartSerializer(serializers.Serializer):

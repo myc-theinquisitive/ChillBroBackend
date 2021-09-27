@@ -5,33 +5,33 @@ from .views import *
 
 
 urlpatterns = [
-    path('mail-signup/', Signup.as_view(),{"mail":True,"phone":False}, name='authemail-signup'),
-    path('phone-signup/', Signup.as_view(),{"mail":False,"phone":True}, name='authemail-signup'),
-    path('signup/verify/', SignupVerify.as_view(),
-         name='authemail-signup-verify'),
+    # signup
+    path('signup-validate/', MailOrPhoneNumberExists.as_view()),
+    path('resend-signup-otp/',ResendSignupOtp.as_view()),
+    path('mail-signup/', Signup.as_view(), {"mail": True, "phone": False}),
+    path('phone-signup/', Signup.as_view(), {"mail": False, "phone": True}),
+    path('signup/verify/', SignupVerify.as_view()),
 
-    path('login/', Login.as_view(), name='authemail-login'),
-    path('logout/', Logout.as_view(), name='authemail-logout'),
+    path('login/', Login.as_view()),
+    path('logout/', Logout.as_view()),
 
-    path('password/reset/', PasswordReset.as_view(),
-         name='authemail-password-reset'),
-    path('password/reset/verify/', PasswordResetVerify.as_view(),
-         name='authemail-password-reset-verify'),
-    path('password/reset/verified/', PasswordResetVerified.as_view(),
-         name='authemail-password-reset-verified'),
+    # Password Change
+    path('password/reset/', PasswordReset.as_view()),
+    path('password/reset/verify/', PasswordResetVerify.as_view()),
+    path('password/reset/verified/', PasswordResetVerified.as_view()),
 
-    path('email/change/', EmailChange.as_view(),
-         name='authemail-email-change'),
-    path('email/change/verify/', EmailChangeVerify.as_view(),
-         name='authemail-email-change-verify'),
+    # Email Change
+    path('email/change/', EmailChange.as_view()),
+    path('email/change/verify/', EmailChangeVerify.as_view()),
 
-    path('password/change/', PasswordChange.as_view(),
-         name='authemail-password-change'),
+    # Profile
+    path('users/me/', UserMe.as_view()),
+    path('password/change/', PasswordChange.as_view()),
 
-    path('users/me/', UserMe.as_view(), name='authemail-me'),
-    path('otp/login/',OTPLogin.as_view(),name='otplogin'),
-    path('otp/validate/',OTPValidate.as_view(),name='otpvalidate'),
-    path('otp/resend/',OTPResend.as_view(),name='otpresend')
+    # OTP login
+    path('otp/login/', OTPLogin.as_view()),
+    path('otp/validate/', OTPValidate.as_view()),
+    path('otp/resend/', OTPResend.as_view())
 ]
 
 
