@@ -295,14 +295,14 @@ class HotelView(ProductInterface):
         hotel_room_data['duration'] = None
 
         if "location" in request.data:
-            print("location" in request.data,"location in request.data")
+            print("location" in request.data, "location in request.data")
             location = request.data["location"]
             if "longitude" and "latitude" in location:
                 source = LatLong(location["latitude"], location["longitude"])
                 destination = get_address_id_of_product([product_id])
-                if(not destination):
+                if (not destination):
                     return hotel_room_data
-                destination=destination[0]
+                destination = destination[0]
                 destination = LatLong(destination["latitude"], destination["longitude"])
                 distance_data = calculate_distance_between_two_points(source, destination)
                 hotel_room_data["distance"] = distance_data['distance']
@@ -310,7 +310,7 @@ class HotelView(ProductInterface):
         return hotel_room_data
 
     def get_by_ids(self, product_ids, request):
-        print(request.data,'request.data')
+
         hotel_rooms = HotelRoom.objects.filter(product_id__in=product_ids)
 
         hotel_rooms_serializer = HotelRoomSerializer(hotel_rooms, many=True)
@@ -330,19 +330,23 @@ class HotelView(ProductInterface):
                 available_amenity_data)
 
         if "location" in request.data:
-            print("location" in request.data,"location in request.data")
+            print("location" in request.data, "location in request.data")
             location = request.data["location"]
             if "longitude" and "latitude" in location:
                 source = LatLong(location["latitude"], location["longitude"])
-                # calculate_distance_between_multiple_points()
 
-                destination_address_ids = get_address_id_of_product(product_ids)
-                print(destination_address_ids,'distination object')
-                if destination_address_ids:
-                    destination_points = list(map(lambda x: LatLong(x['latitude'], x['longitude']), destination_address_ids))
+                destination_product_address_ids = get_address_id_of_product(product_ids)
+                print(destination_product_address_ids, 'destination address ids')
+                if destination_product_address_ids:
+                    destination_points = []
+                    for product_id in destination_product_address_ids:
+                        location = destination_product_address_ids[product_id]
+                        destination_points.append((product_id, LatLong(location['latitude'], location['longitude'])))
+
                     distance_data = calculate_distance_between_multiple_points(source, destination_points)
                     for hotel_room_data in hotel_rooms_data:
-                        distance_item = distance_data.pop(0)
+                        print(hotel_room_data,'hotel room data')
+                        distance_item = distance_data[hotel_room_data['product']]
                         hotel_room_data["distance"] = distance_item["distance"]
                         hotel_room_data["dduration"] = distance_item["duration"]
 

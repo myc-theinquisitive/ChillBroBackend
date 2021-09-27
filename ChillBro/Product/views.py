@@ -269,11 +269,11 @@ class GetProductsByCategory(generics.ListAPIView):
             if "location" in data:
                 location = data["location"]
                 if "longitude" and "latitude" in location:
-                    return query_set.annotate(distance=distance_for_sort_products(location, 'id')).order_by('distance')
+                    return query_set#.annotate(distance=distance_for_sort_products(location, 'id')).order_by('distance')
         return query_set
 
     @staticmethod
-    def sort_results(products_response, sort_filter, data):
+    def sort_results(products_response, sort_filter):
         if sort_filter == "PRICE_LOW_TO_HIGH":
             products_response.sort(key=lambda product_response: Decimal(product_response['discounted_price']))
         elif sort_filter == "PRICE_HIGH_TO_LOW":
@@ -284,7 +284,7 @@ class GetProductsByCategory(generics.ListAPIView):
                 key=lambda product_response: Decimal(product_response['rating']['avg_rating']), reverse=True)
         elif sort_filter == "DISTANCE":
             products_response.sort(
-                key=lambda product_response: product_response['distance'])
+                key=lambda product_response: product_response['hotel_room']['distance'])
 
     def recursively_get_lower_level_categories(self, category_ids):
         if not category_ids:

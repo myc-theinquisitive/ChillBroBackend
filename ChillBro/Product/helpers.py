@@ -32,10 +32,12 @@ def calculate_distance_between_multiple_points(source_point, destination_points)
     p1_longitude = source_point.longitude
     p1_latitude = source_point.latitude
 
+    product_ids = list(map(lambda x: x[0], destination_points))
+
     destinations_string = ''
-    for point in destination_points:
+    for product_id, point in destination_points:
         destinations_string += point.latitude + ',' + point.longitude + '|'
-    print(len(destination_points))
+
     response = requests.get(
         'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + p1_latitude + ',' + p1_longitude + '&destinations=' + destinations_string + '&key=AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos')
 
@@ -43,10 +45,13 @@ def calculate_distance_between_multiple_points(source_point, destination_points)
         'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + p1_latitude + ',' + p1_longitude + '&destinations=' + destinations_string + '&key=AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos,',
         'url')
     dic = response.json()
-    print(dic)
-    all_distances = []
+
+    all_distances = {}
+    count=0
     for destination in dic['rows'][0]['elements']:
         distance = destination['distance']['value']
         duration = destination['duration']['value']
-        all_distances.append({'distance': distance, 'duration': duration})
+        all_distances[product_ids[count]] = {'distance': distance, 'duration': duration}
+        count+=1
+    print(all_distances,'========================= all_distances ====================================')
     return all_distances

@@ -71,9 +71,9 @@ def get_latest_ratings_for_product(product_id):
     return get_latest_ratings_for_secondary_related_id(product_id)
 
 
-def get_address_id_of_product(product_id):
+def get_address_id_of_product(product_ids):
     try:
-        products = Product.objects.filter(id__in=product_id) # .values_list('seller_id')
+        products = Product.objects.filter(id__in=product_ids)  # .values_list('seller_id')
         entity_ids = []
         entity_product = {}
         for product in products:
@@ -81,13 +81,15 @@ def get_address_id_of_product(product_id):
             entity_ids.append(product.seller_id)
 
         entity_details = get_entity_details_for_entity_ids(entity_ids)
+        print(entity_details,'==============entity_details================')
+        product_address = {}
         if len(entity_details) != 0:
             for entity in entity_details:
-                entity_product[entity['id']] = entity['address']
+                product_id = entity_product[entity['id']]
+                product_address[product_id] = entity['address']
 
+            return product_address
 
-
-            return product_ids, list(map(lambda x: x['address'], entity_details))
         return None
     except Product.DoesNotExist:
         return None
