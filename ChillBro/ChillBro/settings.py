@@ -57,7 +57,7 @@ INSTALLED_APPS = [
 
 
 FCM_DJANGO_SETTINGS = {
-        "FCM_SERVER_KEY": "AIzaSyBkAqi63WPerzKQ9-TSrA8pEAH6yTXLrfs"
+    "FCM_SERVER_KEY": "AIzaSyBkAqi63WPerzKQ9-TSrA8pEAH6yTXLrfs"
 }
 
 
@@ -141,7 +141,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-IS_SERVER = True
+IS_SERVER = False
 
 if IS_SERVER:
     DEBUG = True
@@ -184,18 +184,6 @@ if IS_SERVER:
 
         },
         'handlers': {
-            'django_error': {
-                'level': 'DEBUG',
-                'class': 'logging.handlers.RotatingFileHandler',
-                'filename': LOG_PATH + 'django.log',
-                'formatter': 'standard'
-            },
-            'info': {
-                'level': 'DEBUG',
-                'class': 'logging.handlers.RotatingFileHandler',
-                'filename': LOG_PATH + 'info.log',
-                'formatter': 'standard'
-            },
             'console': {
                 'level': 'DEBUG',
                 'filters': ['require_debug_true'],
@@ -203,18 +191,13 @@ if IS_SERVER:
             }
         },
         'loggers': {
-            'info': {
-                'handlers': ['info', "console"],
-                'level': 'DEBUG',
-                'propagate': True
-            },
             'django': {
                 'handlers': ['console'],
                 'level': 'INFO',
                 'propagate': True,
             },
             'django.request': {
-                'handlers': ['django_error', 'console'],
+                'handlers': ['console'],
                 'level': 'DEBUG',
                 'propagate': True,
             },
@@ -232,7 +215,7 @@ else:
     MEDIA_ROOT = ''
     STATIC_ROOT = 'static/'
 
-    ALLOWED_HOSTS = []
+    ALLOWED_HOSTS = ['127.0.0.1']
 
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'

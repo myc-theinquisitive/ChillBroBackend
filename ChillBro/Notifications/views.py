@@ -1,5 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .FCMManager import sendPush
@@ -8,6 +8,7 @@ from .models import Notification, NotificationUsers, NotificationSetting, Fireba
 from .serializers import NotificationSerializer, UserIdsSerializer, NotificationDeleteSerializer, \
     NotificationSettingSerializer, FirebaseTokensSerializer
 import json
+import requests
 
 
 class SendNotification(generics.ListAPIView):
@@ -167,3 +168,33 @@ class AddOrUpdateFirebaseToken(generics.ListAPIView):
 
         return Response({"message": "Successfully added"})
 
+
+class SendMessage(APIView):
+
+    @staticmethod
+    def send_single_message(message, phone_numbers):
+        API_KEY = "2614C934AAA6A8"
+        ROUTE_ID = "69"
+        TYPE = "text"
+        SENDER_ID = "SYMBOS"
+        TEMPLATE_ID = "1234567890"
+
+        phone_numbers_string = ""
+        for index in range(len(phone_numbers)):
+            phone_numbers_string += phone_numbers[index]
+            if index != len(phone_numbers) - 1:
+                phone_numbers += ","
+
+        url = "http://sms.smartsms.online/app/smsapi/index.php?key={0}&campaign=0&routeid={1}&type={2}&contacts={3}&senderid={4}&msg={5}&template_id={6}"\
+            .format(API_KEY, ROUTE_ID, TYPE, phone_numbers_string, SENDER_ID, message, TEMPLATE_ID)
+        print(url)
+
+        response = requests.get(url)
+        return response.text
+
+    def post(self, request, *args, **kwargs):
+        message = request.data["message"]
+        phone_number = request.data["phone_number"]
+
+        response_text = self.send_single_message(message, [phone_number])
+        return Response(response_text, status=status.HTTP_200_OK)

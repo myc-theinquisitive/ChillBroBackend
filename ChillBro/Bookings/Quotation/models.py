@@ -16,4 +16,4 @@ class BusinessClientQuotation(models.Model):
 
 class Quotation(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
-    booking_id = models.OneToOneField('Bookings',on_delete=models.CASCADE)
+    booking_id = models.OneToOneField('Bookings', on_delete=models.CASCADE)
