@@ -9,7 +9,7 @@ from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDele
     CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
 from .Hotel.views import AmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
-    VehicleCharacteristicsDetail, GetVehicleTypesByCategory
+    VehicleCharacteristicsDetail, GetVehicleTypesDetailsByCategory, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
@@ -36,7 +36,8 @@ urlpatterns = [
 
     # urls for vehicle
     path('vehicle/type/', VehicleTypeList.as_view()),
-    path('vehicle/type/category/<str:category_name>/', GetVehicleTypesByCategory.as_view()),
+    path('vehicle/type/category/<str:category_name>/',GetVehicleTypesByCategory.as_view()),
+    path('vehicle/type/complete_details/category/<str:category_name>/', GetVehicleTypesDetailsByCategory.as_view()),
     path('vehicle/type/<str:pk>/', VehicleTypeDetail.as_view()),
 
 

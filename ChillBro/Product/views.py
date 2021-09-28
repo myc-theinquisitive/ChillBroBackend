@@ -291,7 +291,7 @@ class GetProductsByCategory(generics.ListAPIView):
 
         return list(set(result_category_ids))
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetProductsBySearchFilters(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't get products", "errors": input_serializer.errors}, 400)

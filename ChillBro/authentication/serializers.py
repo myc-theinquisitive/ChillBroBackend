@@ -60,7 +60,7 @@ class MailOrPhoneNumberExistserializer(MailOrPhoneNumberSerializer):
 
 
 class MailSignUpSerializer(SignupSerializer, EmailSerializer):
-    password = serializers.CharField(max_length=128, required=True)
+    password = serializers.CharField(max_length=128,  default="hi")
 
     class Meta:
         validators = [email_required]
@@ -84,7 +84,7 @@ class PasswordResetSerializer(MailOrPhoneNumberSerializer):
 
 
 class PasswordResetVerifiedSerializer(serializers.Serializer):
-    code = serializers.CharField(max_length=40)
+    otp = serializers.CharField(max_length=40)
     password = serializers.CharField(max_length=128)
 
 
