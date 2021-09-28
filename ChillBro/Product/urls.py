@@ -8,6 +8,7 @@ from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDele
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
     CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
 from .Hotel.views import AmenitiesList
+from .Hotel.views import AmenitiesList, FindDistance, FindDistanceByAddress, FindDistanceForMultipleAddress
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail, GetVehicleTypesDetailsByCategory, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
