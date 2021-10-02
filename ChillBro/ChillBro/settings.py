@@ -285,6 +285,7 @@ DSC_COUPON_CODE_LENGTH = 15
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
 
+GMAPS_API_KEY = 'AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos'
 
 TAGGIT_CASE_INSENSITIVE = True
 MYC_ID = "MYC"
