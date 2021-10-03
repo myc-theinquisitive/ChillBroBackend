@@ -19,11 +19,13 @@ class BookedProductsSerializer(serializers.ModelSerializer):
         new_products = []
         for product in validated_data:
             add_booking_product = BookedProducts(
-                booking=product["booking"], product_id=product["product_id"], product_value=Decimal(product["product_value"]),
-                quantity=product["quantity"], net_value=(product["net_value"]["net_price"]), price = Decimal(product["price"]),
-                price_type=product["price_type"], size = product["size"], is_combo = product["is_combo"],
-                has_sub_products = product["has_sub_products"], hidden = product["hidden"],
-                parent_booked_product = product["parent_booked_product"], coupon_value = Decimal(product["coupon_value"])
+                booking=product["booking"], product_id=product["product_id"],
+                product_value=Decimal(product["product_value"]),
+                quantity=product["quantity"], net_value=(product["net_value"]["net_price"]),
+                price=Decimal(product["price"]),
+                price_type=product["price_type"], size=product["size"], is_combo=product["is_combo"],
+                has_sub_products=product["has_sub_products"], hidden=product["hidden"],
+                parent_booked_product=product["parent_booked_product"], coupon_value=Decimal(product["coupon_value"])
             )
             new_products.append(add_booking_product)
         return BookedProducts.objects.bulk_create(new_products)
@@ -75,18 +77,31 @@ class TransportBookingDurationDetailsSerializer(serializers.ModelSerializer):
             excess_day_duration_price=validated_data["excess_day_duration_price"])
 
 
+class MakeYourOwnTripDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MakeYourOwnTripDetails
+        fields = '__all__'
+
+    # def create(self, validated_data):
+    #     return MakeYourOwnTripDetails.objects.create(
+    #         preferred_vehicle=validated_data['preferred_vehicle'], no_of_adults=validated_data['no_of_adults'],
+    #         no_of_children=validated_data['no_of_children'], no_of_vehicles=validated_data['no_of_vehicles'],
+    #         min_budget=validated_data['min_budget'], max_budget=validated_data['max_budget']
+    #     )
+
+
 class CheckInDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CheckInDetails
         fields = '__all__'
 
     def create(self, validated_data):
-         return CheckInDetails.objects.create(
-            booking = validated_data['booking'],
-            is_caution_deposit_collected= validated_data['is_caution_deposit_collected'],
-            caution_amount = validated_data['caution_amount'],
-            id_proof_type = validated_data['id_proof_type'],
-            id_image = validated_data['id_image']
+        return CheckInDetails.objects.create(
+            booking=validated_data['booking'],
+            is_caution_deposit_collected=validated_data['is_caution_deposit_collected'],
+            caution_amount=validated_data['caution_amount'],
+            id_proof_type=validated_data['id_proof_type'],
+            id_image=validated_data['id_image']
         )
 
 
@@ -290,3 +305,20 @@ class ProceedToPaymentSerializer(serializers.Serializer):
     payment_mode = serializers.CharField(required=True)
     booking_id = serializers.CharField(required=True, min_length=36, max_length=36)
     transaction_money = serializers.DecimalField(decimal_places=2, max_digits=20)
+
+
+class MakeYourOwnTripDetails(serializers.Serializer):
+    trip_type = serializers.CharField(required=True)
+    no_of_adults = serializers.IntegerField(required=True)
+    no_of_children = serializers.IntegerField(required=True)
+    preferred_vehicle = serializers.CharField(required=True, min_length=36, max_length=36)
+    no_of_vehicles = serializers.IntegerField(required=True)
+    min_budget = serializers.FloatField(required=True)
+    max_budget = serializers.FloatField(required=True)
+
+
+class MakeYourOwnTripBookingSerializer(serializers.Serializer):
+    product_id = serializers.CharField(required=True)
+    start_time = serializers.DateTimeField(required=True)
+    end_time = serializers.DateTimeField(required=True)
+    trip_details = MakeYourOwnTripDetails()

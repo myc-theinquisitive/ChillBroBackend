@@ -20,7 +20,7 @@ from .wrapper import get_product_id_wise_product_details, create_refund_transact
     business_client_review_on_customer, get_product_details, get_entity_details, is_product_valid, \
     get_business_client_review_by_booking_id, get_product_prices_by_duration, get_product_net_price, \
     check_valid_duration, check_valid_address, combine_all_products, entity_id_and_entity_type, get_coupon_value, \
-    get_product_price_values
+    get_product_price_values, post_create_address
 
 
 # Lock for creating a new booking or updating the booking timings
@@ -76,7 +76,7 @@ def valid_booking_with_product_quantity(products_quantity, booking_products_list
     return is_valid, errors
 
 
-def valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time):
+def validate_time(start_time, end_time):
     is_valid = True
     errors = defaultdict(list)
     current_time = datetime.now()
@@ -86,6 +86,12 @@ def valid_booking_with_product_details(products_quantity, booking_products_list,
     if start_time >= end_time:
         is_valid = False
         errors["booking"].append("End time should be less than start time")
+
+    return is_valid, errors
+
+
+def valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time):
+    is_valid, errors = validate_time(start_time, end_time)
 
     for booking_product in booking_products_list:
         if booking_product['quantity'] <= 0:
@@ -1309,7 +1315,6 @@ def create_multiple_bookings_while_checkout(all_booking):
 def create_single_booking(booking_object, product_values):
 
     product_list = booking_object.pop('products', None)
-
     total_money = 0.0
     total_coupon_discount = 0.0
     for product in product_list:
@@ -1330,10 +1335,9 @@ def create_single_booking(booking_object, product_values):
         product["product_value"] = product_values[product['product_id']]['price'] * product['quantity']
         product['price'] = product_values[product['product_id']]['price_by_type']
         product['price_type'] = product_values[product['product_id']]['price_type']
-        product['net_value'] = net_value
 
         net_value = product_values[product['product_id']]['net_value_details']['net_price'] * product['quantity']
-
+        product['net_value'] = net_value
         if product['is_combo']:
             combo_product = product
             product_list.remove(product)
@@ -1363,7 +1367,6 @@ def create_single_booking(booking_object, product_values):
 
     booked_product_serializer_object = BookedProductsSerializer()
     booked_combo_products = defaultdict()
-
     for each_combo_product in combo_parent_products:
         combo_product = booked_product_serializer_object.create({
             'booking': booking,
@@ -1402,10 +1405,19 @@ def create_single_booking(booking_object, product_values):
 
             transport_duration_details_object = None
         else:
-            transport_distance_details_object = transport_distance_details_serializer\
-                .create(transport_data['price_details'])
-            transport_duration_details_object = transport_duration_details_serializer\
-                .create(transport_data['duration_details'])
+            try:
+                transport_distance_details_object = transport_distance_details_serializer\
+                    .create(transport_data['price_details'])
+                transport_duration_details_object = transport_duration_details_serializer\
+                    .create(transport_data['duration_details'])
+            except:
+                transport_distance_details_object = None
+                transport_duration_details_object = None
+        make_your_own_trip_object = None
+        if "make_your_own_trip" in transport_details:
+            make_your_own_trip_data = transport_details["make_your_own_trip"]
+            make_your_own_trip_serializer = MakeYourOwnTripDetailsSerializer()
+            make_your_own_trip_object = make_your_own_trip_serializer.create(make_your_own_trip_data)
 
         transport_details_serializer.create({
             'booked_product': sub_product,
@@ -1414,8 +1426,11 @@ def create_single_booking(booking_object, product_values):
             'drop_location': transport_details['drop_location'],
             'km_limit_choosen': km_limit_choosen,
             'distance_details': transport_distance_details_object,
-            'duration_details': transport_duration_details_object
+            'duration_details': transport_duration_details_object,
+            "make_your_own_trip_details": make_your_own_trip_object
         })
+
+
 
     for each_booked_product in product_list:
         each_booked_product['booking'] = booking
@@ -1510,3 +1525,71 @@ def get_transport_details(product_ids):
             transport_details[each_product] = {}
 
     return transport_details
+
+
+class MakeYourOwnTripBooking(APIView):
+    permission_classes = (IsAuthenticated, )
+
+    # TODO: have to handle coupon case
+    def post(self, request, *args, **kwargs):
+        input_serializer = MakeYourOwnTripBookingSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"Message":"Can't make booking", "errors": input_serializer.errors},400)
+        trip_details = request.data['trip_details']
+        is_valid, errors = check_valid_address(trip_details['pickup_location'])
+        if not is_valid:
+            return Response({"Message":"Can't make booking", "errors": errors},400)
+        is_valid, errors = check_valid_address(trip_details['drop_location'])
+        if not is_valid:
+            return Response({"Message":"Can't make booking", "errors": errors},400)
+
+        is_valid, errors = validate_time(request.data['start_time'], request.data['end_time'])
+        if not is_valid:
+            return Response({"Message": "Can't make booking", "errors": errors}, 400)
+
+        product_id = request.data['product_id']
+        preferred_vehicle_id = trip_details['preferred_vehicle']
+
+        product_details = get_product_id_wise_product_details([product_id, preferred_vehicle_id])
+
+        if len(product_details) != 2:
+            return Response({"Message": "Can't make booking", "errors": "Invalid Product Id or Preferred Vehicle ID"}, 400)
+
+        entity_id, entity_type = entity_id_and_entity_type(product_id)
+        pickup_location_id = post_create_address(trip_details['pickup_location'])["address_id"]
+        drop_location_id = post_create_address(trip_details['drop_location'])["address_id"]
+
+        product_data = [
+            {
+                "product_id": product_id, "quantity": 1, "size": None, "parent_booked_product": None, "coupon_value": 0,
+                "product_value": 0, "is_combo": False, "has_sub_products": True,
+                "transport_details": {
+                    "trip_type": trip_details["trip_type"],
+                    "pickup_location": pickup_location_id,
+                    "drop_location": drop_location_id,
+                    "km_limit_choosen": 0,
+                    "make_your_own_trip":{
+                        "preferred_vehicle": trip_details['preferred_vehicle'],
+                        "no_of_adults": trip_details['no_of_adults'], "no_of_children" : trip_details["no_of_children"],
+                        "no_of_vehicles": trip_details["no_of_vehicles"], "min_budget": trip_details["min_budget"],
+                        "max_budget": trip_details["max_budget"]
+                    }
+                }
+            }
+        ]
+
+        booking_details = {
+            "coupon": "", "created_by": request.user, "entity_id": entity_id, "entity_type": entity_type,
+            "start_time": request.data['start_time'], "end_time": request.data['end_time'],
+            "products": product_data
+        }
+
+        is_valid, errors = create_single_booking(booking_details, product_details)
+
+        if not is_valid:
+            return Response({"message":"Can't create booking", "errors": errors}, 400)
+
+        return Response({"product details": product_details}, 200)
+
+
+

@@ -21,7 +21,14 @@ def get_product_id_wise_details(product_ids):
 
     product_id_wise_details = defaultdict(dict)
     for each_product in products:
-        discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
+        try:
+            discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
+        except:
+            discount = 0
+        has_sub_products = each_product.has_sub_products
+        if each_product.type == "MAKE_YOUR_OWN_TRIP":
+            has_sub_products = True
+
         product_data = {
             'product_id': each_product.id,
             'price': each_product.discounted_price,
@@ -35,7 +42,7 @@ def get_product_id_wise_details(product_ids):
             'type': each_product.type,
             'has_sizes':each_product.has_sizes,
             'is_combo':each_product.is_combo,
-            'has_sub_products':each_product.has_sub_products
+            'has_sub_products': has_sub_products
         }
         product_sizes_details = {}
         if each_product.has_sizes:

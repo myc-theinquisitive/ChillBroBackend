@@ -90,3 +90,11 @@ def entity_id_and_entity_type(product_id):
 def get_product_price_values(group_product_ids_by_type, group_product_details_by_type):
     from Product.exportapi import get_product_values
     return get_product_values(group_product_ids_by_type, group_product_details_by_type)
+
+
+def post_create_address(address_data):
+    return create_address(address_data)
+
+
+def check_valid_address(address):
+    return validate_address(address)

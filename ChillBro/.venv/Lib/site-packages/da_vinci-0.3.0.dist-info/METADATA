@@ -1,0 +1,75 @@
+Metadata-Version: 2.1
+Name: da-vinci
+Version: 0.3.0
+Summary: A simple image manipulation library aiming to make common image tasks easy.
+Home-page: https://github.com/ui/da-vinci
+Author: Selwin Ong
+Author-email: selwin.ong@gmail.com
+License: MIT
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Multimedia :: Graphics
+
+A simple image manipulation library aiming to make common image/photo
+manipulation tasks easy. This library is still under development,
+API may also change at any time.
+
+Requires PIL/Pillow.
+
+Example usage::
+
+    from da_vinci import Image
+
+    image = Image('lena.jpg')
+    image.flip('horizontal')
+    image.resize(width=10, height=10)
+    image.save()
+
+    # Opening an image from URL, rotating and change it's format
+    image = Image('http://stamps.co.id/static/merchants/img/logo.png')
+    image.rotate(degrees=90)
+    image.set(format='jpg', quality=85)
+    image.save() # Creates a file logo.jpg
+
+    # Manipulating saturation, brightness, contrast and sharpness
+    # Accepts values range from -100 (decrease) to 100 (increase)
+    image.adjust(saturation=-100)
+    image.adjust(brightness=-75, contrast=50, sharpness=-20)
+
+
+If you need more extensive manipulation, an escape hatch to PIL
+is also available::
+
+    image = image.from_file('a.jpg')
+    pil_image = image.get_pil_image()
+    # Do whatever you need to do with the pil image
+    # And if you want to convert this back to a da_vinci image
+    image.set_pil_image(pil_image)
+
+Tests
+
+To run tests::
+
+    python -m unittest tests
+
+Changelog
+---------
+
+Version 0.3.0
+=============
+* Added webp extension support
+
+Version 0.2.2
+=============
+* Added bmp extension support
+

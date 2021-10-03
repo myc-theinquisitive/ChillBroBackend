@@ -4,7 +4,8 @@ from .views import ReportCustomerReasonsList, ReportCustomerReasonsDetail, Creat
     GetSpecificBookingDetails, GetBookingDetailsView, BookingStart, BookingEnd, GetBookingEndDetailsView, \
     ReportCustomerForBooking, GetBookingDetailsOfProductId, ProductStatistics, \
     GetProductAvailability, GetProductAvailabilityForGivenDuration, BusinessClientProductCancellationDetails, \
-    BusinessClientBookingApproval, UserSelectQuotation, ProceedToPayment, GetBookingCostDetailsView
+    BusinessClientBookingApproval, UserSelectQuotation, ProceedToPayment, GetBookingCostDetailsView, \
+    MakeYourOwnTripBooking
 from .downloads import GeneratePDF, GenerateExcel
 from .Quotation.views import *
 
@@ -38,5 +39,7 @@ urlpatterns = [
 
     path('business-client-quotation/', BusinessClientQuotationList.as_view()),
     path('business-client-quotation/<str:pk>/', BusinessClientQuotationDetail.as_view()),
-    path('user-select-quotation/<str:pk>/', UserSelectQuotation.as_view())
+    path('user-select-quotation/<str:pk>/', UserSelectQuotation.as_view()),
+    path('make-your-own-trip/', MakeYourOwnTripBooking.as_view())
+
 ]

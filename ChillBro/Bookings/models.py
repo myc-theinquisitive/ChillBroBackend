@@ -189,8 +189,9 @@ class TransportBookingDetails(models.Model):
     starting_km_value = models.PositiveIntegerField(default=0)
     ending_km_value = models.PositiveIntegerField(default=0)
     km_limit_choosen = models.PositiveIntegerField(default=0)
-    distance_details = models.ForeignKey("TransportBookingDistanceDetails", on_delete=models.CASCADE)
+    distance_details = models.ForeignKey("TransportBookingDistanceDetails", on_delete=models.CASCADE, blank=True, null=True)
     duration_details = models.ForeignKey("TransportBookingDurationDetails", on_delete=models.CASCADE, blank=True, null=True)
+    make_your_own_trip_details = models.ForeignKey("MakeYourOwnTripDetails", on_delete=models.CASCADE, blank=True, null=True)
 
 
 class TransportBookingDistanceDetails(models.Model):
@@ -208,6 +209,15 @@ class TransportBookingDurationDetails(models.Model):
     day_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_hour_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_day_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+
+
+class MakeYourOwnTripDetails(models.Model):
+    preferred_vehicle = models.CharField(max_length=36)
+    no_of_adults = models.IntegerField()
+    no_of_children = models.IntegerField()
+    no_of_vehicles = models.IntegerField()
+    min_budget = models.FloatField(default=0.00)
+    max_budget = models.FloatField(default=0.00)
 
 
 class CheckInDetailsManager(models.Manager):
