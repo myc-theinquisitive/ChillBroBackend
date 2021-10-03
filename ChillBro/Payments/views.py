@@ -1,3 +1,4 @@
+import razorpay as razorpay
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +10,7 @@ from .wrapper import *
 from django.db.models import Q, Count
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClientEntities, \
     IsEmployeeEntities
+from django.shortcuts import render
 
 
 class GetBookingTransactions(generics.ListAPIView):
@@ -257,3 +259,22 @@ class RefundTransactionDetail(generics.RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = RefundTransaction.objects.all()
     serializer_class = RefundTransactionDetailsSerializer
+
+
+def pay_form(request):
+    return render(request, 'pay_form.html')
+
+def pay_success(request):
+    if request.method == "POST":
+        print(request.POST)
+        name = request.POST.get('name')
+        amount = 50000
+
+        client = razorpay.Client(
+            auth=("rzp_test_Ggvw8pTdJ3SnAg", "HQrPh4O1A1bIYP2To2yMjqMJ"))
+
+        payment = client.order.create({'amount': amount, 'currency': 'INR',
+                                       'payment_capture': '0'})
+        print(payment,' payment ')
+        return render(request, 'success.html')
+    return render(request, 'pay_form.html')
