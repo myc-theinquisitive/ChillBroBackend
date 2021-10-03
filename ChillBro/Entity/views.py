@@ -23,13 +23,12 @@ from .wrappers import post_create_address, get_address_details_for_address_ids, 
     approximate_distance_query_for_entity
 from datetime import datetime
 from .helpers import get_date_format, get_entity_status, get_entity_types_filter, LatLong, \
-    calculate_distance_between_multiple_points
+    calculate_distance_between_location_multiple_entities
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsGet, IsEmployeeEntity
 from decimal import Decimal
 from django.conf import settings
-
 from collections import defaultdict
 
 
@@ -804,28 +803,21 @@ class EntityView:
         entity_response.pop("upi", None)
 
     @staticmethod
-    def add_distance_data_for_entities(entities_response, request_data):
-        if "location" not in request_data or request_data["location"] is None:
+    def add_distance_data_for_entities(entities_response, latitude, longitude):
+        if not latitude or not longitude:
             for entity in entities_response:
                 entity["distance"] = ""
                 entity["duration"] = ""
             return None
 
-        location = request_data["location"]
-        if "longitude" not in location or "latitude" not in location:
-            for entity in entities_response:
-                entity["distance"] = ""
-                entity["duration"] = ""
-            return None
-
-        source = LatLong(location["latitude"], location["longitude"])
+        source = LatLong(latitude, longitude)
 
         destination_points = []
         for entity in entities_response:
             address = entity['address']
             destination_points.append((entity['id'], LatLong(address['latitude'], address['longitude'])))
 
-        distances_data = calculate_distance_between_multiple_points(source, destination_points)
+        distances_data = calculate_distance_between_location_multiple_entities(source, destination_points)
 
         for entity in entities_response:
             distance_data = distances_data[entity['id']]
@@ -977,7 +969,8 @@ class GetEntitiesBySubType(generics.ListAPIView):
         response = super().get(request, args, kwargs)
         response_data = response.data["results"]
         self.entity_view.add_details_for_entities(response_data)
-        self.entity_view.add_distance_data_for_entities(response_data, request.data)
+        self.entity_view.add_distance_data_for_entities(response_data, request.data['location']['latitude'],
+                                                        request.data['location']['longitude'])
         self.entity_view.add_user_specific_details_for_entities(request.user.id, response_data)
         self.sort_results(response_data, sort_filter)
         return response
