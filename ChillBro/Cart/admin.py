@@ -4,3 +4,5 @@ from .models import *
 admin.site.register(Cart)
 admin.site.register(CartProducts)
 admin.site.register(TransportDetails)
+admin.site.register(EventsDetails)
+admin.site.register(EventsPrices)

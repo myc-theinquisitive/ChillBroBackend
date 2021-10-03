@@ -1,5 +1,6 @@
 from .BaseProduct.admin import *
 from .Category.admin import *
+from .Events.admin import *
 from .Hotel.admin import *
 from .VehicleTypes.admin import *
 from .Rental.admin import *

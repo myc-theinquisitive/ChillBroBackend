@@ -49,3 +49,19 @@ class TransportDetails(models.Model):
     pickup_location = models.CharField(max_length=36, blank=True, null=True)
     drop_location = models.CharField(max_length=36, blank=True, null=True)
     km_limit_choosen = models.PositiveIntegerField(default=0)
+
+
+class EventsDetails(models.Model):
+    cart_product = models.ForeignKey('CartProducts', on_delete=models.CASCADE)
+    date = models.DateTimeField()
+    slot = models.CharField(max_length=50)
+    name = models.CharField(max_length=100)
+    phone_no = models.IntegerField(max_length=10)
+    alternate_no = models.IntegerField(max_length=10)
+    email = models.CharField(max_length=50)
+
+
+class EventsPrices(models.Model):
+    event_details = models.ForeignKey('EventsDetails', on_delete=models.CASCADE)
+    price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    quantity = models.IntegerField(default=0)

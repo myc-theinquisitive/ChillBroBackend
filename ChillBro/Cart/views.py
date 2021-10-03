@@ -151,7 +151,7 @@ def combine_all_products(product_id, size, quantity, combo_product_details, prod
     return all_product_ids, products
 
 
-def add_products_to_cart(products, product_id, quantity, size, cart, product_details, transport_details):
+def add_products_to_cart(products, product_id, quantity, size, cart, product_details, transport_details, event_details):
     is_combo = product_details[product_id]["is_combo"]
     has_sub_products = product_details[product_id]["has_sub_products"]
     cart_product_serializer = CartProductsSerializer()
@@ -202,6 +202,17 @@ def add_products_to_cart(products, product_id, quantity, size, cart, product_det
                     "drop_location": post_create_address(transport_details['drop_location'])["address_id"]
                 }
             )
+        if len(event_details) > 0:
+            events_details_serializer = EventsDetailsSerializer()
+            price_details = event_details.pop("prices", None)
+            event_details["cart_product"] = cart_product_id
+            event_details_object = events_details_serializer.create(event_details)
+
+            for each_price in price_details:
+                each_price["event_details"] = event_details_object
+
+            events_prices_serializer = EventsPricesSerializer()
+            events_prices_serializer.bulk_create(price_details)
 
         if is_combo or has_sub_products:
             combo_cart_products = []
@@ -249,6 +260,7 @@ def check_availability_of_product(new_product_details, user_id):
     combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(
         new_product_details['combo_product_details'])
     transport_details = new_product_details['transport_details']
+    event_details = new_product_details['event_details']
 
     entity_id, entity_type = check_valid_product(product_id)
     if entity_id is None and entity_type is None:
@@ -258,11 +270,14 @@ def check_availability_of_product(new_product_details, user_id):
 
     product_ids = [product_id]
     product_details = get_product_id_wise_product_details(product_ids)
+
+    # return True, product_details
     required_objects["product_details"] = product_details
     required_objects["product_id"] = product_id
     required_objects["quantity"] = quantity
     required_objects["size"] = size
     required_objects["transport_details"] = transport_details
+    required_objects["event_details"] = event_details
 
     is_valid, errors = is_product_valid(product_details, product_id, quantity, size, combo_product_details)
     if not is_valid:
@@ -273,6 +288,7 @@ def check_availability_of_product(new_product_details, user_id):
     if not is_valid:
         return is_valid, errors
 
+    # if entity_type == "TRANSPORT":    #Uncomment this whenever top level category names as TRANSPORT only
     if len(transport_details) > 0:
         if transport_details['km_limit_choosen'] > 0:
             if transport_details['km_limit_choosen'] not in \
@@ -285,6 +301,23 @@ def check_availability_of_product(new_product_details, user_id):
         is_valid, errors = check_valid_address(transport_details['drop_location'])
         if not is_valid:
             return is_valid, errors
+
+    if entity_type == "EVENT":
+        product_event_details = product_details[product_id]["event_details"]
+
+        if product_event_details["start_time"] > event_details["date"] or \
+                product_event_details["end_time"] < event_details["date"]:
+            return False, "Invalid event date"
+        price_details = convert_list_of_dict_to_dict_of_dict(product_event_details["price_classes"],"price")
+        for each_price in event_details["prices"]:
+            if each_price["price"] not in price_details:
+                return False, "Invalid price {}".format(each_price["price"])
+            if each_price["quantity"] > product_details[product_id]["quantity"]:
+                return False, "Maximum quantity is {}".format(product_details[product_id]["quantity"])
+
+        slot_details = convert_list_of_dict_to_dict_of_dict(product_event_details["slots"],"name")
+        if event_details["slot"] not in slot_details:
+            return False, "Invalid slot {}".format(event_details["slot"])
 
     all_product_ids, products = combine_all_products(product_id, size, quantity, \
                                                      combo_product_details, product_details)
@@ -327,6 +360,14 @@ def check_availability_of_product(new_product_details, user_id):
     if is_valid:
         return is_valid, required_objects
     return is_valid, errors
+
+
+def convert_list_of_dict_to_dict_of_dict(list_of_dict, unique_id):
+    dict_of_dict = defaultdict()
+    for each_dict in list_of_dict:
+        dict_of_dict[each_dict[unique_id]] = each_dict
+
+    return dict_of_dict
 
 
 class CheckAvailability(APIView):
@@ -428,9 +469,8 @@ class AddProductToCart(APIView):
         if not input_serializer.is_valid():
             return Response({"message": "Can't add product to cart", "errors": input_serializer.errors}, 400)
 
-        is_valid, required_objects = \
-            check_availability_of_product(request.data, request.user)
-
+        is_valid, required_objects = check_availability_of_product(request.data, request.user)
+        # return Response(required_objects)
         if not is_valid:
             return Response({"message": "Can't add product to cart", "errors": required_objects}, 400)
 
@@ -452,8 +492,8 @@ class AddProductToCart(APIView):
                                     end_time=request.data['end_time'], created_by=request.user)
 
         add_products_to_cart(required_objects["products"], required_objects["product_id"], required_objects["quantity"], \
-                             required_objects["size"], cart, \
-                             required_objects["product_details"], required_objects["transport_details"])
+                             required_objects["size"], cart, required_objects["product_details"], \
+                             required_objects["transport_details"], required_objects['event_details'])
 
         return Response({"message": "Product added to cart successfully", "cart_id": cart.id}, 200)
 
@@ -600,7 +640,7 @@ class UpdateCartProduct(APIView):
             transport_details = {}
         if is_product_with_sizes == 1:
             cart_product.delete()
-            add_products_to_cart(products, product_id, quantity, size, cart, product_details, transport_details)
+            add_products_to_cart(products, product_id, quantity, size, cart, product_details, transport_details, {})
         else:
             cart_products = CartProducts.objects.filter(Q(cart=request.data['cart']) & Q(Q(product_id=product_id) |
                                                                                          Q(
