@@ -2,6 +2,8 @@ from django.conf import settings
 import uuid
 from .constants import ActivationStatus, EntityType
 from django.utils.text import slugify
+import requests
+from Address.helpers import calculate_distance_between_multiple_points
 
 
 def get_user_model():
@@ -62,3 +64,24 @@ def get_entity_types_filter(entity_filter):
     if len(entity_filter) == 0:
         return entities
     return entity_filter
+
+
+class LatLong:
+    def __init__(self, latitude, longitude):
+        self.longitude = longitude
+        self.latitude = latitude
+
+
+def calculate_distance_between_location_multiple_entities(source_point, destinations):
+    entity_ids = list(map(lambda x: x[0], destinations))
+    destination_points = list(map(lambda x: x[1], destinations))
+    distance_response = calculate_distance_between_multiple_points(source_point, destination_points)
+
+    all_distances = {}
+    count = 0
+    for distance_data in distance_response:
+        distance = distance_data['distance']
+        duration = distance_data['duration']
+        all_distances[entity_ids[count]] = {'distance': distance, 'duration': duration}
+        count += 1
+    return all_distances
