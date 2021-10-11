@@ -3,7 +3,7 @@ from .views import ReportCustomerReasonsList, ReportCustomerReasonsDetail, Creat
     CancelBookingView, BookingsStatistics, GetBookingsStatisticsDetails, CancelProductStatusView, GetDateFilters, \
     GetSpecificBookingDetails, GetBookingDetailsView, BookingStart, BookingEnd, GetBookingEndDetailsView, \
     ReportCustomerForBooking, GetBookingDetailsOfProductId, ProductStatistics, \
-    GetProductAvailability, GetProductAvailabilityForGivenDuration, BusinessClientProductCancellationDetails, \
+    GetProductAvailability,  BusinessClientProductCancellationDetails, \
     BusinessClientBookingApproval, UserSelectQuotation, ProceedToPayment, GetBookingCostDetailsView, \
     MakeYourOwnTripBooking
 from .downloads import GeneratePDF, GenerateExcel
@@ -33,7 +33,6 @@ urlpatterns = [
     path('generate_excel/', GenerateExcel.as_view()),
     path('product/<str:product_id>/', GetBookingDetailsOfProductId.as_view()),
     path('product_statistics/<str:product_id>/', ProductStatistics.as_view()),
-    path('product_availability/', GetProductAvailabilityForGivenDuration.as_view()),
     path('product_availability/hour/', GetProductAvailability.as_view()),
     path('back_to_online/add/', BusinessClientProductCancellationDetails.as_view()),
 

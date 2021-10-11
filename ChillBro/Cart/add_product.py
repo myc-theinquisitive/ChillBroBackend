@@ -47,8 +47,7 @@ def add_products_to_cart(products, product_id, quantity, size, cart, product_det
         cart_product_serializer.bulk_create(cart_product_sizes)
 
     if cart_product_id is not None:
-        # TODO: Instead of checking length specify allow null and allow blank for serializer and
-        #  add is_transport boolean variable to identify - specify its default value as false
+        # TODO: Instead of checking length specify allow null and allow blank for serializer
         if len(transport_details) > 0:
             cart_product_extra_details_serializer = TransportDetailsSerializer()
             cart_product_extra_details_serializer.create(
@@ -97,8 +96,11 @@ def check_availability_of_product(new_product_details, user_id):
     size = convert_sizes_list_to_dict(new_product_details['sizes'])
     combo_product_details = convert_combo_products_list_to_dict_of_dictionaries(
         new_product_details['combo_product_details'])
-    transport_details = new_product_details['transport_details']
-    event_details = new_product_details['event_details']
+    transport_details = event_details = {}
+    if "transport_details" in new_product_details:
+        transport_details = new_product_details['transport_details']
+    if "event_details" in new_product_details:
+        event_details = new_product_details['event_details']
 
     entity_id, entity_type = check_valid_product(product_id)
     if entity_id is None and entity_type is None:
@@ -125,8 +127,7 @@ def check_availability_of_product(new_product_details, user_id):
     if not is_valid:
         return is_valid, errors
 
-    # if entity_type == "TRANSPORT":    #Uncomment this whenever top level category names as TRANSPORT only
-    if len(transport_details) > 0:
+    if entity_type == EntityType.TRANSPORT.value:
         if transport_details['km_limit_choosen'] > 0:
             if transport_details['km_limit_choosen'] not in \
                     product_details[product_id]['transport_details']['price_details']:
@@ -139,12 +140,11 @@ def check_availability_of_product(new_product_details, user_id):
         if not is_valid:
             return is_valid, errors
 
-    if entity_type == "EVENT":
+    if entity_type == EntityType.EVENT.value:
         product_event_details = product_details[product_id]["event_details"]
-        print(product_event_details["start_time"],product_event_details["end_time"], event_details["date"])
 
-        if product_event_details["start_time"] > event_details["date"] or \
-                product_event_details["end_time"] < event_details["date"]:
+        if product_event_details["start_time"] > new_product_details["start_time"] or \
+                product_event_details["end_time"] < new_product_details["end_time"]:
             return False, "Invalid event date"
         price_details = convert_list_of_dict_to_dict_of_dict(product_event_details["price_classes"],"price")
         for each_price in event_details["prices"]:
@@ -208,8 +208,7 @@ class CheckAvailability(APIView):
         if not input_serializer.is_valid():
             return Response({"message": "Can't add product to cart", "errors": input_serializer.errors}, 400)
 
-        is_valid, required_objects = \
-            check_availability_of_product(request.data, request.user)
+        is_valid, required_objects = check_availability_of_product(request.data, request.user)
 
         if not is_valid:
             return Response({"message": "Product not available!!", "errors": required_objects}, 400)
@@ -294,7 +293,6 @@ class AddProductToCart(APIView):
             }
         """
 
-        # TODO: add all the fields passed in request to the serializer for validation
         input_serializer = AddProductToCartSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't add product to cart", "errors": input_serializer.errors}, 400)
@@ -325,4 +323,54 @@ class AddProductToCart(APIView):
                              required_objects["transport_details"], required_objects['event_details'])
 
         return Response({"message": "Product added to cart successfully", "cart_id": cart.id}, 200)
+
+
+class AddMultipleBookings(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        input_serializer = AddMultipleBookingsSerializer(data=request.data)
+
+        if not input_serializer.is_valid():
+            return Response({"message":"Can't create multiple bookings", "errors": input_serializer.errors},400)
+        start_time = request.data["start_time"]
+        end_time = request.data["end_time"]
+        overall_is_valid = True
+        errors = defaultdict()
+        added = defaultdict()
+        products = request.data["products"]
+        for each_product in products:
+            each_product["start_time"] = start_time
+            each_product["end_time"] = end_time
+            is_valid, required_objects = check_availability_of_product(each_product, request.user)
+            if not is_valid:
+                overall_is_valid = False
+                errors[each_product["product_id"]] = required_objects
+            else:
+                if not required_objects["is_cart_exist"] :
+                    serializer = CartSerializer()
+                    cart = serializer.create(
+                        {
+                            'entity_id': required_objects["entity_id"],
+                            'entity_type': required_objects["entity_type"],
+                            'start_time': request.data['start_time'],
+                            'end_time': request.data['end_time'],
+                            'created_by': request.user
+                        }
+                    )
+                else:
+                    cart = Cart.objects.get(entity_id=required_objects["entity_id"], \
+                                            entity_type=required_objects["entity_type"], \
+                                            start_time=request.data['start_time'], \
+                                            end_time=request.data['end_time'], created_by=request.user)
+
+                add_products_to_cart(required_objects["products"], required_objects["product_id"],
+                                     required_objects["quantity"], \
+                                     required_objects["size"], cart, required_objects["product_details"], \
+                                     required_objects["transport_details"], required_objects['event_details'])
+                added[each_product["product_id"]] = "Successfully added"
+        if not overall_is_valid:
+            return Response({"message":"Can't create multiple bookings", "errors": errors,"added":added},400)
+
+        return Response({"message": "Successfully Booking Created", "added":added}, 200)
 

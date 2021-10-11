@@ -77,6 +77,29 @@ class TransportBookingDurationDetailsSerializer(serializers.ModelSerializer):
             excess_day_duration_price=validated_data["excess_day_duration_price"])
 
 
+class EventsDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventsDetails
+        fields = '__all__'
+
+
+class EventsPricesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventsPrices
+        fields = '__all__'
+
+    def bulk_create(self, validated_data):
+        new_price = []
+        for product in validated_data:
+            add_price = EventsPrices(
+                event_details=product["event_details"],
+                price=product["price"],
+                quantity = product["quantity"]
+            )
+            new_price.append(add_price)
+        return EventsPrices.objects.bulk_create(new_price)
+
+
 class MakeYourOwnTripDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = MakeYourOwnTripDetails

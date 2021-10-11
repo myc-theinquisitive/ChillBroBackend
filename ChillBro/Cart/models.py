@@ -53,7 +53,6 @@ class TransportDetails(models.Model):
 
 class EventsDetails(models.Model):
     cart_product = models.ForeignKey('CartProducts', on_delete=models.CASCADE)
-    date = models.DateTimeField()
     slot = models.CharField(max_length=50)
     name = models.CharField(max_length=100)
     phone_no = models.IntegerField(max_length=10)

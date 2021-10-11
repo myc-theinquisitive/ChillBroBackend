@@ -23,7 +23,6 @@ def generate_otp():
 
 class BookingsManager(models.Manager):
 
-    # TODO: add booking status cancelled condition and booking time less than that approval time for business client
     def active(self):
         current_time = timezone.now() - timedelta(minutes=BookingApprovalTime)
 
@@ -178,8 +177,6 @@ class BookedProducts(models.Model):
         return "Booked Product - {0}, {1}".format(self.booking_id, self.product_id)
 
 
-# TODO: move trip type, pickup location, drop location, starting_km_value, ending km value
-#  and km limit choosen into a separate table
 class TransportBookingDetails(models.Model):
     booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
     trip_type = models.CharField(max_length=30,
@@ -209,6 +206,21 @@ class TransportBookingDurationDetails(models.Model):
     day_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_hour_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
     excess_day_duration_price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+
+
+class EventsDetails(models.Model):
+    booked_product = models.ForeignKey('BookedProducts', on_delete=models.CASCADE)
+    slot = models.CharField(max_length=50)
+    name = models.CharField(max_length=100)
+    phone_no = models.IntegerField(max_length=10)
+    alternate_no = models.IntegerField(max_length=10)
+    email = models.CharField(max_length=50)
+
+
+class EventsPrices(models.Model):
+    event_details = models.ForeignKey('EventsDetails', on_delete=models.CASCADE)
+    price = models.DecimalField(decimal_places=2, max_digits=20, default=0.00)
+    quantity = models.IntegerField(default=0)
 
 
 class MakeYourOwnTripDetails(models.Model):
