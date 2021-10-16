@@ -272,10 +272,6 @@ class PaymentSuccess(APIView):
             'razorpay_payment_id': request.data['razorpay_payment_id'],
             'razorpay_signature': request.data['razorpay_signature'],
         }
-        try:
-            client.utility.verify_payment_signature(params_dict)
-        except Exception as e:
-            return  Response({'message':str(e)}, 200)
 
         serializer = RazorpayTransactionsSerializer(data=request.data)
         if not serializer.is_valid():
@@ -283,11 +279,19 @@ class PaymentSuccess(APIView):
         serializer.save()
         try:
             booking_transaction = BookingTransaction.objects.get(razorpay_order_id=serializer.data['razorpay_order_id'])
-            booking_transaction.payment_status = PayStatus.done.value
-            booking_transaction.save()
-            return Response({'message': "Your transaction is successfull", "success": True})
         except:
-            return Response({'message': 'Invalid transaction', "success": False})
+            return Response({'message': 'Invalid transaction, no booking id', "success": False})
+
+        try:
+            client.utility.verify_payment_signature(params_dict)
+        except Exception as e:
+            booking_transaction.payment_status = PayStatus.failed.value
+            booking_transaction.save()
+            return  Response({'message':str(e)}, 200)
+
+        booking_transaction.payment_status = PayStatus.done.value
+        booking_transaction.save()
+        return Response({'message': "Your transaction is successfull", "success": True})
 
 
 def pay_form(request):
