@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -257,3 +258,23 @@ class RefundTransactionDetail(generics.RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = RefundTransaction.objects.all()
     serializer_class = RefundTransactionDetailsSerializer
+
+
+class PaymentSuccess(APIView):
+    def post(self, request, *args, **kwargs):
+        print(request.data)
+        serializer = RazorpayTransactionsSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, 400)
+        serializer.save()
+        try:
+            booking_transaction = BookingTransaction.objects.get(razorpay_order_id=serializer.data['razorpay_order_id'])
+            booking_transaction.payment_status = PayStatus.done.value
+            booking_transaction.save()
+            return Response({'message': "Your transaction is successfull", "success": True})
+        except:
+            return Response({'message': 'Invalid transaction', "success": False})
+
+
+def pay_form(request):
+    return render(request, 'pay_form.html')

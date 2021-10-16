@@ -1,6 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist
 from .constants import PaymentUser, PayStatus
 from .serializers import *
+from django.conf import  settings
+import razorpay
 
 
 # TODO: should update based on current changes
@@ -13,9 +15,23 @@ def transaction_details_by_booking_id(booking_id):
 
 
 def new_booking_transaction(transaction_data):
+    booking_id = transaction_data.get('booking_id')
+    content = {}
+    if transaction_data['paid_by'] == PaymentUser.customer.value and transaction_data['paid_to'] == PaymentUser.myc.value:
+        client = razorpay.Client(
+            auth=("rzp_test_Ggvw8pTdJ3SnAg", "HQrPh4O1A1bIYP2To2yMjqMJ"))
+        content = {
+            "amount": float(transaction_data['total_money'])*100,
+            "currency": "INR",
+        }
+        payment = client.order.create(data=content)
+        content['callback_url'] = "https://chillbro.co.in/apis/payments/payment_success/"+booking_id+"/" if settings.IS_SERVER else "http://127.0.0.1:8000/payments/payment_success/"+booking_id+"/"
+        content['order_id'] = payment['id']
+        transaction_data['razorpay_order_id'] = payment['id']
+
     serializer = BookingTransactionDetailsSerializer()
     serializer.create(transaction_data)
-    return True
+    return content
 
 
 def new_refund_transaction(transaction_data):

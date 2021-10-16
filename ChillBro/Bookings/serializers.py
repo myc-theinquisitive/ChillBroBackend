@@ -21,7 +21,7 @@ class BookedProductsSerializer(serializers.ModelSerializer):
             add_booking_product = BookedProducts(
                 booking=product["booking"], product_id=product["product_id"],
                 product_value=Decimal(product["product_value"]),
-                quantity=product["quantity"], net_value=(product["net_value"]["net_price"]),
+                quantity=product["quantity"], net_value=(product["net_value"]),
                 price=Decimal(product["price"]),
                 price_type=product["price_type"], size=product["size"], is_combo=product["is_combo"],
                 has_sub_products=product["has_sub_products"], hidden=product["hidden"],
