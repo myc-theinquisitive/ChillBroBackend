@@ -311,6 +311,9 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = "Asia/Kolkata"
 CELERY_IMPORTS = ('authentication.tasks', 'Bookings.tasks',)
 
+RAZORPAY_API_KEY = "rzp_test_Ggvw8pTdJ3SnAg"
+RAZORPAY_API_SECRET = "HQrPh4O1A1bIYP2To2yMjqMJ"
+
 CHANNEL_LAYERS = {
     'default': {
         "BACKEND": "channels.layers.InMemoryChannelLayer",

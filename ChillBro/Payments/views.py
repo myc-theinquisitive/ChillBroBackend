@@ -1,3 +1,4 @@
+import razorpay
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
 from rest_framework import generics
@@ -10,6 +11,7 @@ from .wrapper import *
 from django.db.models import Q, Count
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClientEntities, \
     IsEmployeeEntities
+from django.conf import settings
 
 
 class GetBookingTransactions(generics.ListAPIView):
@@ -263,6 +265,18 @@ class RefundTransactionDetail(generics.RetrieveUpdateAPIView):
 class PaymentSuccess(APIView):
     def post(self, request, *args, **kwargs):
         print(request.data)
+        client = razorpay.Client(
+            auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
+        params_dict = {
+            'razorpay_order_id': request.data['razorpay_order_id'],
+            'razorpay_payment_id': request.data['razorpay_payment_id'],
+            'razorpay_signature': request.data['razorpay_signature'],
+        }
+        try:
+            client.utility.verify_payment_signature(params_dict)
+        except Exception as e:
+            return  Response({'message':str(e)}, 200)
+
         serializer = RazorpayTransactionsSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, 400)
