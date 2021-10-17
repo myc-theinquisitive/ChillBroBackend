@@ -63,3 +63,8 @@ class GetTrasactionDetailsSerializer(serializers.Serializer):
     payment_status = serializers.ListField(
         child=serializers.CharField()
     )
+
+class RazorpayTransactionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RazorpayTransactions
+        fields = '__all__'

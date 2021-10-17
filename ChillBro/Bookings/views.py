@@ -793,7 +793,11 @@ class ProceedToPayment(APIView):
             booking.payment_mode = payment_mode
             booking.save()
 
-            create_booking_transaction(
+        if payment_mode == PaymentMode.partial.value:
+            if transaction_money != float(booking.total_money - booking.total_net_value):
+                return Response({"message": "Can't create transaction", "errors": "Invalid transaction"}, 400)
+
+            response = create_booking_transaction(
                 {
                     'booking_id': booking.id, 'entity_id': booking.entity_id,
                     'entity_type': booking.entity_type,
@@ -813,14 +817,14 @@ class ProceedToPayment(APIView):
             )
 
         elif payment_mode == PaymentMode.full.value:
-            if transaction_money != booking.total_money:
+            if transaction_money != float(booking.total_money):
                 return Response({"message": "Can't create transaction", "errors": "Invalid transaction"}, 400)
             # TODO: move this logic to outside of if else as it is common for all payment modes
             # this logic should be inside of both cases since we have to check transaction money is valid or not
             booking.payment_mode = payment_mode
             booking.save()
 
-            create_booking_transaction(
+            response = create_booking_transaction(
                 {
                     'booking_id': booking.id, 'entity_id': booking.entity_id,
                     'entity_type': booking.entity_type, 'total_money': booking.total_money,
@@ -837,7 +841,8 @@ class ProceedToPayment(APIView):
                     'paid_to': PaymentUser.entity.value, 'paid_by': PaymentUser.myc.value
                 }
             )
-        return Response({"message":"Your payment was created successfully"})
+        response['message'] = "Your payment was created successfully"
+        return Response(response, 200)
 
 
 class GetBookingDetailsView(generics.ListAPIView):

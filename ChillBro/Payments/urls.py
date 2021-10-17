@@ -11,4 +11,6 @@ urlpatterns = [
     path('booking_transactions/', GetBookingTransactions.as_view()),
     path('booking_transaction/<str:pk>', GetSpecificTransactionDetails.as_view()),
     path('get_transaction_details/',GetTrasactionDetails.as_view()),
+    path('payment_success/', PaymentSuccess.as_view()),
+    path('pay_form/', pay_form)
 ]
