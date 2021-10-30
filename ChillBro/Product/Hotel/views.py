@@ -41,7 +41,7 @@ def validate_hotel_available_amenities_ids(hotel_room_id: int, hotel_available_a
     return True, []
 
 
-class AmenitiesList(generics.ListCreateAPIView):
+class HotelAmenitiesList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet)
     queryset = Amenities.objects.all()
     serializer_class = AmenitiesSerializer

@@ -1,11 +1,10 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 import uuid
-
 from ChillBro.helpers import get_storage
 from .helpers import image_upload_to_travel_agency, upload_image_to_travel_characteristics
 from .validations import is_json
-from .constants import PlaceTypes
+from .constants import PlaceTypes, Cities
 
 
 def get_id():
@@ -26,6 +25,7 @@ class TravelAgency(models.Model):
                                                    validators=[MinValueValidator(0)])
     duration_in_nights = models.PositiveIntegerField(verbose_name="Duration in nights",
                                                      validators=[MinValueValidator(0)])
+    starting_point = models.CharField(max_length=36, choices=[(city.value, city.value) for city in Cities])
     tags = models.TextField(validators=[is_json])
 
     def __str__(self):

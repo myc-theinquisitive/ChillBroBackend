@@ -14,6 +14,10 @@ from Product.Driver.views import DriverView
 from Product.TravelPackageVehicle.views import TravelPackageVehicleView
 from Product.TravelAgency.views import TravelAgencyView
 from Product.MakeYourOwnTrip.views import MakeYourOwnTripView
+from Product.PaidAmenities.views import PaidAmenitiesView
+from Product.PG.views import PGView
+from Product.Dormitory.views import DormitoryView
+from Product.Resort.views import ResortView
 from Product.product_interface import ProductInterface
 from Product.taggable_wrapper import key_value_content_type_model, key_value_tag_model
 from typing import Dict
@@ -62,6 +66,14 @@ class ProductView(ProductInterface):
             return SelfRentalView(), "self_rental"
         elif product_type == "EVENT":
             return EventView(), "event"
+        elif product_type == "PAID_AMENITIES":
+            return PaidAmenitiesView(), "paid_amenities"
+        elif product_type == "PG":
+            return PGView(), "pg_room"
+        elif product_type == "RESORT":
+            return ResortView(), "resort_room"
+        elif product_type == "DORMITORY":
+            return DormitoryView(), "dormitory_room"
         return None, None
 
     # initialize the instance variables before accessing

@@ -26,7 +26,8 @@ class TravelPackageSerializer(serializers.ModelSerializer):
             category_id=validated_data["category"], tags=validated_data["tags"],
             category_product_id=validated_data["category_product"],
             duration_in_days=validated_data["duration_in_days"],
-            duration_in_nights=validated_data["duration_in_nights"])
+            duration_in_nights=validated_data["duration_in_nights"],
+            starting_point=validated_data["starting_point"])
 
     def update(self, instance, validated_data):
         if "tags" in validated_data:
@@ -38,6 +39,7 @@ class TravelPackageSerializer(serializers.ModelSerializer):
         instance.category_product_id = validated_data["category_product"]
         instance.duration_in_days = validated_data["duration_in_days"]
         instance.duration_in_nights = validated_data["duration_in_nights"]
+        instance.starting_point = validated_data["starting_point"]
         instance.tags = validated_data["tags"]
         instance.save()
 

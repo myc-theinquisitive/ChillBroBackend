@@ -1,4 +1,5 @@
 import enum
+from ChillBro.constants import Cities
 
 
 class PlaceTypes(enum.Enum):

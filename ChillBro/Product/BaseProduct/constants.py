@@ -13,6 +13,10 @@ class ProductTypes(enum.Enum):
     Make_Your_Own_Trip = "MAKE_YOUR_OWN_TRIP"
     Self_Rental = "SELF_RENTAL"
     Event = "EVENT"
+    Paid_Amenities = "PAID_AMENITIES"
+    PG = "PG"
+    DORMITORY = "DORMITORY"
+    RESORT = "RESORT"
 
 
 class ActivationStatus(enum.Enum):
