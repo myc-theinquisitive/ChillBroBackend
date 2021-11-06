@@ -2,7 +2,7 @@ from django.urls import path
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
     ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories, \
-    HotelProductsTypes, HotelEntityProducts, HireADriverHomePage, HireADriverYearsFilter
+    HotelProductsTypes, HotelEntityProducts, HireADriverHomePage, HireADriverYearsFilter, EventHomePageCategories
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
@@ -14,7 +14,7 @@ from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDe
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
 from .TravelPackageVehicle.views import TravelPackageVehiclesList
-from  .TravelAgency.views import TravelCharacteristicsList, TravelCharacteristicsDetail
+from .TravelAgency.views import TravelCharacteristicsList, TravelCharacteristicsDetail
 from .PG.views import PGAmenitiesList
 from .Dormitory.views import DormitoryAmenitiesList
 from .Resort.views import ResortAmenitiesList
@@ -93,6 +93,7 @@ urlpatterns = [
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
 
     path('product/rental_home_page_categories/', RentalHomePageCategories.as_view()),
+    path('product/event_home_page_categories/', EventHomePageCategories.as_view()),
     path('product/rental_products_types/', RentalProductsTypes.as_view()),
     path('product/hotel_products_types/', HotelProductsTypes.as_view()),
     path('product/entity/<str:seller_id>/', HotelEntityProducts.as_view()),

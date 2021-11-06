@@ -305,11 +305,11 @@ class DormitoryView(ProductInterface):
         products = Product.objects.filter(id__in=product_ids)
         starting_prices = defaultdict()
         for each_product in products:
-            each_hire_a_vehicle_details = product_details_with_ids[each_product.product_id]
-            start_time_date_object = each_hire_a_vehicle_details['start_time']
-            end_time_date_object = each_hire_a_vehicle_details['end_time']
-            quantity = each_hire_a_vehicle_details["quantity"]
-            discount_percentage = each_hire_a_vehicle_details["discount_percentage"]
+            each_dormitory_details = product_details_with_ids[each_product.product_id]
+            start_time_date_object = each_dormitory_details['start_time']
+            end_time_date_object = each_dormitory_details['end_time']
+            quantity = each_dormitory_details["quantity"]
+            discount_percentage = each_dormitory_details["discount_percentage"]
 
             difference_date = (end_time_date_object - start_time_date_object)
             total_hours = ceil((difference_date.total_seconds() // 60) / 60)
