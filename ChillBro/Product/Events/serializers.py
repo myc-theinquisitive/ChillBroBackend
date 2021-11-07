@@ -4,7 +4,7 @@ import json
 
 
 class EventSlotsSerializer(serializers.ModelSerializer):
-    event = serializers.IntegerField(default=1)  # Internal field - avoid validation
+    event = serializers.IntegerField(default=-1)  # Internal field - avoid validation
 
     class Meta:
         model = EventSlots
@@ -58,7 +58,7 @@ class EventSlotsSerializer(serializers.ModelSerializer):
 
 
 class EventPriceClassesSerializer(serializers.ModelSerializer):
-    event = serializers.IntegerField(default=1)  # Internal field - avoid validation
+    event = serializers.IntegerField(default=-1)  # Internal field - avoid validation
 
     class Meta:
         model = EventPriceClasses

@@ -69,6 +69,7 @@ class EventView(ProductInterface):
         event_slots_data_valid = event_slots_serializer.is_valid()
 
         if not event_slots_data_valid:
+            print(event_slots_serializer.errors)
             is_valid = False
             errors.update(event_slots_serializer.errors)
             return is_valid, errors

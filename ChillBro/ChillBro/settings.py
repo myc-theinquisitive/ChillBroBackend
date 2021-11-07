@@ -141,7 +141,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-IS_SERVER = False
+IS_SERVER = True
 
 if IS_SERVER:
     DEBUG = True
