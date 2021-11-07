@@ -168,6 +168,14 @@ class CategoryProductPricesDetail(generics.RetrieveUpdateDestroyAPIView):
 class GetVehiclesCategoriesList(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        vehicles_categories = Category.objects.filter(parent_category__name__icontains="vehicles").values_list('name',flat=True)
-        return Response({"results":vehicles_categories},200)
-        pass
+        vehicles_categories = Category.objects.filter(parent_category__name__icontains="vehicles")
+        vehicle_details = []
+        for each_vehicle in vehicles_categories:
+            icon_url = each_vehicle.icon_url.url.replace(settings.IMAGE_REPLACED_STRING, "")
+            vehicle_details.append({
+                'id': each_vehicle.id,
+                'name': each_vehicle.name,
+                'image': icon_url
+            })
+        return Response({"results":vehicle_details},200)
+        

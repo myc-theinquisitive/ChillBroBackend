@@ -44,3 +44,21 @@ def get_status_filters(status):
     if len(status) == 0:
         return [status.value for status in BookingStatus]
     return status
+
+
+def get_total_time_period(from_date, to_date):
+    days = from_date - to_date
+    seconds = int(days.total_seconds())
+    if seconds < 60:
+        return "1 min"
+    else:
+        minutes = seconds // 60
+        if minutes < 60:
+            return str(minutes) + " minutes"
+        else:
+            hours = minutes // 60
+            if hours < 24:
+                return str(hours) + " hours"
+            else:
+                days = hours // 24
+                return str(days) + " days"

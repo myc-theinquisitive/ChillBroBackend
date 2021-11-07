@@ -2,22 +2,24 @@ from django.urls import path
 from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProducts, GetSellerProductList, \
     ProductNetPrice, BusinessClientProductsByVerificationStatus, BusinessClientProductDetails, \
     ProductVerificationDetail, ProductListBasedOnVerificationStatus, RentalProductsTypes, RentalHomePageCategories, \
-    HotelProductsTypes, HotelEntityProducts, HireADriverHomePage, HireADriverYearsFilter
+    HotelProductsTypes, HotelEntityProducts, HireADriverHomePage, HireADriverYearsFilter, EventHomePageCategories
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
     CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
-from .Hotel.views import AmenitiesList
+from .Hotel.views import HotelAmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
-    VehicleCharacteristicsDetail, GetVehicleTypesByCategory
+    VehicleCharacteristicsDetail, GetVehicleTypesDetailsByCategory, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
 from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
     TravelPackageImageDelete
 from .TravelPackageVehicle.views import TravelPackageVehiclesList
-from  .TravelAgency.views import TravelCharacteristicsList,TravelCharacteristicsDetail
+from .TravelAgency.views import TravelCharacteristicsList, TravelCharacteristicsDetail
+from .PG.views import PGAmenitiesList
+from .Dormitory.views import DormitoryAmenitiesList
+from .Resort.views import ResortAmenitiesList
 
 urlpatterns = [
-
     # urls for category
     path('category/', CategoryList.as_view()),
     path('category/image/', CategoryImageCreate.as_view()),
@@ -37,6 +39,7 @@ urlpatterns = [
     # urls for vehicle
     path('vehicle/type/', VehicleTypeList.as_view()),
     path('vehicle/type/category/<str:category_name>/', GetVehicleTypesByCategory.as_view()),
+    path('vehicle/type/complete_details/category/<str:category_name>/', GetVehicleTypesDetailsByCategory.as_view()),
     path('vehicle/type/<str:pk>/', VehicleTypeDetail.as_view()),
 
 
@@ -59,7 +62,7 @@ urlpatterns = [
     path('travel_package/<str:pk>/', TravelPackageDetail.as_view()),
 
     # urls for travel agency characteristics
-    path('travel_agency/characteristics/',TravelCharacteristicsList.as_view()),
+    path('travel_agency/characteristics/', TravelCharacteristicsList.as_view()),
     path('travel_agency/characteristics/<str:id>/', TravelCharacteristicsDetail.as_view()),
 
     # urls for all products
@@ -81,19 +84,22 @@ urlpatterns = [
     path('product/business_client/<str:product_id>/', BusinessClientProductDetails.as_view()),
 
     # urls specific to hotels
-    path('product/amenities/', AmenitiesList.as_view()),
+    path('product/hotel/amenities/', HotelAmenitiesList.as_view()),
+    path('product/pg/amenities/', PGAmenitiesList.as_view()),
+    path('product/resort/amenities/', ResortAmenitiesList.as_view()),
+    path('product/dormitory/amenities/', DormitoryAmenitiesList.as_view()),
 
     # urls of update product
     path('product/quantity/<str:product_id>/', ProductQuantity.as_view()),
 
     path('product/rental_home_page_categories/', RentalHomePageCategories.as_view()),
+    path('product/event_home_page_categories/', EventHomePageCategories.as_view()),
     path('product/rental_products_types/', RentalProductsTypes.as_view()),
     path('product/hotel_products_types/', HotelProductsTypes.as_view()),
-    path('product/entity/<str:seller_id>/',HotelEntityProducts.as_view()),
-    path('product/hire_a_driver_home_page/',HireADriverHomePage.as_view()),
+    path('product/entity/<str:seller_id>/', HotelEntityProducts.as_view()),
+    path('product/hire_a_driver_home_page/', HireADriverHomePage.as_view()),
     path('product/hire_a_driver_years_filter/', HireADriverYearsFilter.as_view()),
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),
-
 ]

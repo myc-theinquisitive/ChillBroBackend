@@ -105,6 +105,7 @@ class TravelAgencyView(ProductInterface):
              "travel_agency":{
                 duration_in_days: int,
                 duration_in_nights: int,
+                starting_point: string,
                 places: [
                     {
                         'place': string,
@@ -188,7 +189,6 @@ class TravelAgencyView(ProductInterface):
             is_valid = False
             errors["characteristics"] = agency_characteristics_serializer.errors
 
-
         return is_valid, errors
 
     def update(self, travel_agency_data):
@@ -197,6 +197,7 @@ class TravelAgencyView(ProductInterface):
 
             duration_in_days: int,
             duration_in_nights: int,
+            starting_point: string,
             'places': {
                 'add': [
                     {

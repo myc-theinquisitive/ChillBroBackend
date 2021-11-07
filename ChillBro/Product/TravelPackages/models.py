@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 import uuid
-
+from .constants import Cities
 from ChillBro.helpers import get_storage
 from .helpers import image_upload_to_travel_package
 from .validations import is_json
@@ -23,6 +23,7 @@ class TravelPackage(models.Model):
                                                    validators=[MinValueValidator(0)])
     duration_in_nights = models.PositiveIntegerField(verbose_name="Duration in nights",
                                                      validators=[MinValueValidator(0)])
+    starting_point = models.CharField(max_length=36, choices=[(city.value, city.value) for city in Cities])
 
     def __str__(self):
         return "Travel Package: {0}".format(self.name)

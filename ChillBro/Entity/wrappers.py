@@ -7,6 +7,8 @@ from WishList.exportapis import get_wishlist_entity_ids
 from ReviewsRatings.exportapi import get_rating_stats_for_related_ids, \
     get_rating_type_wise_average_rating_for_related_ids, get_latest_ratings_for_related_ids
 
+# from .export_apis import get_entity_details_for_entity_ids
+
 
 def post_create_address(address_data):
     return create_address(address_data)
@@ -122,3 +124,8 @@ def get_latest_ratings_for_entity(entity_id):
     from Bookings.exportapi import get_booking_ids_for_entity
     booking_ids = get_booking_ids_for_entity(entity_id)
     return get_latest_ratings_for_related_ids(booking_ids)
+
+
+def approximate_distance_query_for_entity(address_id, latitute, longitude):
+    from Address.exportapi import approximate_distance_query
+    return approximate_distance_query(address_id, latitute, longitude)

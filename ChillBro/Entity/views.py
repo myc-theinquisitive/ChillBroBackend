@@ -19,15 +19,16 @@ from .wrappers import post_create_address, get_address_details_for_address_ids, 
     update_address_for_address_id, get_entity_id_wise_employees, get_entity_ids_for_employee, \
     get_entity_id_wise_average_rating, average_rating_query_for_entity, entity_products_starting_price_query, \
     get_entity_id_wise_starting_price, get_entity_id_wise_wishlist_status, get_rating_wise_review_details_for_entity, \
-    get_rating_type_wise_average_rating_for_entity, get_latest_ratings_for_entity
+    get_rating_type_wise_average_rating_for_entity, get_latest_ratings_for_entity, \
+    approximate_distance_query_for_entity
 from datetime import datetime
-from .helpers import get_date_format, get_entity_status, get_entity_types_filter
+from .helpers import get_date_format, get_entity_status, get_entity_types_filter, LatLong, \
+    calculate_distance_between_location_multiple_entities
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsBusinessClientEntity, IsOwnerById, \
     IsEmployee, IsGet, IsEmployeeEntity
 from decimal import Decimal
 from django.conf import settings
-
 from collections import defaultdict
 
 
@@ -801,6 +802,28 @@ class EntityView:
         entity_response.pop("account", None)
         entity_response.pop("upi", None)
 
+    @staticmethod
+    def add_distance_data_for_entities(entities_response, latitude, longitude):
+        if not latitude or not longitude:
+            for entity in entities_response:
+                entity["distance"] = ""
+                entity["duration"] = ""
+            return None
+
+        source = LatLong(latitude, longitude)
+
+        destination_points = []
+        for entity in entities_response:
+            address = entity['address']
+            destination_points.append((entity['id'], LatLong(address['latitude'], address['longitude'])))
+
+        distances_data = calculate_distance_between_location_multiple_entities(source, destination_points)
+
+        for entity in entities_response:
+            distance_data = distances_data[entity['id']]
+            entity['distance'] = distance_data['distance']
+            entity['duration'] = distance_data['duration']
+
     def add_details_for_entities(self, entities_data):
         self.add_average_rating_for_entities(entities_data)
         self.add_starting_price_for_entities(entities_data)
@@ -879,7 +902,7 @@ class GetEntitiesBySubType(generics.ListAPIView):
         return filter_entities.values_list("id", flat=True)
 
     @staticmethod
-    def apply_sort_filter(query_set, sort_filter):
+    def apply_sort_filter(query_set, sort_filter, request_data):
         if sort_filter == "AVERAGE_RATING":
             ratings_query = average_rating_query_for_entity(OuterRef('id'))
             return query_set.annotate(
@@ -890,7 +913,6 @@ class GetEntitiesBySubType(generics.ListAPIView):
             ).order_by('-average_rating')
 
         elif sort_filter == "PRICE_LOW_TO_HIGH" or sort_filter == "PRICE_HIGH_TO_LOW":
-
             starting_price_query = entity_products_starting_price_query(OuterRef('id'))
             query_set = query_set.annotate(
                 starting_price=Subquery(
@@ -898,11 +920,23 @@ class GetEntitiesBySubType(generics.ListAPIView):
                     output_field=DecimalField()
                 )
             )
-
             if sort_filter == "PRICE_LOW_TO_HIGH":
                 return query_set.order_by('starting_price')
             elif sort_filter == "PRICE_HIGH_TO_LOW":
                 return query_set.order_by('-starting_price')
+
+        elif sort_filter == "DISTANCE":
+            if "location" in request_data and request_data["location"] is not None:
+                latitude = request_data["location"]["latitude"]
+                longitude = request_data["location"]["longitude"]
+                distance_query = approximate_distance_query_for_entity(
+                    OuterRef('address_id'), latitude, longitude)
+                return query_set.annotate(
+                    approximate_distance=Subquery(
+                        queryset=distance_query,
+                        output_field=FloatField()
+                    )
+                ).order_by('approximate_distance')
 
         return query_set
 
@@ -916,8 +950,11 @@ class GetEntitiesBySubType(generics.ListAPIView):
         elif sort_filter == "PRICE_HIGH_TO_LOW":
             entities_response.sort(
                 key=lambda entity_response: Decimal(entity_response['starting_price']), reverse=True)
+        elif sort_filter == "DISTANCE":
+            entities_response.sort(
+                key=lambda entity_response: entity_response['distance'])
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
 
         input_serializer = GetEntitiesBySearchFilters(data=request.data)
         if not input_serializer.is_valid():
@@ -927,11 +964,13 @@ class GetEntitiesBySubType(generics.ListAPIView):
         sort_filter = request.data["sort_filter"]
         entity_ids = self.apply_filters(entity_ids, request.data)
         self.queryset = MyEntity.objects.filter(id__in=entity_ids)
-        self.queryset = self.apply_sort_filter(self.queryset, sort_filter)
+        self.queryset = self.apply_sort_filter(self.queryset, sort_filter, request.data)
 
         response = super().get(request, args, kwargs)
         response_data = response.data["results"]
         self.entity_view.add_details_for_entities(response_data)
+        self.entity_view.add_distance_data_for_entities(response_data, request.data['location']['latitude'],
+                                                        request.data['location']['longitude'])
         self.entity_view.add_user_specific_details_for_entities(request.user.id, response_data)
         self.sort_results(response_data, sort_filter)
         return response
@@ -966,22 +1005,23 @@ class HotelHomePageCategories(generics.RetrieveAPIView):
             hotel_categories_home_page['All Hotels'].append(response_data[count])
             count += 1
 
-        hotel_home_page_categories = []
-        hotel_home_page_categories.append({
-            'name': 'Near By You',
-            'products': hotel_categories_home_page['Near By You']
-        })
-        hotel_home_page_categories.append({
-            'name': "Trending",
-            'products': hotel_categories_home_page["Trending"]
-        })
-        hotel_home_page_categories.append({
-            'name': 'Budget',
-            'products': hotel_categories_home_page['Budget']
-        })
-        hotel_home_page_categories.append({
-            'name': 'All Hotels',
-            'products': hotel_categories_home_page['All Hotels']
-        })
+        hotel_home_page_categories = [
+            {
+                'name': 'Near By You',
+                'products': hotel_categories_home_page['Near By You']
+            },
+            {
+                'name': "Trending",
+                'products': hotel_categories_home_page["Trending"]
+            },
+            {
+                'name': 'Budget',
+                'products': hotel_categories_home_page['Budget']
+            },
+            {
+                'name': 'All Hotels',
+                'products': hotel_categories_home_page['All Hotels']
+            }
+        ]
 
         return Response({"results": hotel_home_page_categories}, 200)

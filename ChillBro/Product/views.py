@@ -291,7 +291,7 @@ class GetProductsByCategory(generics.ListAPIView):
 
         return list(set(result_category_ids))
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         input_serializer = GetProductsBySearchFilters(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't get products", "errors": input_serializer.errors}, 400)
@@ -501,6 +501,44 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
         }, {
             'name': 'New Arrivals',
             'products': rental_categories_home_page['New Arrivals']
+        }]
+
+        return Response({"results": rental_home_page_categories}, 200)
+
+
+class EventHomePageCategories(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        product_ids = Product.objects.filter(type=ProductTypes.Event.value).values_list('id', flat=True)
+
+        event_products_details = ProductView().get_by_ids(product_ids)
+        event_categories_home_page = defaultdict(list)
+
+        count = 0
+        for each_product in product_ids:
+            if count % 4 == 0:
+                event_categories_home_page['Entertainment'].append(event_products_details[count])
+            if count % 4 == 1:
+                event_categories_home_page['Education'].append(event_products_details[count])
+            if count % 4 == 2:
+                event_categories_home_page['Health'].append(event_products_details[count])
+            if count % 4 == 3:
+                event_categories_home_page['Food'].append(event_products_details[count])
+            count += 1
+
+        rental_home_page_categories = [{
+            'name': 'Entertainment',
+            'products': event_categories_home_page['Entertainment']
+        }, {
+            'name': 'Education',
+            'products': event_categories_home_page['Education']
+        }, {
+            'name': 'Health',
+            'products': event_categories_home_page['Health']
+        }, {
+            'name': 'Food',
+            'products': event_categories_home_page['Food']
         }]
 
         return Response({"results": rental_home_page_categories}, 200)

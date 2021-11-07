@@ -7,6 +7,7 @@ from .views import *
 urlpatterns = [
     # signup
     path('signup-validate/', MailOrPhoneNumberExists.as_view()),
+    path('resend-signup-otp/',ResendSignupOtp.as_view()),
     path('mail-signup/', Signup.as_view(), {"mail": True, "phone": False}),
     path('phone-signup/', Signup.as_view(), {"mail": False, "phone": True}),
     path('signup/verify/', SignupVerify.as_view()),

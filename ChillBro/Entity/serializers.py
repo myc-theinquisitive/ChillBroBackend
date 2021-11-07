@@ -202,8 +202,14 @@ class LocationFilter(serializers.Serializer):
     city = serializers.CharField(max_length=30, allow_null=True, allow_blank=True)
 
 
+class LatLongSerializer(serializers.Serializer):
+    latitude = serializers.CharField(max_length=10)
+    longitude = serializers.CharField(max_length=10)
+
+
 class GetEntitiesBySearchFilters(serializers.Serializer):
     search_text = serializers.CharField(allow_null=True, allow_blank=True)
     sort_filter = serializers.CharField(allow_null=True, allow_blank=True)
     location_filter = LocationFilter()
     trending_type = serializers.CharField(allow_null=True, allow_blank=True)
+    location = LatLongSerializer(allow_null=True)

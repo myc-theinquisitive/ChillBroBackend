@@ -148,7 +148,6 @@ class CartDetails(generics.ListAPIView):
                 sub_products_details[
                     each_cart_product.cart_id + "," + each_cart_product.parent_cart_product.product_id].append(
                     sub_product_cart_details)
-
         for each_product in cart_products_after_removing_duplicate_products:
             sub_products = []
             if each_product.hidden is False:

@@ -11,6 +11,7 @@ from .product_view import ProductView
 from Entity.export_apis import get_entity_type_and_sub_type
 
 
+# TODO: This is not optimized calls are going exponential
 def get_product_id_wise_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
     sub_products_ids = ProductView().get_sub_products_ids(product_ids)

@@ -9,8 +9,8 @@ from .serializers import *
 from .helpers import *
 from .constants import *
 from collections import defaultdict
-from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsUserOwner, IsOwner, IsGet, \
-    IsEmployee, IsBookingBusinessClient, IsBusinessClientEntityById, IsEmployeeEntityById, IsBookingEmployee, \
+from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwner, IsEmployee, IsBookingBusinessClient, \
+    IsBookingEmployee, \
     IsBusinessClientEntities, IsEmployeeEntities
 import threading
 from datetime import datetime, timedelta
@@ -144,24 +144,6 @@ def cancel_booking(booking):
 
 def update_booking_status(booking_id, status):
     return Bookings.objects.filter(id=booking_id).update(booking_status=status)
-
-
-def get_total_time_period(from_date, to_date):
-    days = from_date - to_date
-    seconds = int(days.total_seconds())
-    if seconds < 60:
-        return "1 min"
-    else:
-        minutes = seconds // 60
-        if minutes < 60:
-            return str(minutes) + " minutes"
-        else:
-            hours = minutes // 60
-            if hours < 24:
-                return str(hours) + " hours"
-            else:
-                days = hours // 24
-                return str(days) + " days"
 
 
 def get_complete_booking_details_by_ids(booking_ids):
