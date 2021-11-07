@@ -48,6 +48,29 @@ class TransportDetailsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class EventsDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventsDetails
+        fields = '__all__'
+
+
+class EventsPricesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventsPrices
+        fields = '__all__'
+
+    def bulk_create(self, validated_data):
+        new_price = []
+        for product in validated_data:
+            add_price = EventsPrices(
+                event_details=product["event_details"],
+                price=product["price"],
+                quantity = product["quantity"]
+            )
+            new_price.append(add_price)
+        return EventsPrices.objects.bulk_create(new_price)
+
+
 class AddtoCartTransportDetailsSerializer(serializers.Serializer):
     trip_type = serializers.CharField(required=True)
     is_pickup_location_updated = serializers.BooleanField(required=True)
@@ -55,14 +78,41 @@ class AddtoCartTransportDetailsSerializer(serializers.Serializer):
     km_limit_choosen = serializers.IntegerField(required=True)
 
 
+class AddtoCartEventPricesSerializer(serializers.Serializer):
+    price = serializers.IntegerField(required=True)
+    quantity = serializers.IntegerField(required=True)
+
+
+class AddtoCartEventDetailsSerializer(serializers.Serializer):
+    prices = AddtoCartEventPricesSerializer(many=True)
+    slot = serializers.CharField(required=True)
+    name = serializers.CharField(required=True)
+    phone_no = serializers.IntegerField(required=True, max_value=9999999999, min_value= 6000000000)
+    alternate_no = serializers.IntegerField(required=True, max_value=9999999999, min_value= 6000000000)
+    email = serializers.CharField(required=True)
+
+
 class AddProductToCartSerializer(serializers.Serializer):
     product_id = serializers.CharField(required=True, min_length=36, max_length=36)
     quantity = serializers.IntegerField(required=True)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
-    # TODO: add validation for transport details and other inputs for add to cart
-    # transport_details = AddtoCartTransportDetailsSerializer(allow_null=True)
+    transport_details = AddtoCartTransportDetailsSerializer(allow_null=True, default=None)
+    event_details = AddtoCartEventDetailsSerializer(allow_null=True, default=None)
 
 
 class CheckoutCartSerializer(serializers.Serializer):
     entity_type = serializers.CharField(required=True)
+
+
+class EachProductSerializer(serializers.Serializer):
+    product_id = serializers.CharField(required=True, min_length=36, max_length=36)
+    quantity = serializers.IntegerField(required=True)
+    transport_details = AddtoCartTransportDetailsSerializer(allow_null=True, default=None)
+    event_details = AddtoCartEventDetailsSerializer(allow_null=True, default=None)
+
+
+class AddMultipleBookingsSerializer(serializers.Serializer):
+    start_time = serializers.DateTimeField(required=True)
+    end_time = serializers.DateTimeField(required=True)
+    products = EachProductSerializer(many=True)

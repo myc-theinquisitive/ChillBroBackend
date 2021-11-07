@@ -332,7 +332,15 @@ class EventView(ProductInterface):
         return {}
 
     def calculate_starting_prices(self, product_ids, product_ids_with_duration):
-        return {}
+        starting_prices = defaultdict()
+        for each_product in product_ids:
+            each_event_product = product_ids_with_duration[each_product]
+            each_event_product_prices = each_event_product["prices"]
+            total_price = 0
+            for each_price in each_event_product_prices:
+                total_price += each_price["price"] * each_price["quantity"]
+            starting_prices[each_product] = total_price
+        return starting_prices
 
     def calculate_final_prices(self, products):
         return {}

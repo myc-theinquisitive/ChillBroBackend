@@ -7,3 +7,7 @@ def get_user_model():
 
 def get_date_format():
     return settings.DATE_FORMAT if hasattr(settings, 'DATE_FORMAT') else "%Y-%m-%dT%H:%M:%S"
+
+
+def get_day_format():
+    return "%Y-%m-%d"

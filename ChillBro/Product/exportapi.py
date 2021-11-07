@@ -16,13 +16,21 @@ def get_product_id_wise_details(product_ids):
     products = Product.objects.filter(id__in=product_ids)
     sub_products_ids = ProductView().get_sub_products_ids(product_ids)
     transport_details = get_transport_details(product_ids)
+    event_details = get_event_details(product_ids)
 
     if not products:
         products = []
 
     product_id_wise_details = defaultdict(dict)
     for each_product in products:
-        discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
+        try:
+            discount = ((each_product.price - each_product.discounted_price) / each_product.price) * 100
+        except:
+            discount = 0
+        has_sub_products = each_product.has_sub_products
+        if each_product.type == "MAKE_YOUR_OWN_TRIP":
+            has_sub_products = True
+
         product_data = {
             'product_id': each_product.id,
             'price': each_product.discounted_price,
@@ -36,7 +44,7 @@ def get_product_id_wise_details(product_ids):
             'type': each_product.type,
             'has_sizes':each_product.has_sizes,
             'is_combo':each_product.is_combo,
-            'has_sub_products':each_product.has_sub_products
+            'has_sub_products': has_sub_products
         }
         product_sizes_details = {}
         if each_product.has_sizes:
@@ -73,6 +81,11 @@ def get_product_id_wise_details(product_ids):
             product_data['transport_details'] = transport_details[each_product.id]
         else:
             product_data['transport_details'] = {}
+
+        if each_product.id in event_details:
+            product_data['event_details'] = event_details[each_product.id]
+        else:
+            product_data['event_details'] = {}
 
         product_id_wise_details[each_product.id] = product_data
 
@@ -163,6 +176,17 @@ def get_transport_details(product_ids):
         }
 
     return transport_details
+
+
+def get_event_details(product_ids):
+    from Product.Events.views import EventView
+    event_details_with_product_ids = defaultdict()
+    event_details = EventView().get_by_ids(product_ids)
+
+    for each_event in event_details:
+        event_details_with_product_ids[each_event["product"]] = each_event
+
+    return event_details_with_product_ids
 
 
 def calculate_product_excess_net_price(excess_price, product_type):

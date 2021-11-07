@@ -123,7 +123,6 @@ class HireAVehicleView(ProductInterface):
         hire_a_vehicle_data["duration_details"] = hire_a_vehicle_duration_object
         hire_a_vehicle_object = self.hire_a_vehicle_serializer.create(hire_a_vehicle_data)
 
-
         return {
             "id": hire_a_vehicle_object.id
         }
