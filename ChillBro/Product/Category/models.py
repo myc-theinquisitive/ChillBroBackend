@@ -11,11 +11,12 @@ def get_id():
 
 class Category(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=get_id)
-    name = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=20)
     description = models.TextField()
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE,
                                         null=True, verbose_name="Parent Category")
     icon_url = ImageField(upload_to=update_image_to_category_icon, max_length=300, storage=get_storage())
+    key = models.CharField(max_length=50)
 
     def __str__(self):
         return "Category - Nº{0}".format(self.name)
