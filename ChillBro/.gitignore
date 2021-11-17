@@ -1,0 +1,19 @@
+# Ignoring virtual environment
+.venv/
+venv/
+activate
+
+# Ignoring extra files create by pycharm
+.idea/
+__pycache__/
+*.pyc
+
+# Ignore database sqlite
+db.sqlite3
+
+# Ignoring static
+static/
+
+# Ignoring celery added files
+celerybeat-schedule
+celerybeat.pid

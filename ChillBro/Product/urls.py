@@ -6,7 +6,8 @@ from .views import ProductList, ProductDetail, GetProductsByCategory, SearchProd
 from .BaseProduct.views import ProductQuantity, BaseProductImageDelete, BaseProductImageCreate
 from .Category.views import CategoryList, CategoryImageCreate, CategoryImageDelete, GetCategoriesLevelWise, \
     GetSpecificCategoriesLevelWise, CategoryTopLevelList, CategoryProductPricesList, \
-    CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList
+    CategoryProductPricesDetail, CategoryDetail, CategoryProductList, CategoryProductDetail, GetVehiclesCategoriesList,\
+    GenerateKey
 from .Hotel.views import HotelAmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail, GetVehicleTypesDetailsByCategory, GetVehicleTypesByCategory
@@ -102,4 +103,6 @@ urlpatterns = [
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),
+
+    path('product/category/generate/key/', GenerateKey.as_view()),
 ]

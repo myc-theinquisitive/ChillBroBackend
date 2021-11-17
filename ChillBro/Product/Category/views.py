@@ -178,4 +178,15 @@ class GetVehiclesCategoriesList(generics.ListAPIView):
                 'image': icon_url
             })
         return Response({"results":vehicle_details},200)
-        
+
+class GenerateKey(APIView):
+
+    def get(self, request,*args, **kwargs):
+        categories = Category.objects.all()
+        print(categories)
+        for each_category in categories:
+            key = each_category.name.lower().split()
+            each_category.key = "-".join(key)
+            each_category.save()
+
+        return Response({"message":"successfully generated"},200)
