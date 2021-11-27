@@ -611,7 +611,7 @@ class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
 class BusinessClientEntitiesByType(generics.RetrieveAPIView):
     serializer_class = EntitySerializer
     queryset = BusinessClientEntity.objects.all()
-    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee)
+    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee | IsSuperAdminOrMYCEmployee)
 
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)
@@ -1025,3 +1025,19 @@ class HotelHomePageCategories(generics.RetrieveAPIView):
         ]
 
         return Response({"results": hotel_home_page_categories}, 200)
+
+
+class GetEntities(APIView):
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsEmployeeEntity | IsBusinessClientEntity)
+
+    def post(self, request, *args, **kwargs):
+        entity_type = request.data['entity_type']
+        entity_sub_type = request.data['entity_sub_type']
+        entity_images = EntityImage.objects.select_related('entity').filter(entity__type=entity_type, \
+                                                                            entity__sub_type=entity_sub_type,
+                                                                            order=1)
+        resultant_entities = EntityImageSerializer(entity_images, many=True).data
+        return Response({"results":resultant_entities}, 200)
+
+
+
