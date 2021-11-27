@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import MyEntity, BusinessClientEntity, EntityAccount, EntityUPI, EntityVerification, \
-    Amenities, EntityAvailableAmenities
+    Amenities, EntityAvailableAmenities, EntityImage
 
 
 admin.site.register(BusinessClientEntity)
@@ -9,6 +9,7 @@ admin.site.register(EntityUPI)
 admin.site.register(EntityVerification)
 admin.site.register(Amenities)
 admin.site.register(EntityAvailableAmenities)
+admin.site.register(EntityImage)
 
 
 @admin.register(MyEntity)

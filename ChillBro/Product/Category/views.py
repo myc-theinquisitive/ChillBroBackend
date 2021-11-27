@@ -91,7 +91,7 @@ class GetSpecificCategoriesLevelWise(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            category = Category.objects.get(name__icontains=kwargs["slug"])
+            category = Category.objects.get(key__icontains=kwargs["slug"])
         except ObjectDoesNotExist:
             return Response({"errors": "Invalid Category!!!"}, 400)
 
@@ -99,9 +99,17 @@ class GetSpecificCategoriesLevelWise(APIView):
         slug_value = kwargs['slug'].lower()
         if slug_value == 'transport':
             new_sub_categories = []
+            vehicles_categories = []
             for each_category in sub_categories:
-                if each_category['name'].lower() == 'place' or each_category['name'].lower() == 'vehicles':
+                if each_category['key'].lower() == 'vehicles':
+                    vehicles_categories = each_category["sub_categories"]
+                    break
+            for each_category in sub_categories:
+                if each_category['key'].lower() == 'place' or each_category['key'].lower() == 'vehicles':
                     pass
+                elif each_category['key'].lower() == 'hire-a-vehiclez' or each_category['key'].lower() == 'hire-a-driver' or each_category['key'].lower() == 'self-rentals':
+                    each_category["sub_categories"] = vehicles_categories
+                    new_sub_categories.append(each_category)
                 else:
                     new_sub_categories.append(each_category)
             response_data = convert_category_to_dict(category)
@@ -168,7 +176,7 @@ class CategoryProductPricesDetail(generics.RetrieveUpdateDestroyAPIView):
 class GetVehiclesCategoriesList(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
-        vehicles_categories = Category.objects.filter(parent_category__name__icontains="vehicles")
+        vehicles_categories = Category.objects.filter(parent_category__key__icontains="vehicles")
         vehicle_details = []
         for each_vehicle in vehicles_categories:
             icon_url = each_vehicle.icon_url.url.replace(settings.IMAGE_REPLACED_STRING, "")

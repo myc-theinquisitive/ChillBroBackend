@@ -2,6 +2,8 @@ from django.db import models
 from .constants import Countries, States, Cities, AddressType
 import uuid
 from django.contrib.auth import get_user_model
+from ChillBro.helpers import get_storage
+from .helpers1 import upload_image_to_city_icon
 
 
 def get_id():
@@ -38,3 +40,12 @@ class UserSavedAddress(models.Model):
 
     def __str__(self):
         return "User: {0}, Address Id: {1}".format(self.created_by, self.address_id)
+
+
+class Cities(models.Model):
+    name = models.CharField(max_length=30, unique=True)
+    short_name = models.CharField(max_length=30, unique=True)
+    image_url = models.ImageField(upload_to=upload_image_to_city_icon, max_length=300, storage=get_storage())
+
+    def __str__(self):
+        return "Category - {0}".format(self.name)

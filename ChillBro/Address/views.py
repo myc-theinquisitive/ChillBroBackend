@@ -2,8 +2,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Address, UserSavedAddress
-from .serializers import AddressSerializer, AddressIdListSerializer, SavedAddressSerializer
+from .models import Address, UserSavedAddress, Cities
+from .serializers import AddressSerializer, AddressIdListSerializer, SavedAddressSerializer, \
+    CitiesSerializer
 from rest_framework import generics, status
 
 
@@ -125,3 +126,9 @@ def get_distance(source, destination):
 
 
 # def get_multiple_distances():
+
+class CitiesList(generics.ListCreateAPIView):
+    print("hi")
+    permission_classes = (IsAuthenticated,)
+    queryset = Cities.objects.all()
+    serializer_class = CitiesSerializer
