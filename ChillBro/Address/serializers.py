@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Address, UserSavedAddress
+from .models import Address, UserSavedAddress, Cities
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -19,3 +19,10 @@ class AddressIdListSerializer(serializers.Serializer):
     ids = serializers.ListField(
         child=serializers.CharField(max_length=36)
     )
+
+
+class CitiesSerializer(serializers.ModelSerializer):
+    """Address serializer returns all data on Address from model"""
+    class Meta:
+        model = Cities
+        fields = '__all__'

@@ -1,6 +1,5 @@
 from django.db import models
 from django.db.models import Q
-
 from ChillBro.helpers import get_storage
 from .constants import Status, EntityType, BankAccountTypes, ActivationStatus, EntitySubType
 import uuid

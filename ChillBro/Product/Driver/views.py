@@ -82,7 +82,7 @@ class DriverView(ProductInterface):
             is_valid = False
             errors["vehicle_categories"] = "Invalid Vehicle Type Categories"
 
-        vehicle_category_object = Category.objects.get(name__icontains="vehicles")
+        vehicle_category_object = Category.objects.get(key__icontains="vehicles")
 
         for each_vehicle_category in vehicle_categories:
             if each_vehicle_category.parent_category != vehicle_category_object:

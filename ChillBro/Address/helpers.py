@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from .serializers import AddressSerializer
 from .views import address_details_for_address_ids
+import uuid
 
 
 def create_address(address_details):

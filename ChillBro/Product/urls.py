@@ -39,8 +39,8 @@ urlpatterns = [
 
     # urls for vehicle
     path('vehicle/type/', VehicleTypeList.as_view()),
-    path('vehicle/type/category/<str:category_name>/', GetVehicleTypesByCategory.as_view()),
-    path('vehicle/type/complete_details/category/<str:category_name>/', GetVehicleTypesDetailsByCategory.as_view()),
+    path('vehicle/type/category/<str:category_key>/', GetVehicleTypesByCategory.as_view()),
+    path('vehicle/type/complete_details/category/<str:category_key>/', GetVehicleTypesDetailsByCategory.as_view()),
     path('vehicle/type/<str:pk>/', VehicleTypeDetail.as_view()),
 
 
