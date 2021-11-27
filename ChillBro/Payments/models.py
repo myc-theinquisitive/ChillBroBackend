@@ -129,6 +129,8 @@ class BookingTransaction(models.Model):
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE, blank=True, null=True)
 
+    razorpay_order_id = models.CharField(max_length=36)
+
     objects = BookingTransactionsManager()
 
     class Meta:
@@ -167,3 +169,8 @@ class RefundTransaction(models.Model):
 
     def __str__(self):
         return self.id + " Booking: " + self.booking_id
+
+class RazorpayTransactions(models.Model):
+    razorpay_payment_id = models.CharField(max_length=36)
+    razorpay_order_id = models.CharField(max_length=36)
+    razorpay_signature = models.CharField(max_length=200)

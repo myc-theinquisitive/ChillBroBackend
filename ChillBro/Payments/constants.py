@@ -13,6 +13,7 @@ class PayStatus(enum.Enum):
     pending = "PENDING"
     done = "DONE"
     cancelled = "CANCELLED"
+    failed = "FAILED"
 
 
 class PaymentUser(enum.Enum):

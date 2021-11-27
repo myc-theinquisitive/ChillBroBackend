@@ -287,6 +287,9 @@ IMAGE_REPLACED_STRING = "home/ffs2imp1oh0k/public_html/chillbro_backend/"
 
 GMAPS_API_KEY = 'AIzaSyAv_fCi15SFyut7jTvkPJE3bmdU0MJ-Mos'
 
+RAZORPAY_API_KEY = "rzp_test_Ggvw8pTdJ3SnAg"
+RAZORPAY_API_SECRET = "HQrPh4O1A1bIYP2To2yMjqMJ"
+
 TAGGIT_CASE_INSENSITIVE = True
 MYC_ID = "MYC"
 
@@ -297,6 +300,7 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = "Asia/Kolkata"
 CELERY_IMPORTS = ('authentication.tasks', 'Bookings.tasks',)
+
 
 CHANNEL_LAYERS = {
     'default': {
