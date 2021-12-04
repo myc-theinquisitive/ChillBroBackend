@@ -143,9 +143,9 @@ def check_availability_of_product(new_product_details, user_id):
     if entity_type == EntityType.EVENT.value:
         product_event_details = product_details[product_id]["event_details"]
 
-        if product_event_details["start_time"] > new_product_details["start_time"] or \
-                product_event_details["end_time"] < new_product_details["end_time"]:
-            return False, "Invalid event date"
+        # if product_event_details["start_time"] > new_product_details["start_time"] or \
+        #         product_event_details["end_time"] < new_product_details["end_time"]:
+        #     return False, "Invalid event date"
         price_details = convert_list_of_dict_to_dict_of_dict(product_event_details["price_classes"],"price")
         for each_price in event_details["prices"]:
             if each_price["price"] not in price_details:

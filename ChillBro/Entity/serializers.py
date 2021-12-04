@@ -106,6 +106,13 @@ class EntityImageSerializer(serializers.Serializer):
     image = serializers.ImageField()
     order = serializers.IntegerField()
 
+    def to_representation(self, instance):
+        res = super(EntityImageSerializer, self).to_representation(instance)
+        res['entity'] = (EntitySerializer(instance.entity).data)['name']
+        res['entity_id'] = (EntitySerializer(instance.entity).data)['id']
+        res['image'] = res.get('image').replace(settings.IMAGE_REPLACED_STRING, '')
+        return res
+
     def update(self, instance, validated_data):
         pass
 

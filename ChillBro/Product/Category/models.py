@@ -16,7 +16,7 @@ class Category(models.Model):
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE,
                                         null=True, verbose_name="Parent Category")
     icon_url = ImageField(upload_to=update_image_to_category_icon, max_length=300, storage=get_storage())
-    key = models.CharField(max_length=50)
+    key = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return "Category - Nº{0}".format(self.name)

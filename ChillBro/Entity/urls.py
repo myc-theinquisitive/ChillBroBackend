@@ -28,6 +28,8 @@ urlpatterns = [
     path('registration-details/<str:pk>/', EntityRegistrationDetail.as_view(), name='entity_registration'),
     path('basic-details/<str:pk>/', EntityBasicDetail.as_view(), name='entity_basic'),
 
+    path('entity-details/', GetEntities.as_view()),
+
     # urls for business client
     path('business_client/count/', CountOfEntitiesAndProducts.as_view()),
     path('business_client/all-entities/', BusinessClientEntities.as_view(), name='business_client_outlets'),

@@ -230,9 +230,10 @@ class GetProductsByCategory(generics.ListAPIView):
             drivers_filter_product_ids = drivers_filter_by_experience.values_list("product_id", flat=True)
 
             if transport_filter['hire_a_driver']['vehicle_category']:
+                # doubt here category name have to change
                 vehicle_driven_by_drivers = VehiclesDrivenByDriver.objects.select_related('category')\
                     .filter(product_id__in=drivers_filter_product_ids,
-                            category__name=transport_filter['hire_a_driver']['vehicle_category'])
+                            category__key=transport_filter['hire_a_driver']['vehicle_category'])
                 vehicle_driven_product_ids = vehicle_driven_by_drivers.values_list("product_id", flat=True)
                 filter_products = filter_products.filter(id__in=vehicle_driven_product_ids)
             else:
@@ -241,9 +242,10 @@ class GetProductsByCategory(generics.ListAPIView):
         if transport_filter["hire_a_vehicle"]["applied"]:
             if transport_filter["hire_a_vehicle"]["vehicle_category"]:
                 product_ids = filter_products.values_list("id", flat=True)
+                # doubt here category name have to change
                 vehicle_category = HireAVehicle.objects.select_related("vehicle")\
                     .filter(product_id__in=product_ids,
-                            vehicle__category__name=transport_filter["hire_a_vehicle"]["vehicle_category"])
+                            vehicle__category__key=transport_filter["hire_a_vehicle"]["vehicle_category"])
                 vehicle_product_ids = vehicle_category.values_list("product_id", flat=True)
                 filter_products = filter_products.filter(id__in=vehicle_product_ids)
 
@@ -304,7 +306,7 @@ class GetProductsByCategory(generics.ListAPIView):
             response_data = cache.get(cache_key)
         else:
             try:
-                category = Category.objects.get(name__icontains=kwargs["slug"])
+                category = Category.objects.get(key=kwargs["slug"])
             except ObjectDoesNotExist:
                 return Response({"errors": "Invalid Category!!!"}, 400)
 

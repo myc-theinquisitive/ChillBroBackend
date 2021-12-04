@@ -376,7 +376,7 @@ class GetVehicleTypesDetailsByCategory(generics.ListAPIView):
     vehicle_type_view = VehicleTypeView()
 
     def get(self, request, *args, **kwargs):
-        category = kwargs['category_name']
+        category = kwargs['category_key']
         if category.lower() == "all":
 
             response = super().get(request, args, kwargs)
@@ -386,7 +386,7 @@ class GetVehicleTypesDetailsByCategory(generics.ListAPIView):
                 vehicle_type_ids.append(vehicle_type["id"])
             response.data["results"] = self.vehicle_type_view.get_by_ids(vehicle_type_ids)
         else:
-            self.queryset = VehicleType.objects.filter(category__name__icontains = category)
+            self.queryset = VehicleType.objects.filter(category__key__icontains = category)
             response = super().get(request, args, kwargs)
 
             vehicle_type_ids = []
@@ -401,11 +401,11 @@ class GetVehicleTypesByCategory(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        category = kwargs['category_name']
+        category = kwargs['category_key']
         if category.lower() == "all":
             vehicle_types = VehicleType.objects.all()
         else:
-            vehicle_types = VehicleType.objects.filter(category__name__icontains=category)
+            vehicle_types = VehicleType.objects.filter(category__key__icontains=category)
 
         vehicle_type_details = []
         for each_vehicle_type in vehicle_types:

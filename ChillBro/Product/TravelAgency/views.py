@@ -352,8 +352,9 @@ class TravelAgencyView(ProductInterface):
         return travel_agency_data
 
     def get_by_ids(self, travel_agency_ids):
-        travel_agencys = TravelAgency.objects.filter(id__in=travel_agency_ids)
-
+        travel_agencys = TravelAgency.objects.select_related('product').filter(product__id__in=travel_agency_ids)
+        travel_agency_ids = travel_agencys.values_list("id", flat=True)
+        
         travel_agency_serializer = TravelAgencySerializer(travel_agencys, many=True)
         travel_agencys_data = travel_agency_serializer.data
 

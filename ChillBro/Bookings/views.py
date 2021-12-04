@@ -1308,7 +1308,7 @@ def create_single_booking(booking_object, product_values):
 
     booked_product_serializer_object = BookedProductsSerializer()
 
-    if booking_object["event_type"] == EntityType.EVENT.value:
+    if "event_type" in booking_object and booking_object["event_type"] == EntityType.EVENT.value:
         for each_product in product_list:
             each_event_data = each_product["event_details"]
             event_product = booked_product_serializer_object.create({
