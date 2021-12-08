@@ -55,6 +55,8 @@ def add_wishlist_status_for_products(user_id, products_response):
     product_id_wise_wishlist_status = get_product_id_wise_wishlist_status(user_id, product_ids)
     for product in products_response:
         product["in_wishlist"] = product_id_wise_wishlist_status[product["id"]]
+        
+    return products_response
 
 
 def calculate_net_price(final_selling_price, product_type):
@@ -477,6 +479,8 @@ class RentalHomePageCategories(generics.RetrieveAPIView):
         product_ids = Product.objects.filter(type=ProductTypes.Rental.value).values_list('id', flat=True)
 
         rental_products_details = ProductView().get_by_ids(product_ids)
+        rental_products_details = add_wishlist_status_for_products(request.user.id, rental_products_details)
+        
         rental_categories_home_page = defaultdict(list)
 
         count = 0
@@ -515,6 +519,8 @@ class EventHomePageCategories(generics.RetrieveAPIView):
         product_ids = Product.objects.filter(type=ProductTypes.Event.value).values_list('id', flat=True)
 
         event_products_details = ProductView().get_by_ids(product_ids)
+        event_products_details = add_wishlist_status_for_products(request.user.id, event_products_details)
+        
         event_categories_home_page = defaultdict(list)
 
         count = 0
@@ -544,6 +550,103 @@ class EventHomePageCategories(generics.RetrieveAPIView):
         }]
 
         return Response({"results": rental_home_page_categories}, 200)
+        
+
+class TravelAgencyHomePageProducts(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        category_key = kwargs['category_key']
+        
+        product_ids = Product.objects.filter(type=ProductTypes.Travel_Agency.value).values_list('id', flat=True)
+        
+        travel_agency_products_details = ProductView().get_by_ids(product_ids)
+        travel_agency_products_details = add_wishlist_status_for_products(request.user.id, travel_agency_products_details)
+        
+        travel_agency_products_home_page = defaultdict(list)
+
+        count = 0
+        if category_key == 'domestic-trips-travel-agency':
+            for each_product in product_ids:
+                if count % 4 == 0:
+                    travel_agency_products_home_page['Adventure'].append(travel_agency_products_details[count])
+                if count % 4 == 1:
+                    travel_agency_products_home_page['Beach'].append(travel_agency_products_details[count])
+                if count % 4 == 2:
+                    travel_agency_products_home_page['Popular Places'].append(travel_agency_products_details[count])
+                count += 1
+            travel_agency_home_page_products = [{
+                'name': 'Adventure',
+                'key': 'adventure-domestic-trips',
+                'products': travel_agency_products_home_page['Adventure']
+            }, {
+                'name': 'Beach',
+                'key': 'beach-domestic-trips',
+                'products': travel_agency_products_home_page['Beach']
+            }, {
+                'name': 'Popular Places',
+                'key': 'popular-places-domestic-trips',
+                'products': travel_agency_products_home_page['Popular Places']
+            }]
+        elif category_key == 'local-trip-travel-agency':
+            for each_product in product_ids:
+                if count % 4 == 0:
+                    travel_agency_products_home_page['Hilly Region'].append(travel_agency_products_details[count])
+                if count % 4 == 1:
+                    travel_agency_products_home_page['Devotional'].append(travel_agency_products_details[count])
+                if count % 4 == 2:
+                    travel_agency_products_home_page['Devotional'].append(travel_agency_products_details[count])
+                count += 1
+            travel_agency_home_page_products = [{
+                'name': 'Hilly Region',
+                'key': 'hilly-region-travel-agency',
+                'products': travel_agency_products_home_page['Hilly Region']
+            }, {
+                'name': 'Devotional',
+                'key': 'devotional-travel-agency',
+                'products': travel_agency_products_home_page['Devotional']
+            }, {
+                'name': 'local city',
+                'key': 'local-city-travel-agency',
+                'products': travel_agency_products_home_page['local city']
+            }]
+        elif category_key == 'international-trips-travel-agency':
+            for each_product in product_ids:
+                if count % 5 == 0:
+                    travel_agency_products_home_page['Maldivs'].append(travel_agency_products_details[count])
+                if count % 5 == 1:
+                    travel_agency_products_home_page['Singapur'].append(travel_agency_products_details[count])
+                if count % 5 == 2:
+                    travel_agency_products_home_page['Paris'].append(travel_agency_products_details[count])
+                if count % 5 == 3:
+                    travel_agency_products_home_page['Dubai'].append(travel_agency_products_details[count])
+                if count % 5 == 4:
+                    travel_agency_products_home_page['London'].append(travel_agency_products_details[count])
+                count += 1
+            travel_agency_home_page_products = [{
+                'name': 'Maldivs',
+                'key': 'maldivs-travel-agency',
+                'products': travel_agency_products_home_page['Maldivs']
+            }, {
+                'name': 'Singapur',
+                'key': 'singapur-travel-agency',
+                'products': travel_agency_products_home_page['Singapur']
+            }, {
+                'name': 'Paris',
+                'key': 'paris-travel-agency',
+                'products': travel_agency_products_home_page['Paris']
+            }, {
+                'name': 'Dubai',
+                'key': 'dubai-travel-agency',
+                'products': travel_agency_products_home_page['Dubai']
+            }, {
+                'name': 'London',
+                'key': 'london-travel-agency',
+                'products': travel_agency_products_home_page['London']
+            }]
+        
+
+        return Response({"results": travel_agency_home_page_products}, 200)
 
 
 class RentalProductsTypes(generics.ListAPIView):
@@ -561,6 +664,8 @@ class HotelEntityProducts(generics.RetrieveAPIView):
         product_ids = Product.objects.filter(seller_id=kwargs['seller_id']).values_list('id', flat=True)
 
         hotel_products_details = ProductView().get_by_ids(product_ids)
+        hotel_products_details = add_wishlist_status_for_products(request.user.id, hotel_products_details)
+        
 
         return Response({"results": hotel_products_details}, 200)
 
