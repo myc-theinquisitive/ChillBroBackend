@@ -649,6 +649,47 @@ class TravelAgencyHomePageProducts(generics.RetrieveAPIView):
         return Response({"results": travel_agency_home_page_products}, 200)
 
 
+class TravelPacakgesHomePageCategories(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        product_ids = Product.objects.filter(type=ProductTypes.Travel_Package_Vehicle.value).values_list('id', flat=True)
+
+        travel_package_products_details = ProductView().get_by_ids(product_ids)
+        travel_package_products_details = add_wishlist_status_for_products(request.user.id, travel_package_products_details)
+        
+        travel_package_categories_home_page = defaultdict(list)
+
+        count = 0
+        for each_product in product_ids:
+            if count % 3 == 0:
+                travel_package_categories_home_page['Hilly Region'].append(travel_package_products_details[count])
+            if count % 3 == 1:
+                travel_package_categories_home_page['Local City Trip'].append(travel_package_products_details[count])
+            if count % 3 == 2:
+                travel_package_categories_home_page['Holiday & recreation'].append(travel_package_products_details[count])
+            count += 1
+
+        travel_package_home_page_categories = [{
+            'name': 'Hilly Region',
+            'key': 'hilly-region-travel-packages',
+            'products': travel_package_categories_home_page['Hilly Region']
+        }, {
+            'name': 'Local City Trip',
+            'key':'local-city-trip-travel-packages',
+            'products': travel_package_categories_home_page['Local City Trip']
+        }, {
+            'name': 'Holiday & recreation',
+            'key':'holiday-and-recreational-travel-packages',
+            'products': travel_package_categories_home_page['Holiday & recreation']
+        }]
+
+        return Response({"results": travel_package_home_page_categories}, 200)
+        
+        
+    
+
+
 class RentalProductsTypes(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):

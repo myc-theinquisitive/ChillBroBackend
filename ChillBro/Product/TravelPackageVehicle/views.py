@@ -4,12 +4,13 @@ from .serializers import TravelPackageVehicleSerializer
 from typing import Dict
 from collections import defaultdict
 from .models import TravelPackageVehicle
-from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details
+from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, get_travel_package_data_by_id, get_travel_package_data_by_ids
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from Product.BaseProduct.models import Product
+from datetime import datetime
 
 
 class TravelPackageVehicleView(ProductInterface):
@@ -104,7 +105,11 @@ class TravelPackageVehicleView(ProductInterface):
 
         travel_package_vehicle_data = self.travel_package_vehicle_serializer.data
         vehicle_data = get_vehicle_data_by_id(travel_package_vehicle_data["vehicle"])
+        current_date = datetime.now()
+        travel_package_data = get_travel_package_data_by_id(travel_package_vehicle_data['travel_package'], current_date)
         travel_package_vehicle_data["vehicle"] = vehicle_data
+        travel_package_vehicle_data["travel_package"] = travel_package_data
+        
 
         # NOTE: not adding travel package data as these details are not exposed directly
 
@@ -115,15 +120,20 @@ class TravelPackageVehicleView(ProductInterface):
 
         travel_package_vehicle_serializer = TravelPackageVehicleSerializer(travel_package_vehicles, many=True)
         travel_package_vehicles_data = travel_package_vehicle_serializer.data
-
+        
         vehicle_ids = []
+        travel_package_ids = []
         for travel_package_vehicle_data in travel_package_vehicles_data:
             vehicle_ids.append(travel_package_vehicle_data["vehicle"])
+            travel_package_ids.append(travel_package_vehicle_data["travel_package"])
 
         vehicle_id_wise_details = get_vehicle_id_wise_details(vehicle_ids)
+        travel_package_id_wise_details = get_travel_package_data_by_ids(travel_package_ids)
+
         for travel_package_vehicle_data in travel_package_vehicles_data:
             travel_package_vehicle_data["vehicle"] = vehicle_id_wise_details[travel_package_vehicle_data["vehicle"]]
-
+            travel_package_vehicle_data["travel_package"] = travel_package_id_wise_details[travel_package_vehicle_data["travel_package"]]
+            
         return travel_package_vehicles_data
 
     def get_sub_products_ids(self, product_ids):
