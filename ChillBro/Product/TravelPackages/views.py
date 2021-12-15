@@ -62,6 +62,7 @@ class TravelPackageView(ProductInterface):
             errors.update(self.travel_package_serializer.errors)
 
         # Validating places
+        print(self.places_data, "============ self.places_data ===========")
         package_places_serializer = PackagePlacesSerializer(data=self.places_data, many=True)
         if not package_places_serializer.is_valid():
             is_valid = False
@@ -86,28 +87,27 @@ class TravelPackageView(ProductInterface):
     def create(self, travel_package_data):
         """
         {
-            name: string,
-            description: string,
-            category: id-string,
-            category_product: id-string,
-            duration_in_days: int,
-            duration_in_nights: int,
-            starting_point: string,
-            places: [
-                {
-                    'place': string,
-                    'order': int,
-                    'in_return': bool,
-                    "spending_time": int,
-                    "duration_to_reach": int
-                }
-            ]
-            images: [
-                {
-                    'image': file,
-                    'order': int
-                }
-            ]
+            "product_id": string, # internal data need not be validated,
+            "travel_package": {
+                duration_in_days: int,
+                duration_in_nights: int,
+                starting_point: string,
+                places: [
+                    {
+                        'place': string,
+                        'order': int,
+                        'in_return': bool,
+                        "spending_time": int,
+                        "duration_to_reach": int
+                    }
+                ]
+                images: [
+                    {
+                        'image': file,
+                        'order': int
+                    }
+                ]
+            }
         }
         """
 
@@ -168,10 +168,6 @@ class TravelPackageView(ProductInterface):
     def update(self, travel_package_data):
         """
         {
-            name: string,
-            description: string,
-            category: id-string,
-            category_product: id-string,
             duration_in_days: int,
             duration_in_nights: int,
             starting_point: string,
@@ -225,7 +221,7 @@ class TravelPackageView(ProductInterface):
 
         travel_package_id_wise_forward_places = defaultdict(list)
         travel_package_id_wise_return_places = defaultdict(list)
-
+        print(start_time, "======= start_time ========")
         for travel_package_place in travel_package_places:
             arrival_time = start_time + timedelta(minutes=travel_package_place.duration_to_reach)
             departure_time = arrival_time + timedelta(minutes=travel_package_place.spending_time)
@@ -285,8 +281,9 @@ class TravelPackageView(ProductInterface):
         return travel_package_id_wise_places_count
 
     def get(self, travel_package_id, start_time):
-        self.travel_package_object = TravelPackage.objects.get(id=travel_package_id)
+        self.travel_package_object = TravelPackage.objects.get(product_id=travel_package_id)
         self.initialize_product_class(None)
+        start_time = datetime.strptime(start_time, settings.DATE_FORMAT)
 
         travel_package_data = self.travel_package_serializer.data
 
@@ -336,6 +333,7 @@ class TravelPackageView(ProductInterface):
         errors = defaultdict(list)
         return is_valid, errors
 
+
 class TravelPackageList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
     queryset = TravelPackage.objects.all()
@@ -380,7 +378,7 @@ class TravelPackageDetail(generics.RetrieveUpdateDestroyAPIView):
         except ObjectDoesNotExist:
             return Response({"errors": "Travel Package does not Exist!!!"}, 400)
         except ValueError:
-            return Response({"errors":"invalid start time","message":"required format "+settings.DATE_FORMAT})
+            return Response({"errors": "invalid start time", "message": "required format " + settings.DATE_FORMAT})
 
         return Response(data=response_data, status=status.HTTP_200_OK)
 

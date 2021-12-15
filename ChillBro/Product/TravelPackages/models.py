@@ -12,18 +12,13 @@ def get_id():
 
 
 class TravelPackage(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, default=get_id)
-    name = models.CharField(max_length=200)
-    description = models.TextField()
-    category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name="Category")
-    category_product = models.ForeignKey('CategoryProduct', on_delete=models.CASCADE, verbose_name="Category Product")
-    tags = models.TextField(validators=[is_json])
-
+    product = models.OneToOneField("Product", on_delete=models.CASCADE, verbose_name="Product")
     duration_in_days = models.PositiveIntegerField(verbose_name="Duration in days",
                                                    validators=[MinValueValidator(0)])
     duration_in_nights = models.PositiveIntegerField(verbose_name="Duration in nights",
                                                      validators=[MinValueValidator(0)])
     starting_point = models.CharField(max_length=36, choices=[(city.value, city.value) for city in Cities])
+    tags = models.TextField(validators=[is_json])
 
     def __str__(self):
         return "Travel Package: {0}".format(self.name)
