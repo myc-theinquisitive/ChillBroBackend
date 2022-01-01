@@ -547,8 +547,7 @@ class ProductView(ProductInterface):
                 "name": ""
             }
         if "start_time" in request.data:
-            start_time = request.data["start_time"]
-            product_specific_data = self.product_specific_view.get(self.product_object.id, start_time)
+            product_specific_data = self.product_specific_view.get(self.product_object.id, request)
         else:
             product_specific_data = self.product_specific_view.get(self.product_object.id)
         product_specific_data.pop("product", None)

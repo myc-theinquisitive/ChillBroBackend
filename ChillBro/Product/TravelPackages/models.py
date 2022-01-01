@@ -18,7 +18,6 @@ class TravelPackage(models.Model):
     duration_in_nights = models.PositiveIntegerField(verbose_name="Duration in nights",
                                                      validators=[MinValueValidator(0)])
     starting_point = models.CharField(max_length=36, choices=[(city.value, city.value) for city in Cities])
-    tags = models.TextField(validators=[is_json])
 
     def __str__(self):
         return "Travel Package: {0}".format(self.name)

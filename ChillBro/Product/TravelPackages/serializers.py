@@ -5,7 +5,6 @@ import json
 
 class TravelPackageSerializer(serializers.ModelSerializer):
     product = serializers.CharField(default="", allow_null=True, allow_blank=True)
-    tags = serializers.ListField(child=serializers.CharField(max_length=20))
 
     class Meta:
         model = TravelPackage
@@ -14,29 +13,20 @@ class TravelPackageSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super(TravelPackageSerializer, self).to_representation(instance)
         data['product'] = instance.product_id
-        data['tags'] = json.loads(instance.tags)
         return data
 
     def create(self, validated_data):
-        if "tags" in validated_data:
-            validated_data["tags"] = json.dumps(validated_data["tags"])
-
         return TravelPackage.objects.create(
             product_id=validated_data["product"],
-            tags=validated_data["tags"],
             duration_in_days=validated_data["duration_in_days"],
             duration_in_nights=validated_data["duration_in_nights"],
             starting_point=validated_data["starting_point"])
 
     def update(self, instance, validated_data):
-        if "tags" in validated_data:
-            validated_data["tags"] = json.dumps(validated_data["tags"])
-
         instance.product_id = validated_data["product"]
         instance.duration_in_days = validated_data["duration_in_days"]
         instance.duration_in_nights = validated_data["duration_in_nights"]
         instance.starting_point = validated_data["starting_point"]
-        instance.tags = validated_data["tags"]
         instance.save()
 
 
