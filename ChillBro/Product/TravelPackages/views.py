@@ -86,28 +86,27 @@ class TravelPackageView(ProductInterface):
     def create(self, travel_package_data):
         """
         {
-            name: string,
-            description: string,
-            category: id-string,
-            category_product: id-string,
-            duration_in_days: int,
-            duration_in_nights: int,
-            starting_point: string,
-            places: [
-                {
-                    'place': string,
-                    'order': int,
-                    'in_return': bool,
-                    "spending_time": int,
-                    "duration_to_reach": int
-                }
-            ]
-            images: [
-                {
-                    'image': file,
-                    'order': int
-                }
-            ]
+            "product_id": string, # internal data need not be validated,
+            "travel_package": {
+                duration_in_days: int,
+                duration_in_nights: int,
+                starting_point: string,
+                places: [
+                    {
+                        'place': string,
+                        'order': int,
+                        'in_return': bool,
+                        "spending_time": int,
+                        "duration_to_reach": int
+                    }
+                ]
+                images: [
+                    {
+                        'image': file,
+                        'order': int
+                    }
+                ]
+            }
         }
         """
 
@@ -168,10 +167,6 @@ class TravelPackageView(ProductInterface):
     def update(self, travel_package_data):
         """
         {
-            name: string,
-            description: string,
-            category: id-string,
-            category_product: id-string,
             duration_in_days: int,
             duration_in_nights: int,
             starting_point: string,
@@ -225,7 +220,6 @@ class TravelPackageView(ProductInterface):
 
         travel_package_id_wise_forward_places = defaultdict(list)
         travel_package_id_wise_return_places = defaultdict(list)
-
         for travel_package_place in travel_package_places:
             arrival_time = start_time + timedelta(minutes=travel_package_place.duration_to_reach)
             departure_time = arrival_time + timedelta(minutes=travel_package_place.spending_time)
@@ -284,9 +278,11 @@ class TravelPackageView(ProductInterface):
 
         return travel_package_id_wise_places_count
 
-    def get(self, travel_package_id, start_time):
-        self.travel_package_object = TravelPackage.objects.get(id=travel_package_id)
+    def get(self, travel_package_id, request):
+        start_time = request.data["start_time"]
+        self.travel_package_object = TravelPackage.objects.get(product_id=travel_package_id)
         self.initialize_product_class(None)
+        start_time = datetime.strptime(start_time, settings.DATE_FORMAT)
 
         travel_package_data = self.travel_package_serializer.data
 
@@ -335,98 +331,3 @@ class TravelPackageView(ProductInterface):
         is_valid = True
         errors = defaultdict(list)
         return is_valid, errors
-
-class TravelPackageList(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
-    queryset = TravelPackage.objects.all()
-    serializer_class = TravelPackageSerializer
-    travel_package_view = TravelPackageView()
-
-    def get(self, request, *args, **kwargs):
-        response = super().get(request, args, kwargs)
-
-        travel_package_ids = []
-        for travel_package in response.data["results"]:
-            travel_package_ids.append(travel_package["id"])
-        response.data["results"] = self.travel_package_view.get_by_ids(travel_package_ids)
-
-        return response
-
-    def post(self, request, *args, **kwargs):
-        # TODO: remove when not using postman
-        # request.data._mutable = True
-        # request_data = request.data.dict()
-        request_data = request.data
-
-        is_valid, errors = self.travel_package_view.validate_create_data(request_data)
-        if not is_valid:
-            return Response({"message": "Can't create travel package", "errors": errors},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        response_data = self.travel_package_view.create(request_data)
-        return Response(data=response_data, status=status.HTTP_201_CREATED)
-
-
-class TravelPackageDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
-    queryset = TravelPackage.objects.all()
-    serializer_class = TravelPackageSerializer
-    travel_package_view = TravelPackageView()
-
-    def get(self, request, *args, **kwargs):
-        try:
-            start_time = datetime.strptime(request.data['start_time'], settings.DATE_FORMAT)
-            response_data = self.travel_package_view.get(kwargs["pk"], start_time)
-        except ObjectDoesNotExist:
-            return Response({"errors": "Travel Package does not Exist!!!"}, 400)
-        except ValueError:
-            return Response({"errors":"invalid start time","message":"required format "+settings.DATE_FORMAT})
-
-        return Response(data=response_data, status=status.HTTP_200_OK)
-
-    def put(self, request, *args, **kwargs):
-        # TODO: remove when not using postman
-        # request_data = request.data.dict()
-        request_data = request.data
-        request_data["id"] = kwargs["pk"]
-
-        is_valid, errors = self.travel_package_view.validate_update_data(request_data)
-        if not is_valid:
-            return Response({"message": "Travel Package can't be updated", "errors": errors},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        self.travel_package_view.update(request_data)
-        return Response({"message": "Travel Package updated successfully"},
-                        status=status.HTTP_200_OK)
-
-
-class TravelPackageImageCreate(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
-    queryset = TravelPackageImage.objects.all()
-    serializer_class = TravelPackageImageSerializer
-
-    def post(self, request, *args, **kwargs):
-        try:
-            travel_package = TravelPackage.objects.get(id=request.data['travel_package'])
-        except ObjectDoesNotExist:
-            return Response({"errors": "Travel Package does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = self.serializer_class(data=request.data)
-        if not serializer.is_valid():
-            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-        serializer.create(request.data)
-        return Response({"message": "Travel Package Image added successfully"}, status=status.HTTP_201_CREATED)
-
-
-class TravelPackageImageDelete(generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
-    queryset = TravelPackageImage.objects.all()
-    serializer_class = TravelPackageImageSerializer
-
-    def delete(self, request, *args, **kwargs):
-        try:
-            travel_package_image = TravelPackageImage.objects.get(id=kwargs['pk'])
-        except ObjectDoesNotExist:
-            return Response({"errors": "Travel Package image does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
-
-        return super().delete(request, *args, **kwargs)

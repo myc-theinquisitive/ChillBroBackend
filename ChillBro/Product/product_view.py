@@ -12,6 +12,7 @@ from Product.HireAVehicle.views import HireAVehicleView
 from Product.SelfRental.views import SelfRentalView
 from Product.Driver.views import DriverView
 from Product.TravelPackageVehicle.views import TravelPackageVehicleView
+from Product.TravelPackages.views import TravelPackageView
 from Product.TravelAgency.views import TravelAgencyView
 from Product.MakeYourOwnTrip.views import MakeYourOwnTripView
 from Product.PaidAmenities.views import PaidAmenitiesView
@@ -56,6 +57,8 @@ class ProductView(ProductInterface):
             return VehicleView(), "vehicle"
         elif product_type == "HIRE_A_VEHICLE":
             return HireAVehicleView(), "hire_a_vehicle"
+        elif product_type == "TRAVEL_PACKAGE":
+            return TravelPackageView(), "travel_package"
         elif product_type == "TRAVEL_PACKAGE_VEHICLE":
             return TravelPackageVehicleView(), "travel_package_vehicle"
         elif product_type == "TRAVEL_AGENCY":
@@ -506,7 +509,7 @@ class ProductView(ProductInterface):
 
         return product_id_wise_combo_products_dict
 
-    def get(self, product_id):
+    def get(self, product_id, request=None):
         self.product_object = Product.objects.select_related("category", "category_product").get(id=product_id)
         self.initialize_product_class(None)
 
@@ -543,8 +546,10 @@ class ProductView(ProductInterface):
                 "id": "",
                 "name": ""
             }
-
-        product_specific_data = self.product_specific_view.get(self.product_object.id)
+        if "start_time" in request.data:
+            product_specific_data = self.product_specific_view.get(self.product_object.id, request)
+        else:
+            product_specific_data = self.product_specific_view.get(self.product_object.id)
         product_specific_data.pop("product", None)
         product_data[self.product_specific_key] = product_specific_data
 
@@ -692,7 +697,7 @@ class ProductView(ProductInterface):
             product_specific_view, product_key = self.get_view_and_key_by_type(type)
 
             product_price_data = product_specific_view.calculate_starting_prices(transport_ids_by_type[type], \
-                                                                                transport_ids_with_duration[type] )
+                                                                                 transport_ids_with_duration[type])
             all_products_prices.update(product_price_data)
 
         return all_products_prices
@@ -703,7 +708,7 @@ class ProductView(ProductInterface):
 
         group_products_by_type = defaultdict(dict)
         for product in all_products:
-            group_products_by_type[product.type].update({product.id:products[product.id]})
+            group_products_by_type[product.type].update({product.id: products[product.id]})
 
         all_products_final_prices = defaultdict()
         for type in group_products_by_type:
@@ -727,7 +732,8 @@ class ProductView(ProductInterface):
         for type in group_products_by_type:
             product_specific_view, product_key = self.get_view_and_key_by_type(type)
 
-            is_valid, errors = product_specific_view.check_valid_duration(group_products_by_type[type], start_time, end_time)
+            is_valid, errors = product_specific_view.check_valid_duration(group_products_by_type[type], start_time,
+                                                                          end_time)
             if not is_valid:
                 overall_is_valid = is_valid
                 overall_errors[type] = errors

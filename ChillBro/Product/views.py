@@ -162,7 +162,7 @@ class ProductDetail(APIView):
 
     def get(self, request, id, format=None, *args):
         try:
-            response_data = self.product_view.get(id)
+            response_data = self.product_view.get(id, request)
         except ObjectDoesNotExist:
             return Response({"errors": "Product does not Exist!!!"}, 400)
 

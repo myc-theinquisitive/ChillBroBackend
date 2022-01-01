@@ -4,7 +4,7 @@ import json
 
 
 class TravelPackageSerializer(serializers.ModelSerializer):
-    tags = serializers.ListField(child=serializers.CharField(max_length=20))
+    product = serializers.CharField(default="", allow_null=True, allow_blank=True)
 
     class Meta:
         model = TravelPackage
@@ -12,35 +12,21 @@ class TravelPackageSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super(TravelPackageSerializer, self).to_representation(instance)
-        data['tags'] = json.loads(instance.tags)
+        data['product'] = instance.product_id
         return data
 
     def create(self, validated_data):
-        if "id" not in validated_data:
-            validated_data["id"] = get_id()
-        if "tags" in validated_data:
-            validated_data["tags"] = json.dumps(validated_data["tags"])
-
         return TravelPackage.objects.create(
-            id=validated_data["id"], name=validated_data["name"], description=validated_data["description"],
-            category_id=validated_data["category"], tags=validated_data["tags"],
-            category_product_id=validated_data["category_product"],
+            product_id=validated_data["product"],
             duration_in_days=validated_data["duration_in_days"],
             duration_in_nights=validated_data["duration_in_nights"],
             starting_point=validated_data["starting_point"])
 
     def update(self, instance, validated_data):
-        if "tags" in validated_data:
-            validated_data["tags"] = json.dumps(validated_data["tags"])
-
-        instance.name = validated_data["name"]
-        instance.description = validated_data["description"]
-        instance.category_id = validated_data["category"]
-        instance.category_product_id = validated_data["category_product"]
+        instance.product_id = validated_data["product"]
         instance.duration_in_days = validated_data["duration_in_days"]
         instance.duration_in_nights = validated_data["duration_in_nights"]
         instance.starting_point = validated_data["starting_point"]
-        instance.tags = validated_data["tags"]
         instance.save()
 
 
