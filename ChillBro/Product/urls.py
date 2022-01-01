@@ -13,8 +13,6 @@ from .Hotel.views import HotelAmenitiesList
 from .VehicleTypes.views import VehicleTypeList, VehicleTypeDetail, VehicleCharacteristicsList, \
     VehicleCharacteristicsDetail, GetVehicleTypesDetailsByCategory, GetVehicleTypesByCategory
 from .Places.views import PlaceList, PlaceDetail, PlaceImageCreate, PlaceImageDelete, GetPlacesByCategory
-from .TravelPackages.views import TravelPackageList, TravelPackageDetail, TravelPackageImageCreate, \
-    TravelPackageImageDelete
 from .TravelPackageVehicle.views import TravelPackageVehiclesList
 from .TravelAgency.views import TravelCharacteristicsList, TravelCharacteristicsDetail
 from .PG.views import PGAmenitiesList
