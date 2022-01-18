@@ -18,6 +18,7 @@ from .TravelAgency.views import TravelCharacteristicsList, TravelCharacteristics
 from .PG.views import PGAmenitiesList
 from .Dormitory.views import DormitoryAmenitiesList
 from .Resort.views import ResortAmenitiesList
+from .SelfRental.views import VehicleTypes, VehiclesCategoriesList
 
 urlpatterns = [
     # urls for category
@@ -61,6 +62,10 @@ urlpatterns = [
     path('travel_agency/characteristics/', TravelCharacteristicsList.as_view()),
     path('travel_agency/characteristics/<str:id>/', TravelCharacteristicsDetail.as_view()),
 
+    #urls for self rentals
+    path('selfrental/vehicle_types/', VehicleTypes.as_view()),
+    path('selfrental/vehicle_categories/', VehiclesCategoriesList.as_view()),
+    
     # urls for all products
     path('product/', ProductList.as_view()),
 
@@ -100,6 +105,7 @@ urlpatterns = [
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),
+    
 
     path('product/category/generate/key/', GenerateKey.as_view()),
 ]

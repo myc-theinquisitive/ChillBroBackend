@@ -7,7 +7,12 @@ from typing import Dict
 from .models import SelfRental, SelfRentalDistancePrice, SelfRentalDurationDetails
 from .wrapper import get_vehicle_data_by_id, get_vehicle_id_wise_details, check_vehicle_exists_by_id
 from collections import defaultdict
-
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from ..Category.models import Category
+from django.conf import settings
+    
 
 def check_distance_price_self_rental_by_id(distance_price_ids, self_rental_id):
     from .models import SelfRentalDistancePrice
@@ -259,7 +264,7 @@ class SelfRentalView(ProductInterface):
         self_rental_serializer = SelfRentalSerializer(self_rentals, many=True)
         self_rentals_data = self_rental_serializer.data
 
-        self_rental_id_wise_distance_prices = self.get_price_data(self_rentals)
+        self_rental_id_wise_distance_prices = (self.get_price_data(self_rentals))
         self_rental_id_wise_duration_details = self.get_duration_data(self_rentals)
 
         vehicle_ids = []
@@ -292,8 +297,8 @@ class SelfRentalView(ProductInterface):
 
     @staticmethod
     def get_price_data(self_rentals):
-        self_rentals_data = defaultdict(dict)
-        self_rentals_price_details = defaultdict(dict)
+        self_rentals_data = defaultdict(list)
+        self_rentals_price_details = defaultdict()
         self_rentals_ids = []
 
         for each_self_rental in self_rentals:
@@ -305,10 +310,10 @@ class SelfRentalView(ProductInterface):
             SelfRentalDistancePriceSerializer(self_rental_distance_price_data, many=True)
 
         for each_distance_price in self_rental_distance_price_serializer.data:
-            self_rentals_data[each_distance_price["self_rental"]][each_distance_price['km_limit']] = each_distance_price
+            self_rentals_data[each_distance_price["self_rental"]].append(each_distance_price)
 
         for each_self_rental in self_rentals:
-            self_rentals_price_details[each_self_rental.product_id].update(self_rentals_data[each_self_rental.id])
+            self_rentals_price_details[each_self_rental.product_id] = (self_rentals_data[each_self_rental.id])
 
         return self_rentals_price_details
 
@@ -351,8 +356,11 @@ class SelfRentalView(ProductInterface):
             difference_date = (end_time_date_object - start_time_date_object)
             total_hours = ceil((difference_date.total_seconds() // 60) / 60)
             days = ceil(total_hours / 24)
-
-            price_data = self_rentals_price_details[each_self_rental.product_id][km_limit_choosen]
+            
+            price_data = defaultdict()
+            for each_km_limit in self_rentals_price_details:
+                if each_km_limit['km_limit'] == km_limit_choosen:
+                    price_data = each_km_limit
 
             duration_price = float(price_data["price"]) * days
             total_price = duration_price * quantity
@@ -370,8 +378,7 @@ class SelfRentalView(ProductInterface):
         final_prices = defaultdict()
         for each_product in products:
             transport_details = products[each_product]["transport_details"]
-            print(transport_details,"transport_details")
-
+            
             start_time = datetime.strptime(products[each_product]["start_time"], get_date_format())
             booking_end_time = datetime.strptime(products[each_product]["booking_end_time"], get_date_format())
             present_end_time = datetime.strptime(products[each_product]["present_end_time"], get_date_format())
@@ -458,3 +465,31 @@ class SelfRentalView(ProductInterface):
 
         return is_valid, errors
 
+
+class VehicleTypes(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request, *args, **kwargs):
+        return Response({
+            "results": {
+                "2 WHEELER" : 4,
+                "4 WHEELER" : 6,
+                "OTHERS" : 0
+            } 
+        })
+        
+        
+class VehiclesCategoriesList(generics.ListAPIView):
+
+    def get(self, request, *args, **kwargs):
+        vehicles_categories = Category.objects.filter(parent_category__key="vehicles")
+        vehicle_details = []
+        for each_vehicle in vehicles_categories:
+            icon_url = each_vehicle.icon_url.url.replace(settings.IMAGE_REPLACED_STRING, "")
+            vehicle_details.append({
+                'id': each_vehicle.id,
+                'name': each_vehicle.name,
+                'image': icon_url,
+                'count': 4
+            })
+        return Response({"results":vehicle_details},200)

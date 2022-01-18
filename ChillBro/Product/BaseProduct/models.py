@@ -84,7 +84,7 @@ class Product(models.Model):
     objects = ProductManager()
 
     def __str__(self):
-        return self.name
+        return self.name+" "+self.activation_status
 
 
 class ProductSize(models.Model):

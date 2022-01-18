@@ -73,8 +73,8 @@ class EventsPricesSerializer(serializers.ModelSerializer):
 
 class AddtoCartTransportDetailsSerializer(serializers.Serializer):
     trip_type = serializers.CharField(required=True)
-    is_pickup_location_updated = serializers.BooleanField(required=True)
-    id_drop_location_updated = serializers.BooleanField(required=True)
+    is_pickup_location_updated = serializers.BooleanField(required=False)
+    id_drop_location_updated = serializers.BooleanField(required=False)
     km_limit_choosen = serializers.IntegerField(required=True)
 
 

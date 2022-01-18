@@ -9,7 +9,9 @@ from .helpers import upload_carousel_image
 class Carousel(models.Model):
     name = models.CharField(max_length=30)
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
-
+    
+    def __str__(self):
+        return self.name
 
 class CarouselItem(models.Model):
     carousel = models.ForeignKey('Carousel', on_delete=models.CASCADE)

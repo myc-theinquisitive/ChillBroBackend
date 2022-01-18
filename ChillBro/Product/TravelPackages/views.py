@@ -303,8 +303,9 @@ class TravelPackageView(ProductInterface):
         return travel_package_data
 
     def get_by_ids(self, travel_package_ids):
-        travel_packages = TravelPackage.objects.filter(id__in=travel_package_ids)
-
+        travel_packages = TravelPackage.objects.select_related('product').filter(product_id__in=travel_package_ids)
+        
+        travel_package_ids = travel_packages.values_list('id',flat=True)
         travel_package_serializer = TravelPackageSerializer(travel_packages, many=True)
         travel_packages_data = travel_package_serializer.data
 

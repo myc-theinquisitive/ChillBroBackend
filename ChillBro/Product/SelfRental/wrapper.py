@@ -13,10 +13,10 @@ def get_vehicle_data_by_ids(vehicle_ids):
 
 def get_vehicle_id_wise_details(vehicle_ids):
     vehicles_data = get_vehicle_data_by_ids(vehicle_ids)
-
+    
     vehicle_type_id_wise_details = defaultdict(dict)
     for vehicle in vehicles_data:
-        vehicle_type_id_wise_details[vehicle["id"]] = vehicle
+        vehicle_type_id_wise_details[vehicle["product"]] = vehicle
 
     return vehicle_type_id_wise_details
 

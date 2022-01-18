@@ -20,7 +20,7 @@ class TravelPackage(models.Model):
     starting_point = models.CharField(max_length=36, choices=[(city.value, city.value) for city in Cities])
 
     def __str__(self):
-        return "Travel Package: {0}".format(self.name)
+        return "Travel Package: {0}".format(self.product)
 
 
 class PackagePlaces(models.Model):
@@ -36,7 +36,7 @@ class PackagePlaces(models.Model):
         ordering = ('order',)
 
     def __str__(self):
-        return "Package Place - {0}, {1}".format(self.travel_package.name, self.place.name)
+        return "Package Place - {0}, {1}".format(self.travel_package.product.name, self.place.name)
 
 
 class TravelPackageImage(models.Model):

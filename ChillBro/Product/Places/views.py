@@ -408,14 +408,14 @@ class GetPlacesByCategory(generics.ListAPIView):
 
         return list(set(result_category_ids))
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
 
         input_serializer = GetPlacesBySearchFilters(data=request.data)
         if not input_serializer.is_valid():
             return Response({"message": "Can't get places", "errors": input_serializer.errors}, 400)
 
         try:
-            category = Category.objects.get(key__icontains=kwargs["slug"])
+            category = Category.objects.get(key=kwargs["slug"])
         except ObjectDoesNotExist:
             return Response({"errors": "Invalid Category!!!"}, 400)
         all_category_ids = self.recursively_get_lower_level_categories([category.id])

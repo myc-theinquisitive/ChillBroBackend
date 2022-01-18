@@ -166,7 +166,7 @@ def get_transport_details(product_ids):
         }
     from Product.SelfRental.views import SelfRentalView
     self_rentals = SelfRental.objects.filter(product_id__in=product_ids)
-    self_rentals_price_details = SelfRentalView().get_price_data(self_rentals)
+    self_rentals_price_details = convert_dict_of_list_to_dict_of_dict(SelfRentalView().get_price_data(self_rentals))
     self_rentals_duration_details = SelfRentalView().get_duration_data(self_rentals)
 
     for each_product in self_rentals:
@@ -192,3 +192,11 @@ def get_event_details(product_ids):
 def calculate_product_excess_net_price(excess_price, product_type):
     from .views import calculate_net_price
     return calculate_net_price(excess_price, product_type)
+    
+    
+def convert_dict_of_list_to_dict_of_dict(dict_elements):
+    resultant_dict = defaultdict(dict)
+    for each_product in dict_elements:
+        for each_km_limit in dict_elements[each_product]:
+            resultant_dict[each_product][each_km_limit['km_limit']] = each_km_limit
+    return resultant_dict
