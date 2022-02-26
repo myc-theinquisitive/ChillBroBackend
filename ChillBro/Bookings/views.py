@@ -1,20 +1,26 @@
 import json
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Sum, Count
-from rest_framework import generics, status
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from .booking_calendar_helper import product_availability_per_hour
+from .booking_helper import cancel_booking, update_booking_status, get_complete_booking_details_by_ids, \
+    get_check_in_details
 from .serializers import *
 from .helpers import *
 from .constants import *
 from collections import defaultdict
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, IsOwner, IsEmployee, IsBookingBusinessClient, \
-    IsBookingEmployee, \
-    IsBusinessClientEntities, IsEmployeeEntities
+    IsBookingEmployee, IsBusinessClientEntities, IsEmployeeEntities
 import threading
 from datetime import datetime, timedelta
 from django.utils import timezone
+
+from .validators import validate_booking_product_availability, validate_start_end_time, validate_booking_product_details, \
+    validate_booking_details
 from .wrapper import get_product_id_wise_product_details, create_refund_transaction, \
     update_booking_transaction_in_payment, create_booking_transaction, get_transaction_details_by_booking_id, \
     business_client_review_on_customer, get_product_details, get_entity_details, is_product_valid, \
@@ -25,268 +31,6 @@ from .wrapper import get_product_id_wise_product_details, create_refund_transact
 
 # Lock for creating a new booking or updating the booking timings
 _booking_lock = threading.Lock()
-
-
-def get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size):
-
-    return BookedProducts.objects.active().select_related('booking') \
-        .filter(product_id=product_id, size=product_size) \
-        .filter(
-        Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gt=start_time)) |
-        Q(Q(booking__start_time__lt=end_time) & Q(booking__end_time__gte=end_time)) |
-        Q(Q(booking__start_time__lte=start_time) & Q(booking__end_time__gte=end_time)) |
-        Q(Q(booking__start_time__gte=start_time) & Q(booking__end_time__lte=end_time))
-    )
-
-
-def get_total_bookings_count_of_product_in_duration(product_id, start_time, end_time, product_size):
-    bookings_count = get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size) \
-        .aggregate(sum=Sum('quantity'))['sum']
-    if bookings_count is None:
-        return 0
-    return bookings_count
-
-
-def valid_booking_with_product_quantity(products_quantity, booking_products_list, start_time, end_time):
-    is_valid = True
-    errors = defaultdict(list)
-
-    for booking_product in booking_products_list:
-        has_sizes = products_quantity[booking_product['product_id']]['has_sizes']
-        quantity_unlimited = products_quantity[booking_product['product_id']]['quantity_unlimited']
-        if not quantity_unlimited:
-            if has_sizes:
-                product_sizes_details = products_quantity[booking_product['product_id']]['size_products']
-
-                total_quantity = product_sizes_details[booking_product['size']]
-                previous_bookings_count = get_total_bookings_count_of_product_in_duration(
-                        booking_product['product_id'], start_time, end_time, booking_product['size'])
-            else:
-                previous_bookings_count = get_total_bookings_count_of_product_in_duration(
-                    booking_product['product_id'], start_time, end_time, booking_product['size'])
-                total_quantity = products_quantity[booking_product['product_id']]['quantity']
-
-            if is_valid and total_quantity - previous_bookings_count < booking_product['quantity']:
-                is_valid = False
-                if total_quantity - previous_bookings_count == 0:
-                    errors[booking_product['product_id']].append("Sorry, No products are available")
-                else:
-                    errors[booking_product['product_id']].append(
-                        "Sorry, only {} products are available".format(total_quantity - previous_bookings_count))
-    return is_valid, errors
-
-
-def validate_time(start_time, end_time):
-    is_valid = True
-    errors = defaultdict(list)
-    current_time = datetime.now()
-    if current_time.strftime(get_date_format()) >= start_time:
-        is_valid = False
-        errors["booking"].append("Start time should be greater than current time")
-    if start_time >= end_time:
-        is_valid = False
-        errors["booking"].append("End time should be less than start time")
-
-    return is_valid, errors
-
-
-def valid_booking_with_product_details(products_quantity, booking_products_list, start_time, end_time):
-    is_valid, errors = validate_time(start_time, end_time)
-
-    for booking_product in booking_products_list:
-        if booking_product['quantity'] <= 0:
-            is_valid = False
-            errors[booking_product['product_id']].append("Quantity should be greater than 0")
-
-        has_sizes = products_quantity[booking_product['product_id']]['has_sizes']
-        if has_sizes:
-            product_sizes_details = products_quantity[booking_product['product_id']]['size_products']
-            try:
-                quantity = product_sizes_details[booking_product['size']]
-            except KeyError:
-                is_valid = False
-                errors[booking_product['product_id']].append("Invalid Size")
-
-    return is_valid, errors
-
-
-def valid_booking(booking_products_list, start_time, end_time):
-    product_ids = []
-    for product in booking_products_list:
-        product_ids.append(product['product_id'])
-    products_quantity = get_product_id_wise_product_details(product_ids)
-
-    is_valid, errors = valid_booking_with_product_details(
-        products_quantity, booking_products_list, start_time, end_time)
-    if not is_valid:
-        return is_valid, errors
-
-    return valid_booking_with_product_quantity(products_quantity, booking_products_list, start_time, end_time)
-
-
-def cancel_booking(booking):
-    # TODO: refund need to be handled
-    # TODO: update payment amount to be paid to business client
-
-    booked_products = BookedProducts.objects.select_related('booking').filter(booking=booking)
-    booked_products.update(booking_status=ProductBookingStatus.cancelled.value)
-
-    create_refund_transaction(
-        {
-            'booking_id': booking.id, 'entity_id': booking.entity_id,
-            'entity_type': booking.entity_type, 'refund_amount': booking.total_money,
-            'booking_date': booking.booking_date, 'booking_start': booking.start_time,
-            'refund_reason': "Booking Cancelled"
-        }
-    )
-    update_booking_transaction_in_payment(booking.id, True, 0, 0, 0)
-
-
-def update_booking_status(booking_id, status):
-    return Bookings.objects.filter(id=booking_id).update(booking_status=status)
-
-
-def get_complete_booking_details_by_ids(booking_ids):
-    bookings = Bookings.objects.filter(id__in=booking_ids)
-    booked_products = BookedProducts.objects.filter(booking_id__in=booking_ids)
-    booking_check_ins = CheckInDetails.objects.filter(booking_id__in=booking_ids)
-    booking_check_outs = CheckOutDetails.objects.filter(booking_id__in=booking_ids)
-
-    booking_id_wise_booked_products = defaultdict(list)
-    product_ids = set()
-    for booked_product in booked_products:
-        product_ids.add(booked_product.product_id)
-        booking_id_wise_booked_products[booked_product.booking_id].append(booked_product)
-    product_id_wise_product_details = get_product_id_wise_product_details(list(product_ids))
-
-    check_in_details = {}
-    for check_in in booking_check_ins:
-        check_in_details[check_in.booking_id] = check_in
-
-    check_out_details = {}
-    for check_out in booking_check_outs:
-        check_out_details[check_out.booking_id] = check_out
-
-    complete_bookings_details = []
-    for booking in bookings:
-        booking_dict = {
-            'id': booking.id,
-            'entity_type': booking.entity_type,
-            'booked_at': booking.booking_date,
-            'booking_status': booking.booking_status,
-            'total_money': booking.total_money,
-            'total_net_value': booking.total_net_value,
-            'total_coupon_discount': booking.total_coupon_discount,
-            'from_date': booking.start_time,
-            'to_date': booking.end_time,
-            'total_days': get_total_time_period(booking.end_time, booking.start_time),
-            'ago': get_total_time_period(datetime.now(), booking.booking_date)
-        }
-
-        check_in_flag = True
-        try:
-            booking_dict['check_in'] = check_in_details[booking.id].check_in
-        except KeyError:
-            booking_dict['check_in'] = "Booking yet to start"
-            booking_dict['check_out'] = "Booking yet to start"
-            check_in_flag = False
-
-        if check_in_flag:
-            try:
-                booking_dict['check_out'] = check_out_details[booking.id].check_out
-            except KeyError:
-                booking_dict['check_out'] = "Booking yet to end"
-
-        booking_products_details = []
-        for booked_product in booking_id_wise_booked_products[booking.id]:
-            product_details = product_id_wise_product_details[booked_product.product_id]
-            booking_products_details.append(
-                {
-                    "product_id": booked_product.product_id,
-                    "name": product_details["name"],
-                    "type": product_details["type"],
-                    "product_value": booked_product.product_value,
-                    "net_value": booked_product.net_value,
-                    "coupon_value": booked_product.coupon_value,
-                    "booked_quantity": booked_product.quantity
-                }
-            )
-        booking_dict['products'] = booking_products_details
-        complete_bookings_details.append(booking_dict)
-    return complete_bookings_details
-
-
-def are_overlapping_time_spans(start_time1, end_time1, start_time2, end_time2):
-    if start_time1 <= start_time2 < end_time1:
-        return True
-    if start_time1 < end_time2 <= end_time1:
-        return True
-    if start_time1 <= start_time2 and end_time1 >= end_time2:
-        return True
-    if start_time1 >= start_time2 and end_time1 <= end_time2:
-        return True
-    return False
-
-
-def product_availability_per_hour(product_id, start_time, end_time, product_size):
-    booked_products = get_total_bookings_of_product_in_duration(product_id, start_time, end_time, product_size)
-    if not booked_products:
-        booked_products = []
-
-    HOUR = timedelta(hours=1)
-    datetime_format = get_date_format()
-    hours_dic = {}
-
-    # converting to datetime objects
-    start_time = datetime.strptime(start_time, datetime_format)
-    end_time = datetime.strptime(end_time, datetime_format)
-
-    products_quantity = get_product_id_wise_product_details([product_id])
-
-    start_hour = datetime(start_time.year, start_time.month, start_time.day, start_time.hour, 0, 0)
-    end_hour = start_hour + HOUR
-    while start_hour < end_time:
-        start_hour_key = start_hour.strftime(datetime_format)
-        end_hour_key = end_hour.strftime(datetime_format)
-        hours_dic[(start_hour_key, end_hour_key)] = products_quantity[product_id]['quantity']
-        start_hour = end_hour
-        end_hour += HOUR
-
-    for booked_product in booked_products:
-        booking_start_time = booked_product.booking.start_time.strftime(datetime_format)
-        booking_end_time = booked_product.booking.end_time.strftime(datetime_format)
-        for start_hour_key, end_hour_key in hours_dic:
-            if are_overlapping_time_spans(booking_start_time, booking_end_time, start_hour_key, end_hour_key):
-                if hours_dic[(start_hour_key, end_hour_key)]:
-                    hours_dic[(start_hour_key, end_hour_key)] -= booked_product.quantity
-
-    availabilities = []
-    for start_hour_key, end_hour_key in hours_dic:
-        availability = {
-            "start_hour": start_hour_key,
-            "end_hour": end_hour_key,
-            "available_count": hours_dic[(start_hour_key, end_hour_key)]
-        }
-        availabilities.append(availability)
-    return Response({"availabilities": availabilities}, 200)
-
-
-def get_check_in_details(check_in_object):
-    response_data = {
-        'is_caution_deposit_collected': True,
-        'caution_amount': check_in_object.caution_amount
-    }
-
-    other_images = []
-    check_in_images = CheckInImages.objects.filter(check_in_id=check_in_object.id)
-    for check_in_image in check_in_images:
-        image_url = check_in_image.image.url
-        image_url = image_url.replace(settings.IMAGE_REPLACED_STRING, "")
-        other_images.append(image_url)
-
-    response_data['other_images'] = other_images
-
-    return response_data
 
 
 class GetProductAvailability(APIView):
@@ -367,7 +111,7 @@ class CreateBooking(generics.ListCreateAPIView):
         all_product_ids, products = combine_all_products(product_id, size, quantity, combo_product_details,\
                                                          product_details)
 
-        is_valid, errors = valid_booking(products, data['start_time'], data['end_time'])
+        is_valid, errors = validate_booking_details(products, data['start_time'], data['end_time'])
         if not is_valid:
             return Response({"message": "Can't create booking", "errors": errors}, 400)
 
@@ -1229,7 +973,7 @@ def create_multiple_bookings_while_checkout(all_booking):
         final_products_list = combine_products(booking_products)
         after_grouping_of_bookings[each_booking] = final_products_list
 
-        is_valid, errors = valid_booking_with_product_details(
+        is_valid, errors = validate_booking_product_details(
             product_details, final_products_list, all_booking[each_booking]['start_time'],
             all_booking[each_booking]['end_time'])
         if not is_valid:
@@ -1240,7 +984,7 @@ def create_multiple_bookings_while_checkout(all_booking):
 
     with _booking_lock:
         for each_booking in all_booking:
-            is_valid, errors = valid_booking_with_product_quantity(
+            is_valid, errors = validate_booking_product_availability(
                 product_details, after_grouping_of_bookings[each_booking],
                 all_booking[each_booking]['start_time'], all_booking[each_booking]['end_time'])
 
@@ -1405,6 +1149,8 @@ def create_single_booking(booking_object, product_values):
                     each_booked_product['parent_booked_product']]
         booked_product_serializer_object.bulk_create(product_list)
 
+    # TODO: To be added when celery is working
+    # TODO: To automatically cancel booking if business client didn't accept request after some interval
     # current_time = datetime.utcnow()
     # current_time.replace(tzinfo=pytz.timezone('Asia/Kolkata'))
     # cancel_booking_if_not_accepted_by_business_client.apply_async(
@@ -1499,16 +1245,16 @@ class MakeYourOwnTripBooking(APIView):
     def post(self, request, *args, **kwargs):
         input_serializer = MakeYourOwnTripBookingSerializer(data=request.data)
         if not input_serializer.is_valid():
-            return Response({"Message":"Can't make booking", "errors": input_serializer.errors},400)
+            return Response({"Message":"Can't make booking", "errors": input_serializer.errors}, 400)
         trip_details = request.data['trip_details']
         is_valid, errors = check_valid_address(trip_details['pickup_location'])
         if not is_valid:
-            return Response({"Message":"Can't make booking", "errors": errors},400)
+            return Response({"Message":"Can't make booking", "errors": errors}, 400)
         is_valid, errors = check_valid_address(trip_details['drop_location'])
         if not is_valid:
-            return Response({"Message":"Can't make booking", "errors": errors},400)
+            return Response({"Message":"Can't make booking", "errors": errors}, 400)
 
-        is_valid, errors = validate_time(request.data['start_time'], request.data['end_time'])
+        is_valid, errors = validate_start_end_time(request.data['start_time'], request.data['end_time'])
         if not is_valid:
             return Response({"Message": "Can't make booking", "errors": errors}, 400)
 

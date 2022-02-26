@@ -3,7 +3,6 @@ from .constants import Countries, States, Cities, AddressType
 import uuid
 from django.contrib.auth import get_user_model
 from ChillBro.helpers import get_storage
-from .helpers1 import upload_image_to_city_icon
 
 
 def get_id():
@@ -18,6 +17,7 @@ class Address(models.Model):
     address_line = models.CharField(max_length=250, blank=True, null=True, verbose_name="Address Line")
     extend_address = models.CharField(max_length=250, blank=True, null=True, verbose_name="Extend Address")
     landmark = models.CharField(max_length=250, blank=True, null=True, verbose_name="Landmark")
+    # TODO: should point to cities table
     city = models.CharField(max_length=30, default=Cities.VSKP.value,
                             choices=[(city.value, city.value) for city in Cities], verbose_name="City")
     state = models.CharField(max_length=30, default=States.AP.value,
@@ -43,6 +43,7 @@ class UserSavedAddress(models.Model):
 
 
 class Cities(models.Model):
+    from .helpers import upload_image_to_city_icon
     name = models.CharField(max_length=30, unique=True)
     short_name = models.CharField(max_length=30, unique=True)
     image_url = models.ImageField(upload_to=upload_image_to_city_icon, max_length=300, storage=get_storage())
