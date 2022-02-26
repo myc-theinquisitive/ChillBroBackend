@@ -4,7 +4,6 @@ from django.conf import settings
 
 
 class AddressSerializer(serializers.ModelSerializer):
-    """Address serializer returns all data on Address from model"""
     class Meta:
         model = Address
         fields = '__all__'
@@ -23,7 +22,6 @@ class AddressIdListSerializer(serializers.Serializer):
 
 
 class CitiesSerializer(serializers.ModelSerializer):
-    """Address serializer returns all data on Address from model"""
     class Meta:
         model = Cities
         fields = '__all__'

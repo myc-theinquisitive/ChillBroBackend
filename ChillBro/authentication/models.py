@@ -226,13 +226,10 @@ class EmailChangeCode(AbstractBaseCode):
         send_multi_format_email(prefix, ctxt, target_email=self.email)
 
 
-def random_string():
-    return str(random.randint(100000, 999999))
-
-
 class AutoDateTimeField(models.DateTimeField):
     def pre_save(self, model_instance, add):
         return timezone.now()
+
 
 class OTPCode(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

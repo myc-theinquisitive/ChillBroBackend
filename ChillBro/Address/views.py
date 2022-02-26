@@ -5,7 +5,38 @@ from rest_framework.response import Response
 from .models import Address, UserSavedAddress, Cities
 from .serializers import AddressSerializer, AddressIdListSerializer, SavedAddressSerializer, \
     CitiesSerializer
-from rest_framework import generics, status
+from rest_framework import generics
+
+
+def create_address(address_details):
+    valid_serializer = AddressSerializer(data=address_details)
+    if valid_serializer.is_valid():
+        serializer = valid_serializer.create(address_details)
+        return {"is_valid": True, "address_id": serializer.id, "errors": None}
+    else:
+        return {"is_valid": False, "address_id": None, "errors": valid_serializer.errors}
+
+
+def get_address_details(address_ids):
+    from .models import Address
+    addresses = Address.objects.filter(id__in=address_ids)
+    address_serializer = AddressSerializer(addresses, many=True)
+    return address_serializer.data
+
+
+def update_address(address_id, address_details):
+    from .models import Address
+    try:
+        address = Address.objects.get(id=address_id)
+    except ObjectDoesNotExist:
+        return {"is_valid": False, "address_id": None, "errors": "Invalid Address Id"}
+
+    valid_serializer = AddressSerializer(data=address_details)
+    if valid_serializer.is_valid():
+        serializer = valid_serializer.update(address, address_details)
+        return {"is_valid": True, "address_id": serializer.id, "errors": None}
+    else:
+        return {"is_valid": False, "address_id": None, "errors": valid_serializer.errors}
 
 
 class AddressList(generics.ListCreateAPIView):
@@ -20,12 +51,6 @@ class AddressDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AddressSerializer
 
 
-def address_details_for_address_ids(address_ids):
-    addresses = Address.objects.filter(id__in=address_ids)
-    address_serializer = AddressSerializer(addresses, many=True)
-    return address_serializer.data
-
-
 class SpecificAddressList(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -33,7 +58,7 @@ class SpecificAddressList(APIView):
     def post(request, format=None):
         serializer = AddressIdListSerializer(data=request.data)
         if serializer.is_valid():
-            address_details = address_details_for_address_ids(serializer.data["ids"])
+            address_details = get_address_details(serializer.data["ids"])
             return Response({"results:": address_details}, 200)
         else:
             return Response({"message": "Can't get address details", "errors": serializer.errors}, 400)
@@ -47,7 +72,6 @@ class UserSavedAddressView(APIView):
         request.data["created_by"] = request.user.id
         saved_address_serializer = SavedAddressSerializer(data=request.data)
 
-        from .helpers import create_address
         response_dict = create_address(request.data["address"])
         if not response_dict["is_valid"]:
             return Response({"message": "Can't create address",
@@ -89,7 +113,6 @@ class UserSavedAddressDetailView(APIView):
             return Response({"message": "Can't update address",
                              "errors": "Invalid address id for user"}, 400)
 
-        from .helpers import update_address
         response_dict = update_address(self.kwargs["address_id"], request.data["address"])
         if not response_dict["is_valid"]:
             return Response({"message": "Can't update address",
@@ -118,17 +141,7 @@ class UserSavedAddressDetailView(APIView):
         return Response({"message": "Address deleted successfully"}, 200)
 
 
-def get_distance(source, destination):
-    source_address = Address.objects.get(id=source)
-    source_points = (source_address.longitute, source_address.longitute)
-    destination_address = Address.objects.get(id=destination)
-    destination_points = (destination_address.longitute, destination_address.longitute)
-
-
-# def get_multiple_distances():
-
 class CitiesList(generics.ListCreateAPIView):
-    print("hi")
     permission_classes = (IsAuthenticated,)
     queryset = Cities.objects.all()
     serializer_class = CitiesSerializer
