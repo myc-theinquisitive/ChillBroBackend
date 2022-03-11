@@ -1,15 +1,17 @@
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.db.models import Q
 from rest_framework.generics import ListCreateAPIView
 from .serializers import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
-from .constants import Status, DEFAULT_FINAL_RESOLUTION, USER_CLOSED_RESOLUTION
-from .wrappers import is_order_id_valid, is_product_id_valid
+from .constants import SupportStatus, DEFAULT_FINAL_RESOLUTION, USER_CLOSED_RESOLUTION
+from .wrappers import is_order_id_valid, is_product_id_valid, get_issue_id_wise_ratings
 from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsOwner
+from .helpers import get_entity_types_filter, get_user_status_filters, convert_support_status_to_user_status
 
 
 class IssueList(ListCreateAPIView):
@@ -17,10 +19,12 @@ class IssueList(ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        request.data._mutable = True
         request.data['created_by'] = request.user.id
         serializer = self.serializer_class(data=request.data)
 
+        # TODO: validation should be done for user, booking and product combined
+        # if product is present in that booking or not
+        # if booking belongs to that user or not
         if not is_product_id_valid(request.data['product_id']):
             return Response({"message": "Issue not inserted", "error": "Invalid Product Id"},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -34,7 +38,7 @@ class IssueList(ListCreateAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         images = request.data.pop("images", [])
-        issue = serializer.create(request.data.dict())
+        issue = serializer.create(request.data)
 
         issue_image_dicts = []
         for image in images:
@@ -49,6 +53,51 @@ class IssueList(ListCreateAPIView):
                         status=status.HTTP_200_OK)
 
 
+class GetIssuesForUser(generics.ListAPIView):
+    serializer_class = IssueSerializer
+    permission_classes = (IsAuthenticated,)
+    queryset = Issue.objects.all()
+
+    @staticmethod
+    def update_issue_response(issue):
+        issue.pop("current_department", None)
+        issue.pop("current_employee_id", None)
+        issue.pop("entity_id", None)
+        issue.pop("order_id", None)
+        issue.pop("product_id", None)
+        issue.pop("final_resolution", None)
+        issue.pop("updated_at", None)
+        issue.pop("created_by", None)
+        support_status = issue.pop("support_status", None)
+        issue["status"] = convert_support_status_to_user_status(support_status)
+
+    def post(self, request, *args, **kwargs):
+        input_serializer = GetUserIssuesSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't get issue details", "error": input_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+        request_user = request.user.id
+        self.queryset = self.queryset.filter(created_by=request_user)
+        entity_types = get_entity_types_filter(request.data["entity_types"])
+        status_types = get_user_status_filters(request.data["status_types"])
+        self.queryset = self.queryset.filter(Q(entity_type__in=entity_types) & Q(support_status__in=status_types))
+        response = super().get(request, args, kwargs)
+
+        issue_ids = []
+        for issue in response.data["results"]:
+            self.update_issue_response(issue)
+            issue_ids.append(issue["id"])
+
+        # adding ratings to issues
+        issue_id_wise_ratings = get_issue_id_wise_ratings(issue_ids)
+        for issue in response.data["results"]:
+            issue["rating"] = {
+                "rating_given": True if issue["id"] in issue_id_wise_ratings else False,
+            }
+            issue["rating"].update(issue_id_wise_ratings[issue["id"]])
+        return response
+
+
 class IssueDetail(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Issue.objects.all()
@@ -59,7 +108,7 @@ class IssueDetail(generics.RetrieveAPIView):
         issue = self.get_object()
         images = IssueImage.objects.filter(issue=issue).values_list("image", flat=True)
         for each_image in images:
-            each_image.replace(settings.IMAGE_REPLACED_STRING,"")
+            each_image.replace(settings.IMAGE_REPLACED_STRING, "")
         response.data["images"] = images
         return response
 
@@ -76,13 +125,14 @@ class PickCloseIssue(APIView):
                 return Response({"message": "Issue can't be picked/closed", "error": "Invalid Issue"},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-            if issue.status == Status.DONE.value:
+            if issue.support_status == SupportStatus.DONE.value:
                 return Response({"message": "Issue can't be picked/closed", "error": "Issue already closed"},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-            request.data['status'] = status_flag
+            request.data['support_status'] = status_flag
             request.data['current_employee_id'] = request.user.id
-            if status_flag == Status.IN_PROGRESS.value:  # for issue to pick, final resolution need not be provided.
+            if status_flag == SupportStatus.IN_PROGRESS.value:
+                # for issue to pick, final resolution need not be provided.
                 if issue.current_employee_id is not None:
                     return Response({"message": "Issue can't be picked", "error": "Issue already picked"},
                                     status=status.HTTP_400_BAD_REQUEST)
@@ -115,11 +165,11 @@ class CloseIssueUser(APIView):
 
             self.check_object_permissions(request, issue)
 
-            if issue.status == Status.DONE.value:
+            if issue.support_status == SupportStatus.DONE.value:
                 return Response({"message": "Issue can't be closed", "error": "Issue already closed"},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-            request.data['status'] = Status.DONE.value
+            request.data['support_status'] = SupportStatus.DONE.value
             request.data['final_resolution'] = USER_CLOSED_RESOLUTION
             request.data['current_employee_id'] = None
             serializer = self.serializer_class(issue, data=request.data)
@@ -136,7 +186,8 @@ class DepartmentStatusIssues(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = Issue.objects.filter(
-            current_department=self.kwargs['current_department'], status=self.kwargs['status']).order_by('created_at')
+            current_department=self.kwargs['current_department'], support_status=self.kwargs['status'])\
+            .order_by('created_at')
         return queryset
 
 
@@ -153,7 +204,7 @@ class TransferIssue(APIView):
             return Response({"message": "Issue can't be transferred", "error": "Invalid Issue"},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if issue.status == Status.DONE.value:
+        if issue.support_status == SupportStatus.DONE.value:
             return Response({"message": "Issue can't be transferred", "error": "Issue already closed"},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -167,7 +218,7 @@ class TransferIssue(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)
 
-        issue.status = Status.TODO.value
+        issue.support_status = SupportStatus.TODO.value
         issue.current_department = request.data['transferred_to']
         issue.current_employee_id = None
         issue.save()

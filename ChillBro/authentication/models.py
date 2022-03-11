@@ -115,7 +115,7 @@ class EmailAbstractUser(AbstractBaseUser, PermissionsMixin):
         send_mail(subject, message, from_email, [self.email], **kwargs)
 
     def __str__(self):
-        return self.email
+        return self.get_full_name()
 
 
 def random_string():
@@ -186,9 +186,6 @@ class AbstractBaseCode(models.Model):
         # send_multi_format_email.delay(prefix, ctxt, target_email=self.user.email)
         send_multi_format_email(prefix, ctxt, target_email=self.user.email)
 
-    def __str__(self):
-        return self.code
-
 
 class SignupCode(AbstractBaseCode):
     ipaddr = models.GenericIPAddressField(_('ip address'))
@@ -238,4 +235,4 @@ class OTPCode(models.Model):
     expiry_time = models.DateTimeField(default=get_expiry_time)
 
     def __str__(self):
-        return self.user
+        return self.user.id + ": " + self.otp

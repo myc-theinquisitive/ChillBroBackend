@@ -46,6 +46,12 @@ def get_status_filters(status):
     return status
 
 
+def get_after_booking_confirmation_status_filters(status):
+    if len(status) == 0:
+        return BookingStatus.after_booking_confirmation_enums()
+    return status
+
+
 def get_total_time_period(from_date, to_date):
     days = from_date - to_date
     seconds = int(days.total_seconds())

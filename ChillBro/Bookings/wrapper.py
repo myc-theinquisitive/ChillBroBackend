@@ -1,3 +1,4 @@
+from collections import defaultdict
 from ReviewsRatings.exportapi import insert_business_client_review_for_customer, \
     business_client_review_for_customer_by_booking_id
 from Payments.exportapi import transaction_details_by_booking_id, new_booking_transaction, \
@@ -96,5 +97,30 @@ def post_create_address(address_data):
     return create_address(address_data)
 
 
-def check_valid_address(address):
-    return validate_address(address)
+def get_product_id_wise_basic_details(product_ids):
+    from Product.exportapi import get_basic_details
+    product_details = get_basic_details(product_ids)
+    product_id_wise_details = defaultdict(dict)
+    for product in product_details:
+        product_id_wise_details[product["id"]] = product
+    return product_id_wise_details
+
+
+def booking_id_wise_reward_points_earned(booking_ids):
+    from Wallet.export_apis import get_amount_earned_for_related_ids
+    bookings_amount_earned = get_amount_earned_for_related_ids(booking_ids)
+    booking_id_wise_amount_earned = defaultdict(int)
+    for booking in bookings_amount_earned:
+        booking_id_wise_amount_earned[booking["related_id"]] = booking["earned_amount"]
+    return booking_id_wise_amount_earned
+
+
+def get_booking_id_product_id_wise_ratings(booking_ids, product_ids):
+    from ReviewsRatings.exportapi import rating_and_comment_for_related_ids_and_secondary_related_ids
+    ratings = rating_and_comment_for_related_ids_and_secondary_related_ids(booking_ids, product_ids)
+    booking_id_product_id_wise_ratings = defaultdict(dict)
+    for rating in ratings:
+        booking_id_product_id_wise_ratings[rating["related_id"] + "-" + rating["secondary_related_id"]] = rating
+        rating.pop("related_id", None)
+        rating.pop("secondary_related_id", None)
+    return booking_id_product_id_wise_ratings

@@ -7,6 +7,14 @@ from .validations import validate_phone
 from .helpers import upload_employee_image
 import uuid
 from .constants import GenderTypes
+import random
+import string
+
+
+def generate_refer_and_earn_code():
+    refer_code = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits)
+                   for _ in range(8))
+    return refer_code
 
 
 class MyUser(EmailAbstractUser):
@@ -19,10 +27,14 @@ class MyUser(EmailAbstractUser):
                                            null=True, blank=True, validators=[MinLengthValidator(10), validate_phone])
     backup_email = models.CharField(verbose_name='backup_email', max_length=30, unique=True, null=True, blank=True,
                                     validators=[validate_email])
+    refer_code = models.CharField(max_length=8, default=generate_refer_and_earn_code, unique=True)
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)
 
     # Required
     objects = EmailUserManager()
+
+    def ___str__(self):
+        return self.first_name + " " + self.last_name
 
 
 # TODO: Add created at and created by for business client and employee

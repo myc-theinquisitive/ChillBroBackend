@@ -140,6 +140,7 @@ def get_rating_type_wise_average_rating_for_related_ids(related_ids):
         .values('rating_type').annotate(avg_rating=Avg('rating'), total_reviews=Count('rating'))
 
 
+# TODO: Check where is it getting used and why
 def get_latest_ratings_for_related_ids(related_ids):
     reviews = ReviewsRatings.objects.select_related('created_by').filter(
         related_id__in=related_ids, rating_type=BASE_RATING_STRING).order_by('-reviewed_time')[:10]
@@ -157,3 +158,17 @@ def get_latest_ratings_for_related_ids(related_ids):
         ratings.append(review_dict)
 
     return ratings
+
+
+def rating_and_comment_for_related_ids(related_ids):
+    return ReviewsRatings.objects.filter(
+        related_id__in=related_ids, rating_type=BASE_RATING_STRING)\
+        .filter(Q(secondary_related_id=None) | Q(secondary_related_id=""))\
+        .order_by('reviewed_time').values('related_id', 'rating', 'comment')
+
+
+def rating_and_comment_for_related_ids_and_secondary_related_ids(related_ids, secondary_related_ids):
+    return ReviewsRatings.objects.filter(
+        related_id__in=related_ids, secondary_related_id__in=secondary_related_ids,
+        rating_type=BASE_RATING_STRING)\
+        .order_by('reviewed_time').values('related_id', 'secondary_related_id', 'rating', 'comment')

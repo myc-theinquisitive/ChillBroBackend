@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import CouponUser, CouponUsage, CouponUserUsages, Coupon, CouponHistory
 from .serializers import UseCouponSerializer, GetDiscountSerializer, CouponSerializer, \
-    CouponHistorySerializer, AvailableCouponSerializer
+    CouponHistorySerializer, AvailableCouponForOrderSerializer, AvailableCouponSerializer
 from .validations import validate_coupon
 from django.db.models import F, Q
 from django.utils import timezone
@@ -16,8 +16,9 @@ from ChillBro.permissions import IsSuperAdminOrMYCEmployee, IsBusinessClient, Is
 def retrieve_coupon_from_db(coupon_code):
     try:
         return Coupon.objects.select_related(
-            'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
-            'ruleset__allowed_product_types', 'ruleset__max_uses', 'ruleset__validity').get(code=coupon_code)
+            'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities',
+            'ruleset__allowed_products', 'ruleset__allowed_product_types',
+            'ruleset__max_uses', 'ruleset__validity').get(code=coupon_code)
     except Coupon.DoesNotExist:
         return None
 
@@ -82,20 +83,24 @@ def use_coupon(coupon, user, order_id, order_value):
     return discount_obtained
 
 
-def get_available_coupons(user_id, entity_ids, product_ids, product_types, order_value):
+def get_active_coupons_with_all_details():
     current_time = timezone.now()
     coupons = Coupon.objects.select_related(
-        'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
-        'ruleset__allowed_product_types', 'ruleset__max_uses', 'ruleset__validity') \
+        'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities',
+        'ruleset__allowed_products', 'ruleset__allowed_product_types',
+        'ruleset__max_uses', 'ruleset__validity') \
         .filter(Q(Q(times_used__lt=F('ruleset__max_uses__max_uses')) |
                   Q(ruleset__max_uses__is_infinite=True)) &
                 Q(Q(ruleset__validity__start_date__lt=current_time) &
                   Q(ruleset__validity__end_date__gt=current_time)) &
                 Q(ruleset__validity__is_active=True)
                 )
+    return coupons
 
+
+def get_available_coupon_objects(active_coupons, user_id, entity_ids, product_ids, product_types):
     coupons_available = []
-    for coupon in coupons:
+    for coupon in active_coupons:
         if not coupon.ruleset.allowed_users.all_users:
             users = coupon.ruleset.allowed_users.users
             if not str(user_id) in users:
@@ -115,7 +120,30 @@ def get_available_coupons(user_id, entity_ids, product_ids, product_types, order
             allowed_product_types = coupon.ruleset.allowed_product_types.product_types
             if not set(product_types).issubset(allowed_product_types):
                 continue
+        coupons_available.append(coupon)
+    return coupons_available
 
+
+def get_available_coupons_for_user(active_coupons, user_id, entity_ids, product_ids, product_types):
+    available_coupons = get_available_coupon_objects(
+        active_coupons, user_id, entity_ids, product_ids, product_types)
+    coupons_available_for_user = []
+    for coupon in available_coupons:
+        coupon_data = {
+            "coupon_code": coupon.code,
+            "title": coupon.title,
+            "description": coupon.description,
+            "terms_and_conditions": coupon.terms_and_conditions,
+            "expiry_data": coupon.ruleset.validity.end_date.strftime("%d %B, %Y")
+        }
+        coupons_available_for_user.append(coupon_data)
+    return coupons_available_for_user
+
+
+def get_available_coupons_for_order(active_coupons, user_id, entity_ids, product_ids, product_types, order_value):
+    available_coupons = get_available_coupon_objects(active_coupons, user_id, entity_ids, product_ids, product_types)
+    coupons_available_for_order = []
+    for coupon in available_coupons:
         available = True
         reason = ""
         if order_value < coupon.ruleset.validity.minimum_order_value:
@@ -131,9 +159,8 @@ def get_available_coupons(user_id, entity_ids, product_ids, product_types, order
             "available": available,
             "reason": reason
         }
-        coupons_available.append(coupon_data)
-
-    return coupons_available
+        coupons_available_for_order.append(coupon_data)
+    return coupons_available_for_order
 
 
 class Discount(APIView):
@@ -215,8 +242,9 @@ class CouponList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsGet,)
     serializer_class = CouponSerializer
     queryset = Coupon.objects.select_related(
-        'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities', 'ruleset__allowed_products',
-        'ruleset__allowed_product_types', 'ruleset__max_uses', 'ruleset__validity').all()
+        'discount', 'ruleset__allowed_users', 'ruleset__allowed_entities',
+        'ruleset__allowed_products', 'ruleset__allowed_product_types',
+        'ruleset__max_uses', 'ruleset__validity').all()
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, args, kwargs)
@@ -261,13 +289,12 @@ class CouponHistoryList(generics.ListAPIView):
         return response
 
 
-class AvailableCoupons(APIView):
+class AvailableCouponsForOrder(APIView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = AvailableCouponSerializer
+    serializer_class = AvailableCouponForOrderSerializer
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
-
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -277,8 +304,10 @@ class AvailableCoupons(APIView):
         product_ids = serializer.data["product_ids"]
         order_value = serializer.data['order_value']
 
-        coupons = get_available_coupons(user_id=str(user.id), entity_ids=entity_ids, product_types=product_types,
-                                        product_ids=product_ids, order_value=order_value)
+        active_coupons = get_active_coupons_with_all_details()
+        coupons = get_available_coupons_for_order(
+            active_coupons=active_coupons, user_id=str(user.id), entity_ids=entity_ids,
+            product_types=product_types, product_ids=product_ids, order_value=order_value)
 
         for coupon in coupons:
             terms_and_conditions = coupon["terms_and_conditions"]
@@ -286,4 +315,32 @@ class AvailableCoupons(APIView):
                 terms_and_conditions = terms_and_conditions.replace("'", '"')
                 coupon["terms_and_conditions"] = json.loads(terms_and_conditions)
 
-        return Response(coupons, status=status.HTTP_200_OK)
+        return Response({"results": coupons}, status=status.HTTP_200_OK)
+
+
+class AvailableCoupons(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AvailableCouponSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        entity_ids = serializer.data["entity_ids"]
+        product_types = serializer.data["product_types"]
+        product_ids = serializer.data["product_ids"]
+
+        active_coupons = get_active_coupons_with_all_details()
+        coupons = get_available_coupons_for_user(
+            active_coupons=active_coupons, user_id=str(user.id), entity_ids=entity_ids,
+            product_types=product_types, product_ids=product_ids)
+
+        for coupon in coupons:
+            terms_and_conditions = coupon["terms_and_conditions"]
+            if terms_and_conditions:
+                terms_and_conditions = terms_and_conditions.replace("'", '"')
+                coupon["terms_and_conditions"] = json.loads(terms_and_conditions)
+
+        return Response({"results": coupons}, status=status.HTTP_200_OK)

@@ -13,7 +13,7 @@ def cancel_booking(booking):
     # TODO: update payment amount to be paid to business client
 
     booked_products = BookedProducts.objects.select_related('booking').filter(booking=booking)
-    booked_products.update(booking_status=ProductBookingStatus.cancelled.value)
+    booked_products.update(booking_status=ProductBookingStatus.CANCELLED.value)
 
     create_refund_transaction(
         {

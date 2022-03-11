@@ -8,7 +8,7 @@ urlpatterns = [
     path('credit-amount/', WalletTransactions.as_view(), {"type": TransactionType.CREDIT.value}),
     path('debit-amount/', WalletTransactions.as_view(), {"type": TransactionType.DEBIT.value}),
     path('get-amount/', GetAmount.as_view()),
-    path('transaction-history/', TransactionHistory.as_view(), )
+    path('transaction-history/<str:type>/', TransactionHistory.as_view())
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

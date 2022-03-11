@@ -32,7 +32,8 @@ class IssueSerializer(serializers.ModelSerializer):
         return Issue.objects.create(
             created_by_id=validated_data["created_by"], title=validated_data["title"],
             description=validated_data["description"], entity_id=validated_data["entity_id"],
-            order_id=validated_data["order_id"], product_id=validated_data["product_id"]
+            order_id=validated_data["order_id"], product_id=validated_data["product_id"],
+            entity_type=validated_data["entity_type"]
         )
 
 
@@ -55,3 +56,12 @@ class TransferSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = '__all__'
+
+
+class GetUserIssuesSerializer(serializers.Serializer):
+    entity_types = serializers.ListField(
+        child=serializers.CharField()
+    )
+    status_types = serializers.ListField(
+        child=serializers.CharField()
+    )

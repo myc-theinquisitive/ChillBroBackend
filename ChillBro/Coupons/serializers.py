@@ -18,10 +18,13 @@ class AvailableCouponSerializer(serializers.Serializer):
     product_types = serializers.ListField(
         child=serializers.CharField(max_length=30)
     )
+
+
+class AvailableCouponForOrderSerializer(AvailableCouponSerializer):
     order_value = serializers.IntegerField()
 
 
-class GetDiscountSerializer(AvailableCouponSerializer):
+class GetDiscountSerializer(AvailableCouponForOrderSerializer):
     coupon_code = serializers.CharField(max_length=get_coupon_code_length)
 
 

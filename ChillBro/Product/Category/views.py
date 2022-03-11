@@ -186,16 +186,17 @@ class GetVehiclesCategoriesList(generics.ListAPIView):
                 'name': each_vehicle.name,
                 'image': icon_url
             })
-        return Response({"results":vehicle_details},200)
+        return Response({"results":vehicle_details}, 200)
 
+
+# TODO: Is this added for temporary purpose remove it
 class GenerateKey(APIView):
 
-    def get(self, request,*args, **kwargs):
+    def get(self, request, *args, **kwargs):
         categories = Category.objects.all()
-        print(categories)
         for each_category in categories:
             key = each_category.name.lower().split()
             each_category.key = "-".join(key)
             each_category.save()
 
-        return Response({"message":"successfully generated"},200)
+        return Response({"message": "successfully generated"}, 200)

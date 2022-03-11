@@ -105,7 +105,6 @@ urlpatterns = [
 
     path('product/category/<str:slug>/', GetProductsByCategory.as_view()),
     path('product/<str:id>/', ProductDetail.as_view()),
-    
 
     path('product/category/generate/key/', GenerateKey.as_view()),
 ]

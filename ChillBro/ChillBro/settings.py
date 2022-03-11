@@ -153,7 +153,7 @@ if IS_SERVER:
     MEDIA_ROOT = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
     DEFAULT_FILE_STORAGE = '/home/ffs2imp1oh0k/public_html/chillbro_backend/'
 
-    ALLOWED_HOSTS = ["chillbro.co.in", "184.168.127.251"]
+    ALLOWED_HOSTS = ["chillbro.co.in", "184.168.127.251", '127.0.0.1']
 
     #MY EMAIL SETTING
 
@@ -168,7 +168,6 @@ if IS_SERVER:
     EMAIL_HOST_USER = 'no-reply@chillbro.co.in' # Ex: info@pure.com
     EMAIL_HOST_PASSWORD = 'MissionImpossible@2020' # for the email you created through cPanel. The password for that
     DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
 
     LOG_PATH = "/home/ffs2imp1oh0k/adminpanel_logs/"
     LOGGING = {
@@ -229,7 +228,6 @@ else:
     EMAIL_USE_TLS = True
     EMAIL_USE_SSL = False
 
-
     LOGGING = {
         'version': 1,
         'filters': {
@@ -260,10 +258,7 @@ else:
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'ChillBro.authentication.JWTAuthentication',
-        # 'rest_framework.authentication.TokenAuthentication',
     ),
-    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    # 'PAGE_SIZE': 10,
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
