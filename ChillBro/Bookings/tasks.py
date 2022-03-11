@@ -14,11 +14,11 @@ def cancel_booking_if_not_accepted_by_business_client(booking_id):
         logger.info("Invalid Booking Id: " + booking_id)
         return
 
-    if booking.booking_status == BookingStatus.yet_to_approve.value:
-        booking.booking_status = BookingStatus.business_client_not_acted.value
+    if booking.booking_status == BookingStatus.YET_TO_APPROVE.value:
+        booking.booking_status = BookingStatus.BC_NOT_ACTED.value
         booking.save()
         logger.info("Booking Cancelled as no action taken: " + booking_id + " " +
-                    BookingStatus.business_client_not_acted.value)
+                    BookingStatus.BC_NOT_ACTED.value)
     else:
         logger.info("Booking is already acted: " + booking_id + " " +
                     booking.booking_status)

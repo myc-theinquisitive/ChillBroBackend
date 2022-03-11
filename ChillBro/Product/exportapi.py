@@ -200,3 +200,8 @@ def convert_dict_of_list_to_dict_of_dict(dict_elements):
         for each_km_limit in dict_elements[each_product]:
             resultant_dict[each_product][each_km_limit['km_limit']] = each_km_limit
     return resultant_dict
+
+
+def get_basic_details(product_ids):
+    from .BaseProduct.views import get_product_basic_details
+    return get_product_basic_details(product_ids)

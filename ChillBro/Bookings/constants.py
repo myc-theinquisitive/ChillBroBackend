@@ -1,47 +1,50 @@
 import enum
-from ChillBro.constants import EntityType, DateFilters, ProductTypes, TripType, DurationType, \
+from ChillBro.constants import EntityType, EntitySubType, DateFilters, ProductTypes, TripType, DurationType, \
     COMMISION_FEE_PERCENT, TRANSACTION_FEE_PERCENT, FIXED_FEE_PERCENT, GST_PERCENT, PriceTypes
 
 
 class BookingStatus(enum.Enum):
-    yet_to_approve = "YET_TO_APPROVE"
-    business_client_rejected = "BUSINESS_CLIENT_REJECTED"
-    business_client_not_acted = "BUSINESS_CLIENT_NOT_ACTED"
-    pending = "PENDING"
-    ongoing = "ONGOING"
-    cancelled = "CANCELLED"
-    done = "DONE"
+    YET_TO_APPROVE = "YET_TO_APPROVE"
+    BC_REJECTED = "BUSINESS_CLIENT_REJECTED"
+    BC_NOT_ACTED = "BUSINESS_CLIENT_NOT_ACTED"
+    PENDING = "PENDING"
+    ONGOING = "ONGOING"
+    CANCELLED = "CANCELLED"
+    COMPLETED = "COMPLETED"
+
+    @classmethod
+    def after_booking_confirmation_enums(cls):
+        return [cls.PENDING.value, cls.ONGOING.value, cls.CANCELLED.value, cls.COMPLETED.value]
 
 
 class PaymentStatus(enum.Enum):
-    pending = "PENDING"
-    failed = "FAILED"
-    done = "DONE"
-    not_required = "NOT_REQUIRED"
+    PENDING = "PENDING"
+    FAILED = "FAILED"
+    DONE = "DONE"
+    NOT_REQUIRED = "NOT_REQUIRED"
 
 
 class ProductBookingStatus(enum.Enum):
-    booked = "BOOKED"
-    cancelled = "CANCELLED"
+    BOOKED = "BOOKED"
+    CANCELLED = "CANCELLED"
 
 
 class IdProofType(enum.Enum):
-    aadhar_card = "AADHAR_CARD"
-    pan_card = "PAN_CARD"
-    voter_id = "VOTER_ID"
+    AADHAR_CARD = "AADHAR_CARD"
+    PAN_CARD = "PAN_CARD"
+    VOTER_ID = "VOTER_ID"
 
 
 class PaymentUser(enum.Enum):
-    entity = "ENTITY"
-    myc = "MYC"
-    customer = "CUSTOMER"
+    ENTITY = "ENTITY"
+    MYC = "MYC"
+    CUSTOMER = "CUSTOMER"
 
 
 class PaymentMode(enum.Enum):
-    partial = "PARTIAL"
-    full = "FULL"
+    PARTIAL = "PARTIAL"
+    FULL = "FULL"
 
 
+# in minutes
 BookingApprovalTime = 10
-
-

@@ -13,6 +13,7 @@ class Carousel(models.Model):
     def __str__(self):
         return self.name
 
+
 class CarouselItem(models.Model):
     carousel = models.ForeignKey('Carousel', on_delete=models.CASCADE)
     id = models.CharField(primary_key=True, default=uuid.uuid4, editable=False, max_length=36)

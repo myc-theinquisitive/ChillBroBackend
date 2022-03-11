@@ -55,8 +55,8 @@ class EventsDetails(models.Model):
     cart_product = models.ForeignKey('CartProducts', on_delete=models.CASCADE)
     slot = models.CharField(max_length=50)
     name = models.CharField(max_length=100)
-    phone_no = models.IntegerField(max_length=10)
-    alternate_no = models.IntegerField(max_length=10)
+    phone_no = models.CharField(max_length=10)
+    alternate_no = models.CharField(max_length=10)
     email = models.CharField(max_length=50)
 
 

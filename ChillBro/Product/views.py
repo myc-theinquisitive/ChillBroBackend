@@ -182,7 +182,7 @@ class ProductDetail(APIView):
             product = Product.objects.get(id=self.kwargs['pk'])
         except ObjectDoesNotExist:
             return Response({"errors": "Product does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
-        product.status = ActivationStatus.DELETED.value
+        product.support_status = ActivationStatus.DELETED.value
         product.save()
         return Response({"success": "Deleted Successfully"}, status=status.HTTP_200_OK)
 

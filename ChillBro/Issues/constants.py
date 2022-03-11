@@ -1,10 +1,17 @@
 import enum
+from ChillBro.constants import EntityType
 
 
-class Status(enum.Enum):
+class SupportStatus(enum.Enum):
     TODO = "TODO"
     IN_PROGRESS = "IN_PROGRESS"
     DONE = "DONE"
+
+
+class UserStatus(enum.Enum):
+    YET_TO_RECEIVE_CALL = "YET_TO_RECEIVE_CALL"
+    CALL_RECEIVED = "CALL_RECEIVED"
+    RESOLVED = "RESOLVED"
 
 
 class Departments(enum.Enum):

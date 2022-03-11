@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import ReviewsRatings, FeedbackAndSuggestions
+from .models import ReviewsRatings, BCAppFeedbackAndSuggestions, CustomerAppFeedbackAndSuggestions, \
+    CustomerAppRating, BCAppRating
 
 
 class ReviewsRatingsSerializer(serializers.ModelSerializer):
@@ -34,15 +35,31 @@ class EntityTotalReviewsSerializer(serializers.Serializer):
     )
 
 
-class FeedbackAndSuggestionsSerializer(serializers.ModelSerializer):
+class BCAppFeedbackAndSuggestionsSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = FeedbackAndSuggestions
+        model = BCAppFeedbackAndSuggestions
         fields = '__all__'
 
 
-class GetFeedbackAndSuggestionsSerializer(serializers.Serializer):
+class GetBCAppFeedbackAndSuggestionsSerializer(serializers.Serializer):
     category_filters = serializers.ListField(
+        child=serializers.CharField()
+    )
+
+
+class CustomerAppFeedbackAndSuggestionsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CustomerAppFeedbackAndSuggestions
+        fields = '__all__'
+
+
+class GetCustomerAppFeedbackAndSuggestionsSerializer(serializers.Serializer):
+    category_filters = serializers.ListField(
+        child=serializers.CharField()
+    )
+    module_filters = serializers.ListField(
         child=serializers.CharField()
     )
 
@@ -54,3 +71,17 @@ class EntityReviewStatisticsSerializer(serializers.Serializer):
     entity_filters = serializers.ListField(
         child=serializers.CharField()
     )
+
+
+class CustomerAppRatingSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CustomerAppRating
+        fields = '__all__'
+
+
+class BCAppRatingSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = BCAppRating
+        fields = '__all__'

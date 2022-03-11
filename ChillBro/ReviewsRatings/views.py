@@ -1,15 +1,19 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Avg, Q
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer, FeedbackAndSuggestionsSerializer,\
-    GetFeedbackAndSuggestionsSerializer, EntityReviewStatisticsSerializer
-from .models import ReviewsRatings, FeedbackAndSuggestions
+from .serializers import ReviewsRatingsSerializer, EntityTotalReviewsSerializer, BCAppFeedbackAndSuggestionsSerializer, \
+    GetBCAppFeedbackAndSuggestionsSerializer, EntityReviewStatisticsSerializer, \
+    CustomerAppFeedbackAndSuggestionsSerializer, GetCustomerAppFeedbackAndSuggestionsSerializer, \
+    CustomerAppRatingSerializer, BCAppRatingSerializer
+from .models import ReviewsRatings, BCAppFeedbackAndSuggestions, CustomerAppFeedbackAndSuggestions, CustomerAppRating, \
+    BCAppRating
 from .helpers import *
 from .wrapper import *
 from ChillBro.permissions import IsOwner
 from django.conf import settings
+from rest_framework.views import APIView
 
 
 class ReviewRatingList(generics.ListCreateAPIView):
@@ -27,24 +31,27 @@ class EntityReviewRatingList(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         if kwargs['entity_id'] == "MYC":
-            data = {'related_id': settings.MYC_ID, 'comment':request.data['comment'], 'rating':request.data['rating'], 'created_by': request.user}
+            data = {'related_id': settings.MYC_ID, 'comment': request.data['comment'],
+                    'rating': request.data['rating'], 'created_by': request.user}
         else:
-            data = {'related_id': kwargs['entity_id'], 'comment':request.data['comment'], 'rating':request.data['rating'], 'created_by': request.user}
+            data = {'related_id': kwargs['entity_id'], 'comment': request.data['comment'],
+                    'rating': request.data['rating'], 'created_by': request.user}
         serializer = ReviewsRatingsSerializer()
         serializer.create(data)
         return Response({"message": "success"}, 200)
-        
+
         
 class GetBusinessCleintToMYCReview(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     
     def get(self, request, *args, **kwargs):
         try:
-            business_client_review_to_MYC = ReviewsRatings.objects.get(related_id="MYC",created_by=request.user)
+            business_client_review_to_MYC = ReviewsRatings.objects.get(
+                related_id="MYC", created_by=request.user)
         except ObjectDoesNotExist:
-            return Response({"results":{}},200)
+            return Response({"results": {}}, 200)
         serializer = ReviewsRatingsSerializer(business_client_review_to_MYC)
-        return Response({"results":serializer.data},200)
+        return Response({"results": serializer.data}, 200)
 
 
 class ReviewRatingDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -174,12 +181,12 @@ class EntityTotalReviews(generics.ListAPIView):
         return Response({"results": booking_ratings}, 200)
 
 
-class CreateFeedbackAndSuggestion(generics.CreateAPIView):
+class CreateBCAppFeedbackAndSuggestion(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         request.data["created_by"] = request.user.id
-        input_serializer = FeedbackAndSuggestionsSerializer(data=request.data)
+        input_serializer = BCAppFeedbackAndSuggestionsSerializer(data=request.data)
         if input_serializer.is_valid():
             input_serializer.save()
             return Response({"message": "Successfully given feedback"}, 200)
@@ -187,15 +194,111 @@ class CreateFeedbackAndSuggestion(generics.CreateAPIView):
             return Response({"message": "Feedback is not submitted", "errors": input_serializer.errors}, 400)
 
 
-class GetFeedbackAndSuggestions(generics.ListAPIView):
+class GetBCAppFeedbackAndSuggestions(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        input_serializer = GetFeedbackAndSuggestionsSerializer(data=request.data)
-        if input_serializer.is_valid():
+        input_serializer = GetBCAppFeedbackAndSuggestionsSerializer(data=request.data)
+        if not input_serializer.is_valid():
             return Response({"message": "Can't get the feedback details", "errors": input_serializer.errors}, 400)
 
-        categories = get_categories(request.data['category_filters'])
-        feedback = FeedbackAndSuggestions.objects.filter(category__in=categories)
-        serializer = FeedbackAndSuggestionsSerializer(feedback, many=True)
+        categories = get_bc_app_feedback_categories(request.data['category_filters'])
+        feedback = BCAppFeedbackAndSuggestions.objects.filter(category__in=categories)
+        serializer = BCAppFeedbackAndSuggestionsSerializer(feedback, many=True)
         return Response({"results": serializer.data}, 200)
+
+
+class CreateCustomerAppFeedbackAndSuggestion(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        request.data["created_by"] = request.user.id
+        input_serializer = CustomerAppFeedbackAndSuggestionsSerializer(data=request.data)
+        if input_serializer.is_valid():
+            input_serializer.save()
+            return Response({"message": "Successfully given feedback"}, 200)
+        else:
+            return Response({"message": "Feedback is not submitted", "errors": input_serializer.errors}, 400)
+
+
+class GetCustomerAppFeedbackAndSuggestions(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        input_serializer = GetCustomerAppFeedbackAndSuggestionsSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            return Response({"message": "Can't get the feedback details", "errors": input_serializer.errors}, 400)
+
+        queryset = CustomerAppFeedbackAndSuggestions.objects
+        categories = request.data['category_filters']
+        if categories:
+            queryset = queryset.filter(category__in=categories)
+        modules = request.data['module_filters']
+        if modules:
+            queryset = queryset.filter(module__in=modules)
+        serializer = CustomerAppFeedbackAndSuggestionsSerializer(queryset.all(), many=True)
+        return Response({"results": serializer.data}, 200)
+
+
+class CustomerAppRatingList(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = CustomerAppRating.objects.all().order_by("-submitted_on")
+    serializer_class = CustomerAppRatingSerializer
+
+    def post(self, request, *args, **kwargs):
+        request.data["created_by"] = request.user.id
+        response = super().post(request, args, kwargs)
+        if response.status_code == status.HTTP_201_CREATED:
+            response.data = {"message": "Feedback Submitted Successfully"}
+        return response
+
+
+class GetCustomerAppLastRatingForUser(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        last_review = CustomerAppRating.objects.filter(created_by=request.user).order_by("-submitted_on").first()
+        if last_review:
+            response_data = {
+                "rating_given": True,
+                "rating": last_review.rating,
+                "comment": last_review.comment,
+                "submitted_on": last_review.submitted_on
+            }
+        else:
+            response_data = {
+                "rating_given": False
+            }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class BCAppRatingList(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = BCAppRating.objects.all().order_by("-submitted_on")
+    serializer_class = BCAppRatingSerializer
+
+    def post(self, request, *args, **kwargs):
+        request.data["created_by"] = request.user.id
+        response = super().post(request, args, kwargs)
+        if response.status_code == status.HTTP_201_CREATED:
+            response.data = {"message": "Feedback Submitted Successfully"}
+        return response
+
+
+class GetBCAppLastRatingForUser(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        last_review = BCAppRating.objects.filter(created_by=request.user).order_by("-submitted_on").first()
+        if last_review:
+            response_data = {
+                "rating_given": True,
+                "rating": last_review.rating,
+                "comment": last_review.comment,
+                "submitted_on": last_review.submitted_on
+            }
+        else:
+            response_data = {
+                "rating_given": False
+            }
+        return Response(response_data, status=status.HTTP_200_OK)

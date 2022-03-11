@@ -25,8 +25,8 @@ def get_rating_filters(rating_filter):
     return rating_filter
 
 
-def get_categories(category_filters):
-    categories = [category.value for category in FeedbackCategory]
+def get_bc_app_feedback_categories(category_filters):
+    categories = [category.value for category in BCAppFeedbackCategory]
     if len(category_filters) == 0:
         return categories
     if category_filters[0] == "ALL":

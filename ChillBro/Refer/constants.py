@@ -10,3 +10,9 @@ class SignUpRequestStatus(enum.Enum):
     YET_TO_VERIFY = "YET_TO_VERIFY"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
+
+
+class ReferAndEarnStatus(enum.Enum):
+    PENDING = "PENDING"
+    EARNED = "EARNED"
+

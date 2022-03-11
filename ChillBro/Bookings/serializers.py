@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import *
 from decimal import Decimal
+from .constants import DateFilters
 
 
 class BookingsSerializer(serializers.ModelSerializer):
@@ -225,8 +226,8 @@ class CustomDatesSerializer(serializers.Serializer):
     to_date = serializers.DateTimeField(required=True)
 
 
-class BookingStatisticsSerializer(serializers.Serializer):
-    date_filter = serializers.CharField(required=True)
+class GetBookingsStatisticsSerializer(serializers.Serializer):
+    date_filter = serializers.CharField(default=DateFilters.TOTAL.value)
     entity_filter = serializers.ListField(
         child=serializers.CharField()
     )
@@ -236,7 +237,7 @@ class BookingStatisticsSerializer(serializers.Serializer):
     custom_dates = CustomDatesSerializer(required=False)
 
 
-class GetBookingsStatisticsDetailsSerializer(BookingStatisticsSerializer):
+class GetBookingsStatisticsDetailsSerializer(GetBookingsStatisticsSerializer):
     statistics_details_type = serializers.CharField(required=True)
 
 
@@ -275,6 +276,10 @@ class GetBookingDetailsViewSerializer(serializers.Serializer):
     entity_id = serializers.ListField(
         child=serializers.CharField()
     )
+
+
+class GetBookingsWithFiltersSerializer(GetBookingDetailsViewSerializer):
+    custom_dates = CustomDatesSerializer(required=False)
 
 
 class BookingStartSerializer(serializers.Serializer):

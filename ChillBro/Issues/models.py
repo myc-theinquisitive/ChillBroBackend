@@ -1,9 +1,7 @@
 from django.db import models
-
 from ChillBro.helpers import get_storage
 from .helpers import image_upload_to_issue
-from .constants import Departments
-from .constants import Status
+from .constants import Departments, SupportStatus, EntityType
 import uuid
 from .helpers import get_user_model
 
@@ -14,7 +12,6 @@ def get_id():
 
 class Issue(models.Model):
     id = models.CharField(max_length=36, primary_key=True, default=get_id, verbose_name="Issue Id")
-
     user_model = get_user_model()
     created_by = models.ForeignKey(user_model, on_delete=models.CASCADE)
 
@@ -22,14 +19,18 @@ class Issue(models.Model):
         max_length=30, choices=[(department.name, department.value) for department in Departments],
         default=Departments.CUSTOMER_CARE.value)
     current_employee_id = models.CharField(max_length=36, blank=True, null=True)
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     entity_id = models.CharField(max_length=36)
+    entity_type = models.CharField(max_length=30, choices=[(etype.name, etype.value) for etype in EntityType])
     order_id = models.CharField(max_length=36)
     product_id = models.CharField(max_length=36)
-    status = models.CharField(
-        max_length=30, choices=[(status.name, status.value) for status in Status], default=Status.TODO.value)
+    support_status = models.CharField(
+        max_length=30, choices=[(support_status.name, support_status.value) for support_status in SupportStatus],
+        default=SupportStatus.TODO.value)
     final_resolution = models.TextField(blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

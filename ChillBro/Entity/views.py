@@ -150,7 +150,7 @@ class EntityImageDelete(generics.DestroyAPIView):
             entity_image = EntityImage.objects.get(id=kwargs['pk'])
         except ObjectDoesNotExist:
             return Response({"errors": "Entity image does not Exist!!!"}, status=status.HTTP_400_BAD_REQUEST)
-        self.check_object_permissions(request, entity_image.entity)
+        self.check_object_permissions(request, entity_image.ENTITY)
 
         return super().delete(request, *args, **kwargs)
 
@@ -539,7 +539,7 @@ class EntityStatus(APIView):
             return Response({"message": "Can't update Outlet status",
                              "errors": "Outlet is not active"}, status=status.HTTP_400_BAD_REQUEST)
 
-        entity.status = input_serializer.data['status']
+        entity.support_status = input_serializer.data['status']
         entity.save()
         return Response({"message": "Outlet status updated successfully"}, status=status.HTTP_200_OK)
 

@@ -42,9 +42,13 @@ class EntitySubType(enum.Enum):
 class DateFilters(enum.Enum):
     TODAY = "TODAY"
     YESTERDAY = "YESTERDAY"
-    WEEK = "WEEK"
-    MONTH = "MONTH"
+    THIS_WEEK = "THIS_WEEK"
+    THIS_MONTH = "THIS_MONTH"
+    LAST_7_DAYS = "LAST_7_DAYS"
+    LAST_30_DAYS = "LAST_30_DAYS"
+    LAST_6_MONTHS = "LAST_6_MONTHS"
     TOTAL = "TOTAL"
+    CUSTOM = "CUSTOM"
 
 
 class ProductTypes(enum.Enum):

@@ -2,7 +2,7 @@ import pytest
 from freezegun import freeze_time
 from .models import CouponUser, Coupon, CouponUsage
 from .serializers import CouponSerializer
-from .views import get_discounted_value, use_coupon, get_available_coupons, retrieve_coupon_from_db
+from .views import get_discounted_value, use_coupon, get_available_coupons_for_order, retrieve_coupon_from_db
 from .validations import validate_coupon
 from django.contrib.auth import get_user_model
 import random
@@ -360,7 +360,7 @@ def test_available_coupons():
     # coupon available for current product type
     create_coupon(code="NEWCOUPON7", all_product_types=False, product_types=["HOTEL"])
 
-    response = get_available_coupons("1", ["2"], ["3"], ["HOTEL"], 300)
+    response = get_available_coupons_for_order("1", ["2"], ["3"], ["HOTEL"], 300)
 
     expected_response = {
         'NEWCOUPON': {

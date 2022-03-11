@@ -6,7 +6,8 @@ from ReviewsRatings.exportapi import average_rating_query_for_secondary_related_
     get_secondary_related_id_wise_average_rating, get_rating_stats_for_secondary_related_id, \
     get_rating_type_wise_average_rating_for_secondary_related_id, get_latest_ratings_for_secondary_related_id
 from WishList.exportapis import get_wishlist_product_ids
-from  django.conf import settings
+from django.conf import settings
+
 
 def get_booked_count_of_product_id(product_id, from_date, to_date):
     return booked_count_of_product_id(product_id, from_date, to_date)

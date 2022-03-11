@@ -91,5 +91,9 @@ def get_product_sizes(product_ids):
     product_sizes = defaultdict(dict)
     all_products_sizes = ProductSize.objects.filter(product_id__in=product_ids)
     for each_product_size in all_products_sizes:
-        product_sizes[each_product_size.product_id].update({each_product_size.size:each_product_size.quantity})
+        product_sizes[each_product_size.product_id].update({each_product_size.size: each_product_size.quantity})
     return product_sizes
+
+
+def get_product_basic_details(product_ids):
+    return list(Product.objects.filter(id__in=product_ids).values('id', 'name'))

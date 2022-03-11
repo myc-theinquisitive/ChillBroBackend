@@ -1,6 +1,6 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import *
+from .models import ReferAndEarn
 from .serializers import *
 from .constants import SHARE_APP_MESSAGE
 from rest_framework.views import APIView
@@ -47,3 +47,28 @@ class SignUpRequestDetail(generics.UpdateAPIView):
     permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee)
     serializer_class = SignUpRequestApprovalSerialiser
     queryset = SignUpRequest.objects.all()
+
+
+class GetUserReferAndEarnDetails(APIView):
+    def get(self, request, *args, **kwargs):
+        referals = ReferAndEarn.objects.select_related("referred_user").filter(referred_by=request.user)
+
+        all_referal_details = []
+        total_earnings = 0
+        for referal in referals:
+            total_earnings += referal.amount_earned
+            referal_details = {
+                "referred_user": referal.referred_user.first_name + " " + referal.referred_user.last_name,
+                "amount": referal.amount_earned,
+                "status": referal.status
+            }
+            all_referal_details.append(referal_details)
+
+        response_data = {
+            "refer_code": request.user.refer_code,
+            "total_earnings": total_earnings,
+            "referal_count": len(referals),
+            "referals": all_referal_details
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
