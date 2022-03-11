@@ -221,7 +221,7 @@ def checkAndGetUserId(request):
 
     if phone_number:
         try:
-            user = get_user_model().objects.get(phone=phone_number)
+            user = get_user_model().objects.get(phone_number=phone_number)
         except get_user_model().DoesNotExist:
             return Response({'message': "Can't verify", 'error': 'Invalid Phone number'}, 400), False
 

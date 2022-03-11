@@ -53,6 +53,8 @@ def get_after_booking_confirmation_status_filters(status):
 
 
 def get_total_time_period(from_date, to_date):
+        # Remove below return statement, it is used for temporary
+    return "2 days"
     days = from_date - to_date
     seconds = int(days.total_seconds())
     if seconds < 60:

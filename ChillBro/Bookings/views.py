@@ -378,6 +378,7 @@ class GetBookingsStatisticsDetails(generics.ListAPIView):
     queryset = Bookings.objects.order_by('booking_date').all()
 
     def post(self, request, *args, **kwargs):
+        print("request data", request.data)
         input_serializer = GetBookingsStatisticsDetailsSerializer(data=request.data)
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, 400)
@@ -428,7 +429,9 @@ class GetBookingsStatisticsDetails(generics.ListAPIView):
         booking_ids = []
         for booking in response.data["results"]:
             booking_ids.append(booking["id"])
+        print("booking ids", booking_ids)
         response.data["results"] = get_complete_booking_details_by_ids(booking_ids)
+        print("response", response)
         return response
 
 
@@ -527,7 +530,8 @@ class GetSpecificBookingDetails(APIView):
                         "booked_quantity": booked_product.quantity,
                         "is_combo": booked_product.is_combo,
                         "has_sub_products": booked_product.has_sub_products,
-                        "combo_products": combo_products
+                        "combo_products": combo_products,
+                        "otp": booking.otp
                     }
                 )
         serializer['total_days'] = get_total_time_period(booking.end_time, booking.start_time)
@@ -689,7 +693,7 @@ class GetBookingDetailsView(generics.ListAPIView):
 
 
 class BookingStart(APIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,
                           IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):

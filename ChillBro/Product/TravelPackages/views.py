@@ -273,7 +273,7 @@ class TravelPackageView(ProductInterface):
 
         travel_package_id_wise_places_count = defaultdict(int)
         for travel_package_place_count in travel_package_places_count:
-            travel_package_id_wise_places_count[travel_package_place_count["travel_package_id"]] = \
+            travel_package_id_wise_places_count[travel_package_place_count["travel_package_id"]] += \
                 travel_package_place_count["count"]
 
         return travel_package_id_wise_places_count

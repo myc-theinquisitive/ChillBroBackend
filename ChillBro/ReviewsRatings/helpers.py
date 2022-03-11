@@ -1,6 +1,7 @@
 import uuid
 from django.conf import settings
 from .constants import *
+from ChillBro.constants import *
 from ChillBro.helpers import get_time_period
 
 

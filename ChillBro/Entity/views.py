@@ -187,10 +187,9 @@ class EntityList(generics.ListCreateAPIView):
         return is_valid, errors
 
     def post(self, request, *args, **kwargs):
-        request_data = request.data.dict()
-        address_data = request_data.pop('address', {})
+        address_data = request.data.pop('address', {})
         # remove while not using forms from postman
-        address_data = json.loads(address_data)
+        # address_data = json.loads(address_data)
 
         entity_registration_serializer = EntityRegistrationSerializer(data=request.data)
         entity_upi_serializer = EntityUPISerializer(data=request.data)
@@ -205,7 +204,7 @@ class EntityList(generics.ListCreateAPIView):
             return Response({"message": "Can't create outlet", "errors": entity_upi_serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        amenities_data = request_data.pop("amenities", [])
+        amenities_data = request.data.pop("amenities", [])
         # remove while not using forms from postman
         amenities_data = json.loads(amenities_data)
         amenities_data_valid, errors = self.validate_entity_amenities(amenities_data)
@@ -214,7 +213,7 @@ class EntityList(generics.ListCreateAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Validating images
-        entity_images = request_data.pop("images", [])
+        entity_images = request.data.pop("images", [])
         entity_image_serializer = EntityImageSerializer(data=entity_images, many=True)
         if not entity_image_serializer.is_valid():
             Response({"message": "Can't create outlet", "errors": entity_image_serializer.errors},
@@ -593,7 +592,7 @@ class BusinessClientEntitiesByVerificationStatus(generics.ListAPIView):
 
 
 class CountOfEntitiesAndProducts(generics.RetrieveAPIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,)
+    permission_classes = (IsAuthenticated, IsSuperAdminOrMYCEmployee | IsBusinessClient | IsEmployee,)
 
     def get(self, request, *args, **kwargs):
         entity_ids = entity_ids_for_user(request.user.id)

@@ -46,8 +46,7 @@ class GetBusinessCleintToMYCReview(generics.ListAPIView):
     
     def get(self, request, *args, **kwargs):
         try:
-            business_client_review_to_MYC = ReviewsRatings.objects.get(
-                related_id="MYC", created_by=request.user)
+            business_client_review_to_MYC = ReviewsRatings.objects.get(related_id=settings.MYC_ID,created_by=request.user)
         except ObjectDoesNotExist:
             return Response({"results": {}}, 200)
         serializer = ReviewsRatingsSerializer(business_client_review_to_MYC)

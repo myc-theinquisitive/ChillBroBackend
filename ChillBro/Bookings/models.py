@@ -27,6 +27,7 @@ class BookingsManager(models.Manager):
             ~Q(payment_status=PaymentStatus.FAILED.value) &
             Q(~Q(booking_status=BookingStatus.CANCELLED.value) & ~Q(booking_date__lte=current_time)))
 
+
     def received_bookings(self, from_date, to_date, entity_types, entity_ids):
         if from_date and to_date:
             return self.active().filter(Q(Q(booking_date__gte=from_date) & Q(booking_date__lte=to_date)

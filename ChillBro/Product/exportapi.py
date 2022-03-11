@@ -109,7 +109,7 @@ def product_details(product_ids):
 
 def total_products_count_in_entities(entity_ids):
     products_count = Product.objects.filter(seller_id__in=entity_ids).active()\
-                        .aggregate(count=Count('product'))['count']
+                        .aggregate(count=Count('id'))['count']
     return products_count
 
 
