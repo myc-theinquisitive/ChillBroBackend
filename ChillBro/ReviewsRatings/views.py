@@ -301,3 +301,30 @@ class GetBCAppLastRatingForUser(APIView):
                 "rating_given": False
             }
         return Response(response_data, status=status.HTTP_200_OK)
+        
+        
+class ModulesAndCategories(APIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request, *args, **kwargs):
+        data = {
+            "results": [
+                    {
+                        "name": "STAY",
+                        "categories":["HOTEL", "RESORT","PG_MEN","PG_WOMEN","PG_ALL"]
+                    },
+                    {
+                        "name": "TRANSPORT",
+                        "categories":["DRIVER","VEHICLE","HIRE_A_VEHICLE","TRAVEL_PACKAGE_VEHICLE","SELF_RENTAL"]
+                    },
+                    {
+                        "name": "RENTAL",
+                        "categories":["RENTAL"]
+                    },
+                    {
+                        "name": "EVENT",
+                        "categories":["EVENT"]
+                    }
+                ]
+        }
+        return Response(data, status=status.HTTP_200_OK)

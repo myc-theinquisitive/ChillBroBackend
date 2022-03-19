@@ -8,8 +8,8 @@ from Address.exportapi import create_address, update_address, validate_address
 
 
 def check_valid_booking(product_list, start_time, end_time):
-    from Bookings.views import valid_booking
-    is_valid, errors = valid_booking(product_list, start_time, end_time)
+    from Bookings.validators import validate_booking_details
+    is_valid, errors = validate_booking_details(product_list, start_time, end_time)
     return is_valid, errors
 
 

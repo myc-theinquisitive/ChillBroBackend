@@ -748,8 +748,8 @@ class BookingStart(APIView):
 
 
 class BookingEnd(APIView):
-    permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,
-                          IsBookingBusinessClient | IsBookingEmployee)
+    # permission_classes = (IsAuthenticated, IsBusinessClient | IsEmployee,
+    #                       IsBookingBusinessClient | IsBookingEmployee)
 
     def post(self, request, *args, **kwargs):
         booking = Bookings.objects.get(id=request.data['booking_id'])

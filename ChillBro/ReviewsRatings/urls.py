@@ -2,7 +2,8 @@ from django.urls import path
 from .views import ReviewRatingList, ReviewRatingDetail, RelatedReviewRatingList, EntityReviewStatistics, \
     EntityTotalReviews, EntityReviewRatingList, CreateBCAppFeedbackAndSuggestion, GetBCAppFeedbackAndSuggestions, \
     GetBusinessCleintToMYCReview, CreateCustomerAppFeedbackAndSuggestion, GetCustomerAppFeedbackAndSuggestions, \
-    CustomerAppRatingList, GetCustomerAppLastRatingForUser, BCAppRatingList, GetBCAppLastRatingForUser
+    CustomerAppRatingList, GetCustomerAppLastRatingForUser, BCAppRatingList, GetBCAppLastRatingForUser, \
+    ModulesAndCategories
 
 urlpatterns = [
     path('', ReviewRatingList.as_view()),
@@ -13,6 +14,7 @@ urlpatterns = [
     path('bc_app_feedback_and_suggestion/', CreateBCAppFeedbackAndSuggestion.as_view()),
     path('get_all_bc_app_feedback_and_suggestions/', GetBCAppFeedbackAndSuggestions.as_view()),
     path('customer_app_feedback_and_suggestion/', CreateCustomerAppFeedbackAndSuggestion.as_view()),
+    path('customer_app_feedback_and_suggestion/input/',ModulesAndCategories.as_view()),
     path('get_all_customer_app_feedback_and_suggestions/', GetCustomerAppFeedbackAndSuggestions.as_view()),
     path('customer_app_rating/', CustomerAppRatingList.as_view()),
     path('customer_app_rating/user/latest/', GetCustomerAppLastRatingForUser.as_view()),
